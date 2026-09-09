@@ -94,6 +94,12 @@ export async function GET(request: Request) {
         status: apt.status,
         note: apt.note || "",
         cancelReason: apt.cancel_reason || "",
+        // 🔑 KEYWORD: ส่งวันนัดเดิมให้หน้าเว็บโชว์ขีดฆ่า
+        // หน้าคิวนัดหมายฝั่งนายหน้ามีโค้ดโชว์ "วันเดิมขีดฆ่า + ป้าย (แก้ไขใหม่)" รออยู่แล้ว
+        // แต่เดิม API ไม่เคยส่ง 3 ฟิลด์นี้กลับไป ส่วนนั้นเลยไม่เคยทำงาน
+        originalDate: apt.original_date ? toDateKey(apt.original_date) : null,
+        originalTimeSlot: apt.original_time_slot,
+        wasEdited: apt.original_date !== null,
         customerName,
         customerPhone: cust?.phone || "-",
         customerEmail: cust?.email || "-",
