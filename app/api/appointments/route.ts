@@ -94,6 +94,12 @@ export async function GET(request: Request) {
         status: apt.status,
         note: apt.note || "",
         cancelReason: apt.cancel_reason || "",
+        // 🔑 KEYWORD: ส่งวันนัดเดิมให้หน้าเว็บโชว์ขีดฆ่า
+        // หน้าคิวนัดหมายฝั่งนายหน้ามีโค้ดโชว์ "วันเดิมขีดฆ่า + ป้าย (แก้ไขใหม่)" รออยู่แล้ว
+        // แต่เดิม API ไม่เคยส่ง 3 ฟิลด์นี้กลับไป ส่วนนั้นเลยไม่เคยทำงาน
+        originalDate: apt.original_date ? toDateKey(apt.original_date) : null,
+        originalTimeSlot: apt.original_time_slot,
+        wasEdited: apt.original_date !== null,
         customerName,
         customerPhone: cust?.phone || "-",
         customerEmail: cust?.email || "-",
@@ -320,9 +326,21 @@ export async function PATCH(request: Request) {
         }
       }
 
+      // 🔑 KEYWORD: เก็บวันนัดเดิมไว้โชว์ขีดฆ่า
+      // เก็บวัน+รอบ "ครั้งแรกสุด" ที่ลูกค้าจองไว้ เพื่อให้นายหน้าเห็นว่าเดิมนัดวันไหน แล้วถูกเลื่อนมาเป็นวันใหม่
+      // เขียนเฉพาะตอนที่ยังว่าง (null) เท่านั้น — ถ้าลูกค้าเลื่อนนัดครั้งที่ 2, 3 ต้องไม่ทับของเดิม
+      // ไม่งั้นจะกลายเป็น "วันก่อนหน้า" แทนที่จะเป็น "วันที่จองไว้ตั้งแต่แรก"
+      const shouldKeepOriginal = !isSameSlot && appointment.original_date === null;
+
       const updated = await db.appointments.update({
         where: { id },
-        data: { appointment_date: new Date(date), time_slot: timeSlot }
+        data: {
+          appointment_date: new Date(date),
+          time_slot: timeSlot,
+          ...(shouldKeepOriginal
+            ? { original_date: appointment.appointment_date, original_time_slot: appointment.time_slot }
+            : {})
+        }
       });
 
       // สลับการล็อกรอบเวลา: ปลดล็อกรอบเดิมคืนระบบ และ ไปล็อกรอบใหม่
