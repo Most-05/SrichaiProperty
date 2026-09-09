@@ -13,6 +13,8 @@
  */
 
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next"; // ดึงเซสชันเพื่อดูว่าคนเปิดดูคือเจ้าของประกาศเองหรือไม่
+import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับเพิ่มจำนวนยอดเข้าชมแบบ atomic
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit"; // กันนับยอดวิวซ้ำจากคนเดิมที่รีเฟรชรัวๆ
 
@@ -33,6 +35,18 @@ export async function POST(
     //     ตอบ success กลับไปตามปกติเพื่อไม่ให้หน้าเว็บแสดง error ให้ผู้ใช้เห็น (ไม่ใช่ความผิดเขา)
     if (!checkRateLimit(`view:${getClientIp(req)}:${id}`, 1, VIEW_WINDOW_MS)) {
       return NextResponse.json({ success: true, counted: false });
+    }
+
+    // 🔑 KEYWORD: ไม่นับวิวเมื่อเจ้าของบ้านเปิดดูเอง
+    // 1.2 นายหน้าเปิดดูประกาศตัวเอง (เช่น เช็คว่าหน้าตาออกมาโอเคไหม) ไม่ควรถูกนับเป็นยอดวิว
+    //     เพราะยอดวิวมีไว้วัดความสนใจจากผู้ซื้อจริง ถ้านับตัวเองด้วยสถิติจะเพี้ยน
+    const session = await getServerSession(authOptions);
+    const viewerId = (session?.user as { id?: string } | undefined)?.id;
+    if (viewerId) {
+      const property = await db.properties.findUnique({ where: { id }, select: { agent_id: true } });
+      if (property?.agent_id === viewerId) {
+        return NextResponse.json({ success: true, counted: false });
+      }
     }
 
     // 2. อัปเดตเพิ่มยอดเข้าชมแบบ Atomic Increment (+1) ในตาราง properties
