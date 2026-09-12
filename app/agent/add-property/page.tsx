@@ -164,7 +164,7 @@ export default function AgentAddPropertyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // 8.1 ตรวจสอบข้อมูลบังคับและตัวเลขป้อนเข้า (Validation)
-    if (!f.title || !f.price || !f.provinceId || !f.amphureId) return alert('กรุณากรอกข้อมูลสำคัญ (*) ให้ครบถ้วน');
+    if (!f.title || !f.price || !f.provinceId || !f.amphureId || !f.districtId) return alert('กรุณากรอกข้อมูลสำคัญ (*) ให้ครบถ้วน');
     if (Number(f.price) <= 0) return alert('กรุณากรอกราคาที่มากกว่า 0 บาท');
     if (f.landArea && Number(f.landArea) < 0) return alert('ขนาดที่ดินต้องไม่ติดลบ');
     if (f.usableArea && Number(f.usableArea) < 0) return alert('พื้นที่ใช้สอยต้องไม่ติดลบ');
@@ -185,7 +185,8 @@ export default function AgentAddPropertyPage() {
           title: f.title, type_id: parseInt(f.typeId), price: parseFloat(f.price) || 0,
           listing_type: f.listingType === 'เช่า' ? 'rent' : 'sale',
           location: `${f.address ? f.address + ', ' : ''}${amp}, ${prov}`,
-          province_id: parseInt(f.provinceId), amphure_id: parseInt(f.amphureId), district_id: districts[0]?.id || null,
+          province_id: parseInt(f.provinceId), amphure_id: parseInt(f.amphureId),
+          district_id: f.districtId ? parseInt(f.districtId) : null, // ส่งตำบลที่นายหน้าเลือกจริง (เดิมส่ง districts[0] คือตำบลแรกของอำเภอเสมอ)
           description: f.description, bedrooms: parseInt(f.bedrooms), bathrooms: parseInt(f.bathrooms),
           area_sqm: parseFloat(f.usableArea) || parseFloat(f.landArea) || 120,
           images: uploadedImages.length > 0 ? uploadedImages : [f.image],
