@@ -51,7 +51,7 @@ export default function AgentAddPropertyPage() {
     title: '', typeId: '1', listingType: 'ขาย', description: '',
     price: '', commonFee: '', bedrooms: '3', bathrooms: '2', parking: '1', floors: '1',
     landArea: '', usableArea: '', ownership: 'ขายขาด (Freehold)',
-    provinceId: '', amphureId: '', address: '',
+    provinceId: '', amphureId: '', districtId: '', address: '',
     image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
     doc: '' // URL ของไฟล์เอกสารสิทธิ์ (PDF/Image)
   });
@@ -106,7 +106,8 @@ export default function AgentAddPropertyPage() {
   // [5] ฟังก์ชันเมื่อเปลี่ยนจังหวัด -> ดึงรายชื่ออำเภอในจังหวัดนั้น
   // ----------------------------------------------------------------------------
   const handleProvince = (pId: string) => {
-    setF(prev => ({ ...prev, provinceId: pId, amphureId: '' }));
+    setF(prev => ({ ...prev, provinceId: pId, amphureId: '', districtId: '' }));
+    setAmphures([]);
     setDistricts([]); // ล้างตัวเลือกตำบลเดิม
     if (pId) fetch(`/api/locations?type=amphures&provinceId=${pId}`).then(r => r.json()).then(d => Array.isArray(d) && setAmphures(d));
   };
@@ -115,7 +116,8 @@ export default function AgentAddPropertyPage() {
   // [6] ฟังก์ชันเมื่อเปลี่ยนอำเภอ -> ดึงรายชื่อตำบลในอำเภอนั้น
   // ----------------------------------------------------------------------------
   const handleAmphure = (aId: string) => {
-    setF(prev => ({ ...prev, amphureId: aId }));
+    setF(prev => ({ ...prev, amphureId: aId, districtId: '' })); // เปลี่ยนอำเภอแล้วต้องล้างตำบลเดิมด้วย ไม่งั้นจะค้างตำบลของอำเภอเก่า
+    setDistricts([]);
     if (aId) fetch(`/api/locations?type=districts&amphureId=${aId}`).then(r => r.json()).then(d => Array.isArray(d) && setDistricts(d));
   };
 
@@ -336,6 +338,17 @@ export default function AgentAddPropertyPage() {
                   {amphures.map(a => <option key={a.id} value={a.id}>{a.name_th}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* 🔑 KEYWORD: เลือกตำบลตอนลงประกาศ */}
+            {/* เดิมหน้านี้ดึงรายชื่อตำบลมาเก็บไว้เฉยๆ ไม่มีช่องให้เลือก แล้วส่งตำบลแรกของอำเภอไปเสมอ
+                ทำให้บ้านทุกหลังในอำเภอเดียวกันถูกบันทึกเป็นตำบลเดียวกันหมด (ข้อมูลผิด) */}
+            <div>
+              <label className="block font-bold mb-1 text-slate-700">ตำบล / แขวง <span className="text-red-500">*</span></label>
+              <select value={f.districtId} onChange={e => setF({ ...f, districtId: e.target.value })} disabled={!f.amphureId} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" required>
+                <option value="">เลือกตำบล</option>
+                {districts.map(d => <option key={d.id} value={d.id}>{d.name_th}</option>)}
+              </select>
             </div>
 
             <div>
