@@ -247,6 +247,7 @@ export default function AgentEditPropertyPage() {
           province_id: f.provinceId ? parseInt(f.provinceId) : null,
           amphure_id: f.amphureId ? parseInt(f.amphureId) : null,
           district_id: f.districtId ? parseInt(f.districtId) : null,
+          latitude, longitude, // พิกัดที่ปักหมุดไว้ (null ถ้าบ้านนี้ยังไม่เคยมีพิกัด และนายหน้าไม่ได้แตะแผนที่)
           images: uploadedImages,
           viewingSlots: viewingSlots.map(s => ({ date: s.date, timeSlot: s.timeSlot }))
         })
