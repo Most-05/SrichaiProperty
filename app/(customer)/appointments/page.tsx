@@ -79,6 +79,8 @@ interface AppointmentItem {
   agentName: string;
   agentPhone: string;
   agentImage?: string;
+  // ข้อมูลรีวิว (ถ้าเคยให้คะแนนไว้แล้ว)
+  review?: { id: string; rating: number; comment?: string } | null;
 }
 
 const MONTH_NAMES_TH = [
@@ -224,7 +226,14 @@ export default function AppointmentsPage() {
     return false;
   });
 
-  const [reviewModalApt, setReviewModalApt] = useState<{ id: string; agentName: string; propertyName: string } | null>(null);
+  // ข้อมูลนัดหมายที่จะเปิดโมดัลรีวิว (เก็บคะแนนและความคิดเห็นเดิมไว้ด้วยถ้ามี)
+  const [reviewModalApt, setReviewModalApt] = useState<{
+    id: string;
+    agentName: string;
+    propertyName: string;
+    initialRating?: number;
+    initialComment?: string;
+  } | null>(null);
 
   return (
     <div className="font-sans bg-slate-50 min-h-screen text-slate-800 antialiased overflow-x-hidden text-sm flex flex-col">
@@ -379,14 +388,43 @@ export default function AppointmentsPage() {
                       <ChatIcon className="w-3.5 h-3.5" /> แชทกับนายหน้า
                     </button>
 
-                    {/* ปุ่มให้คะแนนการบริการ (แสดงเฉพาะนัดในประวัติที่ไม่ได้ยกเลิก) */}
+                    {/* ส่วนการให้คะแนนรีวิวนายหน้า (สำหรับนัดในประวัติที่ไม่ได้ยกเลิก):
+                        - กรณีที่ 1: ลูกค้าเคยรีวิวแล้ว -> โชว์คะแนนดาวที่เคยให้ พร้อมปุ่มกด "แก้ไขรีวิว"
+                        - กรณีที่ 2: ยังไม่เคยรีวิว -> โชว์ปุ่มสีเหลือง "ให้คะแนนการบริการ" */}
                     {pastThisApt && !cancelledThisApt && (
-                      <button
-                        onClick={() => setReviewModalApt({ id: String(apt.id), agentName: apt.agentName, propertyName: apt.propertyName })}
-                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-black text-xs transition cursor-pointer flex items-center gap-1"
-                      >
-                        <StarIcon className="w-3.5 h-3.5" /> ให้คะแนนการบริการ
-                      </button>
+                      apt.review ? (
+                        <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/80 rounded-xl px-2.5 py-1">
+                          <span className="text-amber-800 font-extrabold text-[11px] flex items-center gap-1">
+                            <StarIcon className="w-3.5 h-3.5 text-amber-500" />
+                            ให้คะแนนแล้ว ({apt.review.rating}/5)
+                          </span>
+                          <button
+                            onClick={() => setReviewModalApt({
+                              id: String(apt.id),
+                              agentName: apt.agentName,
+                              propertyName: apt.propertyName,
+                              initialRating: apt.review?.rating || 5,
+                              initialComment: apt.review?.comment || ''
+                            })}
+                            className="text-[10px] font-black text-blue-700 hover:text-blue-800 underline hover:no-underline ml-1 cursor-pointer"
+                          >
+                            แก้ไข
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setReviewModalApt({ 
+                            id: String(apt.id), 
+                            agentName: apt.agentName, 
+                            propertyName: apt.propertyName,
+                            initialRating: 5,
+                            initialComment: ''
+                          })}
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-black text-xs transition cursor-pointer flex items-center gap-1"
+                        >
+                          <StarIcon className="w-3.5 h-3.5" /> ให้คะแนนการบริการ
+                        </button>
+                      )
                     )}
 
                     {apt.status === 'rejected' && (
@@ -496,6 +534,8 @@ export default function AppointmentsPage() {
           appointmentId={reviewModalApt.id}
           agentName={reviewModalApt.agentName}
           propertyName={reviewModalApt.propertyName}
+          initialRating={reviewModalApt.initialRating}
+          initialComment={reviewModalApt.initialComment}
           onClose={() => setReviewModalApt(null)}
           onSuccess={() => {
             setReviewModalApt(null);

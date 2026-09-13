@@ -7,6 +7,8 @@ interface ReviewModalProps {
   appointmentId: string;
   agentName: string;
   propertyName: string;
+  initialRating?: number; // คะแนนเดิมที่เคยให้ไว้ (ถ้ามี)
+  initialComment?: string; // ข้อความรีวิวเดิม (ถ้ามี)
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -16,11 +18,14 @@ export default function ReviewModal({
   appointmentId,
   agentName,
   propertyName,
+  initialRating = 5,
+  initialComment = '',
   onClose,
   onSuccess
 }: ReviewModalProps) {
-  const [ratingStars, setRatingStars] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
+  // ตั้งค่าเริ่มต้นตามข้อมูลรีวิวเดิม (ถ้าเคยรีวิวแล้ว) หรือ 5 ดาว (ถ้ายังไม่เคย)
+  const [ratingStars, setRatingStars] = useState(initialRating);
+  const [reviewComment, setReviewComment] = useState(initialComment);
   const [submittingReview, setSubmittingReview] = useState(false);
 
   if (!isOpen) return null;
