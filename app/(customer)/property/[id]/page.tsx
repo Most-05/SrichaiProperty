@@ -17,7 +17,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { useApp } from '@/context/AppContext';
+
+// ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
+const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-bold">กำลังโหลดแผนที่...</div>
+});
 
 function PinIcon({ className }: { className?: string }) {
   return (
@@ -440,11 +447,10 @@ export default function PropertyDetailPage() {
               <div className="space-y-3 pt-4 border-t border-slate-100">
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">แผนที่ตั้งโครงการ</h3>
                 <div className="bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 h-64 relative">
-                  <iframe 
-                    title="Property Location Map"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${(property.longitude ? Number(property.longitude) : 100.4767) - 0.005}%2C${(property.latitude ? Number(property.latitude) : 7.0084) - 0.003}%2C${(property.longitude ? Number(property.longitude) : 100.4767) + 0.005}%2C${(property.latitude ? Number(property.latitude) : 7.0084) + 0.003}&layer=mapnik&marker=${property.latitude ? Number(property.latitude) : 7.0084}%2C${property.longitude ? Number(property.longitude) : 100.4767}`}
-                    className="w-full h-full border-0"
-                    allowFullScreen
+                  <PropertyLocationMap
+                    latitude={property.latitude ?? null}
+                    longitude={property.longitude ?? null}
+                    height={256}
                   />
                 </div>
               </div>
