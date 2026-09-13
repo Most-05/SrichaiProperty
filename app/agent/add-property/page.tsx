@@ -200,6 +200,7 @@ export default function AgentAddPropertyPage() {
           location: `${f.address ? f.address + ', ' : ''}${amp}, ${prov}`,
           province_id: parseInt(f.provinceId), amphure_id: parseInt(f.amphureId),
           district_id: f.districtId ? parseInt(f.districtId) : null, // ส่งตำบลที่นายหน้าเลือกจริง (เดิมส่ง districts[0] คือตำบลแรกของอำเภอเสมอ)
+          latitude, longitude, // พิกัดจริงที่ปักหมุดไว้ (null = ไม่เคยแตะแผนที่ → backend ใช้ default พิกัดหาดใหญ่แทน)
           description: f.description, bedrooms: parseInt(f.bedrooms), bathrooms: parseInt(f.bathrooms),
           area_sqm: parseFloat(f.usableArea) || parseFloat(f.landArea) || 120,
           images: uploadedImages.length > 0 ? uploadedImages : [f.image],
