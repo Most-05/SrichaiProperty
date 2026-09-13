@@ -60,7 +60,21 @@ export default function PropertyLocationMap({ latitude, longitude, height = 176,
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={position} />
+      <Marker
+        position={position}
+        draggable={editable}
+        eventHandlers={
+          editable && onChange
+            ? {
+                // 🔑 KEYWORD: ลากหมุดได้โดยตรง
+                dragend: (e) => {
+                  const latlng = e.target.getLatLng();
+                  onChange(latlng.lat, latlng.lng);
+                }
+              }
+            : undefined
+        }
+      />
       {editable && onChange && <ClickToMoveMarker onMove={onChange} />}
     </MapContainer>
   );
