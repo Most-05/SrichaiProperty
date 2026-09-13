@@ -82,6 +82,9 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       province_id: fullProp.province_id,
       amphure_id: fullProp.amphure_id,
       district_id: fullProp.district_id,
+      // 🔑 KEYWORD: ส่งพิกัดกลับให้หน้าแก้ไข preload แผนที่
+      latitude: fullProp.latitude ? Number(fullProp.latitude) : null,
+      longitude: fullProp.longitude ? Number(fullProp.longitude) : null,
       status: fullProp.status,
       rejectReason: fullProp.reject_reason || null,
       agentName: fullProp.users ? `${fullProp.users.first_name} ${fullProp.users.last_name}` : "ไม่ระบุตัวแทน",
@@ -120,7 +123,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     const {
       title, type_id, price, description, listing_type, listingType,
       bedrooms, bathrooms, area_sqm, location,
-      province_id, amphure_id, district_id, images, viewingSlots, status: newStatus
+      province_id, amphure_id, district_id, latitude, longitude, images, viewingSlots, status: newStatus
     } = body;
 
     // ตรวจสอบความถูกต้องของข้อมูล (Validation)
@@ -156,6 +159,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (province_id) updateData.province_id = parseInt(String(province_id));
     if (amphure_id) updateData.amphure_id = parseInt(String(amphure_id));
     if (district_id) updateData.district_id = parseInt(String(district_id));
+    // 🔑 KEYWORD: บันทึกพิกัดที่ปักหมุดใหม่
+    // เช็ค !== undefined/null (ไม่ใช่ if (latitude) เฉยๆ) เพราะ 0 เป็นพิกัดที่ถูกต้องได้ (แม้ไม่น่าเกิดกับบ้านในไทย)
+    if (latitude !== undefined && latitude !== null) updateData.latitude = parseFloat(String(latitude));
+    if (longitude !== undefined && longitude !== null) updateData.longitude = parseFloat(String(longitude));
     if (newStatus) updateData.status = newStatus;
 
     // 🔑 KEYWORD: ตีกลับกลับเข้าคิวอนุมัติอัตโนมัติ
