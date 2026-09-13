@@ -102,8 +102,21 @@ export default function Navbar() {
           {/* 3. แผงจัดการผู้ใช้ฝั่งขวาบนจอเดสก์ท็อป (Desktop Right User Panel) */}
           <div className="hidden lg:flex items-center space-x-3">
             {session ? (
-              // กรณีเข้าสู่ระบบแล้ว: แสดงกระดิ่งแจ้งเตือน, รูปโปรไฟล์ย่อ, ชื่อผู้ใช้, ป้ายบทบาท และปุ่มออกจากระบบ
-              <div className="flex items-center gap-2.5">
+              // กรณีเข้าสู่ระบบแล้ว: แสดงปุ่มแชท, กระดิ่งแจ้งเตือน, รูปโปรไฟล์ย่อ, ชื่อผู้ใช้, ป้ายบทบาท และปุ่มออกจากระบบ
+              <div className="flex items-center gap-2">
+                {/* ทางลัดไปหน้ากล่องข้อความ / แชท */}
+                <Link
+                  href="/chat"
+                  className={`p-2 rounded-xl transition cursor-pointer relative ${
+                    pathname === '/chat' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:text-blue-600 hover:bg-slate-100'
+                  }`}
+                  title="กล่องข้อความ / แชท"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </Link>
+
                 <NotificationBell />
                 <div className="h-6 w-px bg-slate-200 mx-1" />
 
@@ -205,6 +218,19 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {/* ทางลัดเข้ากล่องข้อความบนมือถือ */}
+            {session && (
+              <Link
+                href="/chat"
+                onClick={() => setIsOpen(false)}
+                className={`block px-4 py-3 rounded-xl text-xs font-extrabold transition ${
+                  pathname === '/chat' ? "text-blue-700 bg-blue-50" : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                💬 กล่องข้อความ / แชท
+              </Link>
+            )}
 
             <div className="border-t border-slate-100 my-2 pt-2" />
 

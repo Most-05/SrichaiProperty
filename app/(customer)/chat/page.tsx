@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useChatRealtime } from '@/hooks/useChatRealtime';
 import SharedChatView, { SharedChatSession, OutgoingChatPayload } from '@/components/common/SharedChatView';
 
@@ -190,6 +191,48 @@ function ChatContent() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------------------------
+  // 2.9.1 แสดง Empty State แจ้งเตือนลูกค้าเมื่อยังไม่เคยเริ่มคุยกับนายหน้าคนใดเลย
+  // ----------------------------------------------------------------------------
+  if (sessions.length === 0) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm text-center space-y-5">
+          {/* ไอคอนกล่องข้อความ */}
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+
+          {/* หัวข้อและคำแนะนำ */}
+          <div className="space-y-2">
+            <h2 className="text-lg font-extrabold text-slate-900">ยังไม่มีบทสนทนาในกล่องข้อความ</h2>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+              เริ่มคุยกับนายหน้าผู้ดูแลได้โดยตรงจากหน้าอสังหาริมทรัพย์ที่คุณสนใจ หรือเลือกดูนายหน้าเพื่อปรึกษาได้ทันที
+            </p>
+          </div>
+
+          {/* ปุ่มทางลัดนำทาง */}
+          <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
+            <Link
+              href="/search"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition shadow-sm flex items-center justify-center gap-1.5"
+            >
+              🔍 ค้นหาอสังหาริมทรัพย์
+            </Link>
+            <Link
+              href="/agents"
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+            >
+              👥 นายหน้าของเรา
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
