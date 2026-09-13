@@ -253,6 +253,8 @@ export default function AgentEditPropertyPage() {
           province_id: f.provinceId ? parseInt(f.provinceId) : null,
           amphure_id: f.amphureId ? parseInt(f.amphureId) : null,
           district_id: f.districtId ? parseInt(f.districtId) : null,
+          // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+          commonFee: f.commonFee || null, parking: f.parking, floors: f.floors, ownership: f.ownership,
           latitude, longitude, // พิกัดที่ปักหมุดไว้ (null ถ้าบ้านนี้ยังไม่เคยมีพิกัด และนายหน้าไม่ได้แตะแผนที่)
           images: uploadedImages,
           viewingSlots: viewingSlots.map(s => ({ date: s.date, timeSlot: s.timeSlot }))
