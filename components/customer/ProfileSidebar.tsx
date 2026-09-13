@@ -51,7 +51,7 @@ export default function ProfileSidebar({
           </Link>
 
           <Link 
-            href="/favorites" 
+            href="/saved-properties" 
             className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:bg-slate-50 rounded-xl transition"
           >
             <div className="flex items-center gap-3">
