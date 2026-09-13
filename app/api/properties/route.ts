@@ -105,6 +105,11 @@ export async function GET() {
           description: p.description || "",
           latitude: p.latitude ? Number(p.latitude) : null,
           longitude: p.longitude ? Number(p.longitude) : null,
+          // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมให้หน้ารายละเอียดบ้านแสดงผล
+          commonFee: p.common_fee ? Number(p.common_fee) : null,
+          parking: p.parking_spaces ?? null,
+          floors: p.floors ?? null,
+          ownership: p.ownership_type || null,
           province_id: p.province_id,
           amphure_id: p.amphure_id,
           district_id: p.district_id,
