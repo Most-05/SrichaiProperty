@@ -153,6 +153,12 @@ model properties {
   bedrooms               Int?                     @default(0) // จำนวนห้องนอน
   bathrooms              Int?                     @default(0) // จำนวนห้องน้ำ
   area_sqm               Decimal?                 @db.Decimal(8, 2) // ขนาดพื้นที่ (ตารางเมตร)
+  // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่ฟอร์มเก็บไว้แต่ไม่เคยมีคอลัมน์รองรับ
+  // เดิมฟอร์ม add-property เก็บ 4 ค่านี้ + ตรวจ validation ด้วย แต่ไม่มีคอลัมน์ให้บันทึก ข้อมูลเลยหายทุกครั้งที่ลงประกาศ
+  common_fee             Decimal?                 @db.Decimal(10, 2) // ค่าส่วนกลางรายเดือน (บาท) — null = ไม่ได้ระบุ/ไม่มีค่าส่วนกลาง
+  parking_spaces         Int?                     // จำนวนที่จอดรถ
+  floors                 Int?                     // จำนวนชั้นของตัวบ้าน
+  ownership_type         String?                  @db.VarChar(50) // ลักษณะกรรมสิทธิ์ เช่น "ขายขาด (Freehold)", "เช่าระยะยาว (Leasehold)"
   status                 String?                  @default("pending") @db.VarChar(20) // สถานะประกาศ ("pending", "approved", "rejected", "sold")
   // 🔑 KEYWORD: คอลัมน์เก็บเหตุผลตีกลับประกาศ
   reject_reason          String?                  @db.VarChar(255) // เหตุผลที่ไม่อนุมัติประกาศ (ถ้ามี)
