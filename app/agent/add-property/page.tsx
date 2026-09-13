@@ -203,6 +203,9 @@ export default function AgentAddPropertyPage() {
           latitude, longitude, // พิกัดจริงที่ปักหมุดไว้ (null = ไม่เคยแตะแผนที่ → backend ใช้ default พิกัดหาดใหญ่แทน)
           description: f.description, bedrooms: parseInt(f.bedrooms), bathrooms: parseInt(f.bathrooms),
           area_sqm: parseFloat(f.usableArea) || parseFloat(f.landArea) || 120,
+          // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+          // เดิมฟอร์มเก็บค่าพวกนี้ไว้ครบ (มี validation ด้วย) แต่ไม่เคยส่งไปกับ payload เลย
+          commonFee: f.commonFee || null, parking: f.parking, floors: f.floors, ownership: f.ownership,
           images: uploadedImages.length > 0 ? uploadedImages : [f.image],
           doc: f.doc || null,
           viewingSlots
