@@ -63,32 +63,42 @@ export default function PropertyLocationMap({ latitude, longitude, height = 176,
   const position: [number, number] = [latitude ?? DEFAULT_LAT, longitude ?? DEFAULT_LNG];
 
   return (
-    <MapContainer
-      center={position}
-      zoom={15}
-      style={{ height, width: '100%' }}
-      scrollWheelZoom={false}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Marker
-        position={position}
-        draggable={editable}
-        eventHandlers={
-          editable && onChange
-            ? {
-                // 🔑 KEYWORD: ลากหมุดได้โดยตรง
-                dragend: (e) => {
-                  const latlng = e.target.getLatLng();
-                  onChange(latlng.lat, latlng.lng);
+    <div className="relative" style={{ height }}>
+      <MapContainer
+        center={position}
+        zoom={15}
+        style={{ height, width: '100%' }}
+        scrollWheelZoom={false}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker
+          position={position}
+          draggable={editable}
+          eventHandlers={
+            editable && onChange
+              ? {
+                  // 🔑 KEYWORD: ลากหมุดได้โดยตรง
+                  dragend: (e) => {
+                    const latlng = e.target.getLatLng();
+                    onChange(latlng.lat, latlng.lng);
+                  }
                 }
-              }
-            : undefined
-        }
-      />
-      {editable && onChange && <ClickToMoveMarker onMove={onChange} />}
-    </MapContainer>
+              : undefined
+          }
+        />
+        {editable && onChange && <ClickToMoveMarker onMove={onChange} />}
+      </MapContainer>
+
+      {/* 🔑 KEYWORD: โชว์พิกัดปัจจุบันเป็นตัวเลข */}
+      {/* ให้ผู้ใช้เห็นค่า lat/lng จริงที่กำลังจะบันทึก ไม่ใช่แค่หมุดลอยๆ บนแผนที่ */}
+      {editable && (
+        <div className="absolute bottom-2 left-2 z-[1000] bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg border shadow text-[10px] font-bold text-slate-700 pointer-events-none">
+          📍 {position[0].toFixed(6)}, {position[1].toFixed(6)}
+        </div>
+      )}
+    </div>
   );
 }
