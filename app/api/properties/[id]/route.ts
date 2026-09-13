@@ -85,6 +85,11 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       // 🔑 KEYWORD: ส่งพิกัดกลับให้หน้าแก้ไข preload แผนที่
       latitude: fullProp.latitude ? Number(fullProp.latitude) : null,
       longitude: fullProp.longitude ? Number(fullProp.longitude) : null,
+      // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมกลับให้หน้าแก้ไข preload ค่าเดิม
+      commonFee: fullProp.common_fee ? Number(fullProp.common_fee) : null,
+      parking: fullProp.parking_spaces ?? null,
+      floors: fullProp.floors ?? null,
+      ownership: fullProp.ownership_type || null,
       status: fullProp.status,
       rejectReason: fullProp.reject_reason || null,
       agentName: fullProp.users ? `${fullProp.users.first_name} ${fullProp.users.last_name}` : "ไม่ระบุตัวแทน",
