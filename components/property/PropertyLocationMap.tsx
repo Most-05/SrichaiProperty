@@ -17,7 +17,20 @@
  */
 
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css'; // จำเป็นต่อการจัดวาง tile/marker ให้ถูกตำแหน่ง ถ้าลืม import แผนที่จะเพี้ยนทั้งหน้า
+
+// 🔑 KEYWORD: แก้ไอคอนหมุดหาย/เพี้ยนใน Next.js
+// Leaflet คำนวณ path รูปไอคอนเริ่มต้นจากตำแหน่งไฟล์ CSS ของตัวเอง แต่ bundler (Turbopack/Webpack)
+// ย้าย/เปลี่ยนชื่อไฟล์รูปตอน build ทำให้ path เดิมหาไฟล์ไม่เจอ ไอคอนหมุดเลยหายไปเงียบๆ (ไม่ error ให้เห็น)
+// แก้โดยชี้ไปที่ CDN ของ leaflet เวอร์ชันเดียวกับที่ใช้ตรงๆ แทน ไม่ต้องพึ่ง path ที่ bundler คำนวณให้
+// (เป็นวิธีแก้มาตรฐานที่ community ของ react-leaflet ใช้กันทั่วไป ไม่ใช่การแก้เฉพาะกิจ)
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+});
 
 // พิกัดกลางเมืองหาดใหญ่ — ใช้เป็นค่าเริ่มต้นตอนยังไม่มีพิกัดจริง (โซนที่ประกาศส่วนใหญ่กระจุกตัวอยู่)
 // ใช้ค่าเดียวกับ default เดิมใน api/properties/route.ts (7.0089, 100.4812) เพื่อให้สอดคล้องกัน
