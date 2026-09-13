@@ -128,7 +128,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     const {
       title, type_id, price, description, listing_type, listingType,
       bedrooms, bathrooms, area_sqm, location,
-      province_id, amphure_id, district_id, latitude, longitude, images, viewingSlots, status: newStatus
+      province_id, amphure_id, district_id, latitude, longitude, images, viewingSlots, status: newStatus,
+      commonFee, parking, floors, ownership // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
     } = body;
 
     // ตรวจสอบความถูกต้องของข้อมูล (Validation)
@@ -146,6 +147,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     if ((bedrooms !== undefined && Number(bedrooms) < 0) || (bathrooms !== undefined && Number(bathrooms) < 0)) {
       return NextResponse.json({ error: "จำนวนห้องต้องไม่ติดลบ" }, { status: 400 });
+    }
+
+    // 🔑 KEYWORD: validate ฟิลด์สเปคเพิ่มเติม
+    if ((parking !== undefined && parking !== null && parking !== "" && Number(parking) < 0) ||
+        (floors !== undefined && floors !== null && floors !== "" && Number(floors) < 0)) {
+      return NextResponse.json({ error: "จำนวนที่จอดรถ/ชั้น ต้องไม่ติดลบ" }, { status: 400 });
+    }
+    if (commonFee !== undefined && commonFee !== null && commonFee !== "" && Number(commonFee) < 0) {
+      return NextResponse.json({ error: "ค่าส่วนกลางต้องไม่ติดลบ" }, { status: 400 });
     }
 
     const resolvedListingType = listing_type ?? listingType;
@@ -168,6 +178,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     // เช็ค !== undefined/null (ไม่ใช่ if (latitude) เฉยๆ) เพราะ 0 เป็นพิกัดที่ถูกต้องได้ (แม้ไม่น่าเกิดกับบ้านในไทย)
     if (latitude !== undefined && latitude !== null) updateData.latitude = parseFloat(String(latitude));
     if (longitude !== undefined && longitude !== null) updateData.longitude = parseFloat(String(longitude));
+    // 🔑 KEYWORD: บันทึกฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+    if (commonFee !== undefined && commonFee !== null && commonFee !== "") updateData.common_fee = parseFloat(String(commonFee));
+    if (parking !== undefined && parking !== null && parking !== "") updateData.parking_spaces = parseInt(String(parking));
+    if (floors !== undefined && floors !== null && floors !== "") updateData.floors = parseInt(String(floors));
+    if (ownership !== undefined && ownership !== null && ownership !== "") updateData.ownership_type = ownership;
     if (newStatus) updateData.status = newStatus;
 
     // 🔑 KEYWORD: ตีกลับกลับเข้าคิวอนุมัติอัตโนมัติ
