@@ -432,6 +432,26 @@ export default function PropertyDetailPage() {
                     <span className="text-slate-400 font-medium">ลักษณะเด่น</span>
                     <span className="font-bold text-slate-700">{property.tag || "ทรัพย์ทั่วไป"}</span>
                   </div>
+                  {/* 🔑 KEYWORD: แสดงฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ */}
+                  {/* บ้านที่ลงประกาศก่อนมีฟีเจอร์นี้จะได้ null ทั้ง 4 ฟิลด์ — โชว์ "ไม่ระบุ" แทนที่จะพัง */}
+                  <div className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-400 font-medium">ค่าส่วนกลาง</span>
+                    <span className="font-bold text-slate-700">
+                      {property.commonFee ? `฿${property.commonFee.toLocaleString()} / เดือน` : "ไม่มีค่าส่วนกลาง"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-400 font-medium">ที่จอดรถ</span>
+                    <span className="font-bold text-slate-700">{property.parking != null ? `${property.parking} คัน` : "ไม่ระบุ"}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-400 font-medium">จำนวนชั้น</span>
+                    <span className="font-bold text-slate-700">{property.floors != null ? `${property.floors} ชั้น` : "ไม่ระบุ"}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-400 font-medium">กรรมสิทธิ์</span>
+                    <span className="font-bold text-slate-700">{property.ownership || "ไม่ระบุ"}</span>
+                  </div>
                 </div>
               </div>
 
