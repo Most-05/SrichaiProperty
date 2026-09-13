@@ -34,7 +34,18 @@ export async function GET() {
             email: true, 
             phone: true, 
             line_id: true, 
-            plan_type: true 
+            plan_type: true,
+            profile_image: true,
+            appointments_appointments_agent_idTousers: {
+              where: {
+                reviews: { isNot: null }
+              },
+              select: {
+                reviews: {
+                  select: { rating: true }
+                }
+              }
+            }
           } 
         },
         listing_package_orders: { 
@@ -65,6 +76,13 @@ export async function GET() {
         
         const mainImage = p.property_images[0]?.image_url || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80";
 
+        const agentReviews = (p.users?.appointments_appointments_agent_idTousers || [])
+          .map(a => a.reviews)
+          .filter((r): r is { rating: number | null } => r !== null && typeof r.rating === 'number');
+        const agentReviewCount = agentReviews.length;
+        const agentTotalRating = agentReviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+        const agentRating = agentReviewCount > 0 ? parseFloat((agentTotalRating / agentReviewCount).toFixed(1)) : 0;
+
         return {
           id: p.id,
           title: p.title,
@@ -80,7 +98,9 @@ export async function GET() {
           image: mainImage,
           images: p.property_images.map((img) => img.image_url),
           agentName,
-          agentImage: `https://ui-avatars.com/api/?name=${encodeURIComponent(agentName)}&background=1e40af&color=fff`,
+          agentImage: p.users?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(agentName)}&background=1e40af&color=fff`,
+          agentRating,
+          agentReviewCount,
           isPremium,
           description: p.description || "",
           latitude: p.latitude ? Number(p.latitude) : null,

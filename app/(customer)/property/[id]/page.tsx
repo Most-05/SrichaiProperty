@@ -180,9 +180,42 @@ export default function PropertyDetailPage() {
   const [downPaymentPercent, setDownPaymentPercent] = useState(10); // เงินดาวน์เริ่มต้น % ของราคาซื้อขาย
 
   // ----------------------------------------------------------------------------
-  // 5. EFFECTS & COMPUTATIONS
+  // 5. REVIEWS STATE & EFFECT
   // ----------------------------------------------------------------------------
-  // 5.1 บันทึกยอดผู้เข้าชมประกาศนี้ไปยังฐานข้อมูล (+1 View Count)
+  interface ReviewItem {
+    id: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+    customerName: string;
+    customerImage?: string | null;
+    propertyTitle: string;
+  }
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [agentRealRating, setAgentRealRating] = useState<number>(property?.agentRating || 0);
+  const [agentRealReviewCount, setAgentRealReviewCount] = useState<number>(property?.agentReviewCount || 0);
+
+  useEffect(() => {
+    if (property?.agent_id) {
+      fetch(`/api/reviews?agentId=${property.agent_id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setReviews(data.reviews || []);
+            setAgentRealRating(data.averageRating || 0);
+            setAgentRealReviewCount(data.totalReviews || 0);
+          }
+        })
+        .catch(err => console.error("Error fetching agent reviews:", err))
+        .finally(() => setReviewsLoading(false));
+    }
+  }, [property?.agent_id]);
+
+  // ----------------------------------------------------------------------------
+  // 6. EFFECTS & COMPUTATIONS
+  // ----------------------------------------------------------------------------
+  // 6.1 บันทึกยอดผู้เข้าชมประกาศนี้ไปยังฐานข้อมูล (+1 View Count)
   useEffect(() => {
     if (id) fetch(`/api/properties/${id}/view`, { method: 'POST' }).catch(() => {});
   }, [id]);
@@ -526,6 +559,90 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
+              {/* ====================================================================
+                  ส่วนที่ 3.5: คะแนนและรีวิวจากผู้ใช้บริการ (CUSTOMER REVIEWS & RATINGS)
+                  ==================================================================== */}
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                      <span className="text-amber-500">⭐</span> คะแนนและความคิดเห็นจากผู้เข้าชมจริง
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1">
+                      รีวิวการให้บริการของนายหน้า {property.agentName} จากลูกค้าที่นัดหมายเข้าชมโครงการจริง
+                    </p>
+                  </div>
+                  {agentRealReviewCount > 0 && (
+                    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200/60 px-3.5 py-1.5 rounded-2xl shrink-0 self-start sm:self-center">
+                      <span className="text-lg font-black text-amber-600">{agentRealRating.toFixed(1)}</span>
+                      <div className="flex text-amber-400 text-xs">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <span key={i}>{i < Math.round(agentRealRating) ? '★' : '☆'}</span>
+                        ))}
+                      </div>
+                      <span className="text-[11px] text-amber-800 font-bold">({agentRealReviewCount} รีวิว)</span>
+                    </div>
+                  )}
+                </div>
+
+                {reviewsLoading ? (
+                  <div className="py-10 text-center text-slate-400 font-bold text-xs flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    กำลังโหลดข้อมูลรีวิว...
+                  </div>
+                ) : reviews.length === 0 ? (
+                  <div className="py-10 px-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center space-y-2">
+                    <div className="text-3xl">⭐</div>
+                    <p className="text-sm font-bold text-slate-700">ยังไม่มีรีวิวสำหรับนายหน้าท่านนี้</p>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      เมื่อคุณนัดหมายเข้าชมโครงการและเข้าชมสถานที่จริงเสร็จสิ้น คุณสามารถร่วมบันทึกประเมินความพึงพอใจการให้บริการได้
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.map((rev) => (
+                      <div key={rev.id} className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center overflow-hidden border border-blue-200 shrink-0">
+                              {rev.customerImage ? (
+                                <Image src={rev.customerImage} alt={rev.customerName} width={36} height={36} className="w-full h-full object-cover" unoptimized />
+                              ) : (
+                                rev.customerName[0] || 'U'
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-900">{rev.customerName}</p>
+                              <p className="text-[10px] text-slate-400">
+                                {new Date(rev.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl border border-slate-200/80 shadow-xs">
+                            <div className="flex text-amber-400 text-xs">
+                              {Array.from({ length: 5 }, (_, i) => (
+                                <span key={i}>{i < rev.rating ? '★' : '☆'}</span>
+                              ))}
+                            </div>
+                            <span className="text-[10px] font-extrabold text-slate-700 ml-1">{rev.rating}.0</span>
+                          </div>
+                        </div>
+                        {rev.comment && (
+                          <p className="text-xs text-slate-600 leading-relaxed sm:pl-12">
+                            &ldquo;{rev.comment}&rdquo;
+                          </p>
+                        )}
+                        <div className="sm:pl-12 flex items-center gap-2">
+                          <span className="text-[9px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200">
+                            เข้าชม: {rev.propertyTitle}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
 
@@ -550,7 +667,17 @@ export default function PropertyDetailPage() {
                 </div>
                 <div>
                   <h4 className="font-extrabold text-slate-800 text-sm leading-none mb-1.5">{property.agentName}</h4>
-                  <p className="text-[10px] text-blue-600 font-extrabold uppercase tracking-widest">Verified Agent</p>
+                  <div className="flex items-center justify-center gap-1.5 mt-1">
+                    <span className="text-[10px] text-blue-600 font-extrabold uppercase tracking-widest">Verified Agent</span>
+                    <span className="text-slate-300">•</span>
+                    {agentRealReviewCount > 0 ? (
+                      <span className="text-[11px] font-extrabold text-amber-600 flex items-center gap-0.5">
+                        ⭐ {agentRealRating.toFixed(1)} <span className="text-slate-400 font-medium">({agentRealReviewCount})</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-medium">ยังไม่มีรีวิว</span>
+                    )}
+                  </div>
                 </div>
               </div>
 

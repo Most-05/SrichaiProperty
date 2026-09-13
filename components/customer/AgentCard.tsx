@@ -9,6 +9,8 @@ export interface Agent {
   role: string;
   propertiesCount: number;
   rating: string;
+  averageRating?: number;
+  reviewCount?: number;
   location: string;
   phone: string;
   email: string;
@@ -42,11 +44,21 @@ export default function AgentCard({ agent }: AgentCardProps) {
       <div className="w-full bg-slate-50 p-2.5 rounded-xl grid grid-cols-2 text-center text-xs font-semibold border border-slate-100">
         <div className="border-r border-slate-200">
           <p className="text-slate-400 text-[10px]">อสังหาริมทรัพย์</p>
-          <p className="text-slate-850">{agent.propertiesCount} ประกาศ</p>
+          <p className="text-slate-850 font-bold">{agent.propertiesCount} ประกาศ</p>
         </div>
         <div>
           <p className="text-slate-400 text-[10px]">คะแนนรีวิว</p>
-          <p className="text-slate-850">{agent.rating}</p>
+          <div className="text-slate-800 flex items-center justify-center gap-1 font-bold mt-0.5">
+            {agent.reviewCount && agent.reviewCount > 0 ? (
+              <>
+                <span className="text-amber-500 text-xs">⭐</span>
+                <span className="text-slate-900 font-extrabold">{agent.averageRating?.toFixed(1)}</span>
+                <span className="text-[10px] text-slate-400 font-normal">({agent.reviewCount})</span>
+              </>
+            ) : (
+              <span className="text-slate-400 text-[11px] font-normal">ยังไม่มีรีวิว</span>
+            )}
+          </div>
         </div>
       </div>
 

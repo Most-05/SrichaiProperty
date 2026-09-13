@@ -22,14 +22,19 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const agentId = searchParams.get("agentId");
+    const propertyId = searchParams.get("propertyId");
 
-    if (!agentId) {
-      return NextResponse.json({ error: "กรุณาระบุ agentId" }, { status: 400 });
+    if (!agentId && !propertyId) {
+      return NextResponse.json({ error: "กรุณาระบุ agentId หรือ propertyId" }, { status: 400 });
     }
 
-    // ดึงรายการรีวิวทั้งหมดของนายหน้านี้ใน Query เดียว โดยใช้ Prisma Relation Filter
+    const appointmentFilter: { agent_id?: string; property_id?: string } = {};
+    if (agentId) appointmentFilter.agent_id = agentId;
+    if (propertyId) appointmentFilter.property_id = propertyId;
+
+    // ดึงรายการรีวิวทั้งหมดใน Query เดียว โดยใช้ Prisma Relation Filter
     const reviewsList = await db.reviews.findMany({
-      where: { appointments: { agent_id: agentId } },
+      where: { appointments: appointmentFilter },
       include: {
         appointments: {
           include: {
@@ -47,8 +52,8 @@ export async function GET(req: Request) {
 
     // คำนวณคะแนนเฉลี่ยดาว
     const count = reviewsList.length;
-    const totalRating = reviewsList.reduce((sum, r) => sum + (r.rating || 5), 0);
-    const averageRating = count > 0 ? (totalRating / count).toFixed(1) : "5.0";
+    const totalRating = reviewsList.reduce((sum, r) => sum + (r.rating || 0), 0);
+    const averageRating = count > 0 ? (totalRating / count).toFixed(1) : "0.0";
 
     const formattedReviews = reviewsList.map(r => {
       const customer = r.appointments?.users_appointments_customer_idTousers;
