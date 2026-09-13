@@ -74,6 +74,10 @@ export async function GET(request: Request) {
         },
         users_appointments_customer_idTousers: {
           select: { id: true, first_name: true, last_name: true, phone: true, email: true, profile_image: true } // ดึงข้อมูลลูกค้า
+        },
+        // ดึงข้อมูลรีวิวของนัดหมายนี้ (ถ้าเคยรีวิวแล้ว) เพื่อให้ฝั่งลูกค้าและนายหน้ารู้สถานะรีวิว
+        reviews: {
+          select: { id: true, rating: true, comment: true }
         }
       },
       orderBy: { appointment_date: "asc" } // เรียงลำดับตามวันที่นัดหมายจากใกล้ไปไกล
@@ -110,6 +114,12 @@ export async function GET(request: Request) {
         status: apt.status,
         note: apt.note || "",
         cancelReason: apt.cancel_reason || "",
+        // ข้อมูลรีวิวที่ลูกค้าเคยให้คะแนนไว้ (ถ้ายังไม่เคยรีวิว จะเป็น null)
+        review: apt.reviews ? {
+          id: apt.reviews.id,
+          rating: apt.reviews.rating,
+          comment: apt.reviews.comment || ""
+        } : null,
         // 🔑 KEYWORD: ส่งวันนัดเดิมให้หน้าเว็บโชว์ขีดฆ่า
         // หน้าคิวนัดหมายฝั่งนายหน้ามีโค้ดโชว์ "วันเดิมขีดฆ่า + ป้าย (แก้ไขใหม่)" รออยู่แล้ว
         // แต่เดิม API ไม่เคยส่ง 3 ฟิลด์นี้กลับไป ส่วนนั้นเลยไม่เคยทำงาน
