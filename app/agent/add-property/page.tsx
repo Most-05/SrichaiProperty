@@ -19,8 +19,16 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
+
+// ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
+// ถ้าโดน server-render (ซึ่ง Next.js ทำแม้ในหน้า 'use client' รอบแรกด้วย) จะพังทันที
+const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
+  ssr: false,
+  loading: () => <div className="h-44 rounded-2xl bg-slate-100 border flex items-center justify-center text-slate-400 text-xs font-bold">กำลังโหลดแผนที่...</div>
+});
 
 // โครงสร้างข้อมูลสล็อตเวลาสำหรับให้นัดชมสถานที่
 interface ViewingSlot {
@@ -62,6 +70,11 @@ export default function AgentAddPropertyPage() {
   const [provinces, setProvinces] = useState<{ id: number; name_th: string }[]>([]);
   const [amphures, setAmphures] = useState<{ id: number; name_th: string }[]>([]);
   const [districts, setDistricts] = useState<{ id: number; name_th: string }[]>([]);
+
+  // 🔑 KEYWORD: พิกัดปักหมุดบ้านจริง
+  // null = ยังไม่เคยแตะแผนที่ ตอนส่งฟอร์มจะให้ backend ใช้ค่า default เดิม (พิกัดหาดใหญ่)
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   
   // State ยินยอมข้อตกลง PDPA และเงื่อนไขบริการ
   const [agreed1, setAgreed1] = useState(false);
@@ -357,14 +370,20 @@ export default function AgentAddPropertyPage() {
               <input type="text" value={f.address} onChange={e => setF({ ...f, address: e.target.value })} placeholder="เช่น 123/45 ซ.ปุณณกัณฑ์ 10 ถ.ปุณณกัณฑ์" className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium text-xs" required />
             </div>
 
-            {/* Interactive Map Box */}
-            <div className="relative bg-slate-100 rounded-2xl h-44 border flex items-center justify-center overflow-hidden">
-              <iframe title="Map" src="https://www.openstreetmap.org/export/embed.html?bbox=100.47%2C7.00%2C100.49%2C7.02&layer=mapnik&marker=7.0089%2C100.4812" className="w-full h-full border-0 pointer-events-none" />
-              <div className="absolute bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl border shadow flex items-center gap-2">
-                <span className="text-blue-600 font-bold">📍</span>
-                <span className="font-extrabold text-[10px] text-slate-800">คลิกเพื่อเลือกตำแหน่งบนแผนที่</span>
-              </div>
+            {/* 🔑 KEYWORD: แผนที่ปักหมุดจริงตอนลงประกาศ */}
+            {/* เดิมเป็น <iframe pointer-events-none> พิกัดตายตัวทุกบ้าน กดปักหมุดไม่ได้จริงเลย */}
+            <div className="rounded-2xl border overflow-hidden">
+              <PropertyLocationMap
+                latitude={latitude}
+                longitude={longitude}
+                height={176}
+                editable
+                onChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
+              />
             </div>
+            <p className="text-[10px] text-slate-500 font-medium">
+              📍 คลิกหรือลากหมุดบนแผนที่เพื่อระบุตำแหน่งบ้านจริง (ถ้าไม่เลือก ระบบจะใช้พิกัดกลางหาดใหญ่แทน)
+            </p>
           </div>
 
           {/* Card 4: สื่อประกอบ & เอกสารสิทธิ์ */}
