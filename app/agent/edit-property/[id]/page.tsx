@@ -9,8 +9,15 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter, useParams } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
+
+// ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
+const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
+  ssr: false,
+  loading: () => <div className="h-44 rounded-2xl bg-slate-100 border flex items-center justify-center text-slate-400 text-xs font-bold">กำลังโหลดแผนที่...</div>
+});
 
 interface ViewingSlot {
   date: string; // YYYY-MM-DD
@@ -47,6 +54,10 @@ export default function AgentEditPropertyPage() {
   const [provinces, setProvinces] = useState<{ id: number; name_th: string }[]>([]);
   const [amphures, setAmphures] = useState<{ id: number; name_th: string }[]>([]);
   const [districts, setDistricts] = useState<{ id: number; name_th: string }[]>([]);
+
+  // 🔑 KEYWORD: พิกัดปักหมุดบ้านจริง
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [propertyStatus, setPropertyStatus] = useState<string>('');
   const [rejectReason, setRejectReason] = useState<string>('');
@@ -112,6 +123,8 @@ export default function AgentEditPropertyPage() {
           districtId: p.district_id ? String(p.district_id) : '',
           location: p.location || ''
         });
+        setLatitude(typeof p.latitude === 'number' ? p.latitude : null);
+        setLongitude(typeof p.longitude === 'number' ? p.longitude : null);
 
         setPropertyStatus(p.status || '');
         setRejectReason(p.rejectReason || '');
@@ -421,6 +434,22 @@ export default function AgentEditPropertyPage() {
               <label className="block font-bold mb-1 text-slate-700">ที่อยู่ที่แสดงบนประกาศ <span className="text-red-500">*</span></label>
               <input type="text" value={f.location} onChange={e => setF({ ...f, location: e.target.value })} placeholder="เช่น 123/45 ซ.ปุณณกัณฑ์ 10, หาดใหญ่, สงขลา" className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium text-xs" required />
               <p className="text-[9px] text-slate-400 mt-1">ข้อความนี้คือที่อยู่ที่ลูกค้าจะเห็นบนหน้าประกาศ แก้ให้สอดคล้องกับจังหวัด/อำเภอที่เลือกด้วย</p>
+            </div>
+
+            {/* 🔑 KEYWORD: แผนที่ปักหมุดจริงตอนแก้ไขประกาศ */}
+            {/* หน้านี้ไม่เคยมีแผนที่มาก่อนเลย — พึ่งการกรอกที่อยู่เป็นข้อความอย่างเดียว */}
+            <div>
+              <label className="block font-bold mb-1 text-slate-700">ตำแหน่งบนแผนที่</label>
+              <div className="rounded-2xl border overflow-hidden">
+                <PropertyLocationMap
+                  latitude={latitude}
+                  longitude={longitude}
+                  height={176}
+                  editable
+                  onChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
+                />
+              </div>
+              <p className="text-[9px] text-slate-400 mt-1">คลิกหรือลากหมุดเพื่อแก้ตำแหน่งบ้านให้ตรงจริง</p>
             </div>
           </div>
 
