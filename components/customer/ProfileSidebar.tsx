@@ -11,6 +11,9 @@ interface ProfileSidebarProps {
   avatarUrl: string;
   favoritesCount: number;
   appointmentsCount: number;
+  isVerified?: boolean;
+  isUploadingAvatar?: boolean;
+  onAvatarChange?: (file: File) => void;
 }
 
 export default function ProfileSidebar({
@@ -19,23 +22,76 @@ export default function ProfileSidebar({
   avatarUrl,
   favoritesCount,
   appointmentsCount,
+  isVerified = false,
+  isUploadingAvatar = false,
+  onAvatarChange,
 }: ProfileSidebarProps) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onAvatarChange) {
+      onAvatarChange(file);
+    }
+  };
+
   return (
     <aside className="w-full lg:w-72 flex-shrink-0">
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-6">
         {/* User Profile Summary */}
-        <div className="text-center space-y-2">
-          <div className="relative inline-block">
+        <div className="text-center space-y-2.5">
+          <div className="relative inline-block group">
             <Image 
               src={avatarUrl} 
               alt="Profile" 
-              width={80} 
-              height={80} 
-              className="w-20 h-20 rounded-full object-cover border-2 border-slate-100 shadow-sm mx-auto" 
+              width={88} 
+              height={88} 
+              className="w-22 h-22 rounded-full object-cover border-2 border-slate-100 shadow-sm mx-auto" 
+              unoptimized
             />
+            {/* ปุ่มกดอัปโหลดรูปโปรไฟล์ใหม่ */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileSelect} 
+              accept="image/jpeg,image/png,image/webp,image/gif" 
+              className="hidden" 
+            />
+            <button
+              type="button"
+              disabled={isUploadingAvatar}
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-full shadow-md border-2 border-white transition transform active:scale-95 cursor-pointer disabled:opacity-60"
+              title="เปลี่ยนรูปโปรไฟล์"
+            >
+              {isUploadingAvatar ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              )}
+            </button>
           </div>
-          <h2 className="font-bold text-slate-900 text-sm">{userDisplayName}</h2>
-          <p className="text-slate-400 text-[11px] font-mono">{email}</p>
+
+          <div>
+            <h2 className="font-extrabold text-slate-900 text-sm">{userDisplayName}</h2>
+            <p className="text-slate-400 text-[11px] font-mono mt-0.5">{email}</p>
+          </div>
+
+          {/* ป้ายสถานะการยืนยันตัวตน */}
+          <div>
+            {isVerified ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-full text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> บัญชียืนยันแล้ว
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/80 rounded-full text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> สมาชิกทั่วไป
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Navigation Links */}

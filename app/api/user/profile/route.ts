@@ -97,7 +97,7 @@ export async function PUT(request: Request) {
     if (error) return error;
 
     const body = await request.json();
-    const { firstName, lastName, phone, lineId, newPassword, currentPassword } = body;
+    const { firstName, lastName, phone, lineId, profileImage, newPassword, currentPassword } = body;
 
     // 2.1 ตรวจสอบความถูกต้องของข้อมูล (Validation)
     if (firstName !== undefined && (!firstName || firstName.trim().length === 0 || firstName.trim().length > 100)) {
@@ -131,6 +131,7 @@ export async function PUT(request: Request) {
     if (lastName !== undefined) updateData.last_name = lastName.trim();
     if (phone !== undefined) updateData.phone = phone.trim();
     if (lineId !== undefined) updateData.line_id = lineId.trim();
+    if (profileImage !== undefined) updateData.profile_image = profileImage;
 
     if (newPassword && newPassword.trim() !== "") {
       if (newPassword.length < 6) {
@@ -154,7 +155,7 @@ export async function PUT(request: Request) {
     const updatedUser = await db.users.update({
       where: { id: targetUser.id },
       data: updateData,
-      select: { id: true, email: true, first_name: true, last_name: true, phone: true, line_id: true },
+      select: { id: true, email: true, first_name: true, last_name: true, phone: true, line_id: true, profile_image: true },
     });
 
     return NextResponse.json({
@@ -167,6 +168,7 @@ export async function PUT(request: Request) {
         lastName: updatedUser.last_name,
         phone: updatedUser.phone,
         lineId: updatedUser.line_id,
+        profileImage: updatedUser.profile_image,
       },
     });
   } catch (err) {

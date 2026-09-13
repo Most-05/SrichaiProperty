@@ -38,6 +38,8 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState('');
   const [lineId, setLineId] = useState('');
   const [email, setEmail] = useState('');
+  const [profileImage, setProfileImage] = useState<string>('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // ---- State การตั้งค่าการแจ้งเตือน ----
   const [emailNotification, setEmailNotification] = useState(true);
@@ -84,6 +86,18 @@ export default function ProfilePage() {
           setEmail(u.email || '');
           setOriginalProfile(loaded);
           setIsVerified(Boolean(u.isVerified));
+          if (u.profileImage) {
+            setProfileImage(u.profileImage);
+          }
+
+          // โหลดค่าความยินยอม PDPA ที่บันทึกไว้ในเบราว์เซอร์
+          if (typeof window !== 'undefined') {
+            const userKey = u.email || 'default';
+            const savedEmailNotif = localStorage.getItem(`pdpa_consent_email_${userKey}`);
+            const savedSmsNotif = localStorage.getItem(`pdpa_consent_sms_${userKey}`);
+            if (savedEmailNotif !== null) setEmailNotification(savedEmailNotif === 'true');
+            if (savedSmsNotif !== null) setSmsNotification(savedSmsNotif === 'true');
+          }
 
           if (u.lastLogin?.created_at) {
             const dt = new Date(u.lastLogin.created_at);
@@ -121,7 +135,83 @@ export default function ProfilePage() {
   }, [session]);
 
   // ----------------------------------------------------------------------------
-  // 2. ฟังก์ชันรีเซ็ตฟอร์ม (ยกเลิกการแก้ไข คืนค่าเป็นข้อมูลล่าสุดจากฐานข้อมูล)
+  // 2. ฟังก์ชันจัดการความยินยอม PDPA (Consent Handlers)
+  // ----------------------------------------------------------------------------
+  const handleEmailNotifChange = (val: boolean) => {
+    setEmailNotification(val);
+    if (typeof window !== 'undefined') {
+      const userKey = email || session?.user?.email || 'default';
+      localStorage.setItem(`pdpa_consent_email_${userKey}`, String(val));
+    }
+  };
+
+  const handleSmsNotifChange = (val: boolean) => {
+    setSmsNotification(val);
+    if (typeof window !== 'undefined') {
+      const userKey = email || session?.user?.email || 'default';
+      localStorage.setItem(`pdpa_consent_sms_${userKey}`, String(val));
+    }
+  };
+
+  // ----------------------------------------------------------------------------
+  // 3. ฟังก์ชันอัปโหลดรูปโปรไฟล์ใหม่ (Upload Avatar)
+  // ----------------------------------------------------------------------------
+  const handleAvatarUpload = async (file: File) => {
+    // ตรวจสอบขนาดและประเภทไฟล์
+    if (file.size > 5 * 1024 * 1024) {
+      setStatusMsg({ type: 'error', text: 'ขนาดไฟล์ภาพต้องไม่เกิน 5MB' });
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      setStatusMsg(null);
+
+      // ส่งไฟล์รูปภาพไปยัง API /api/upload
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+
+      if (!uploadRes.ok || !uploadData.url) {
+        setStatusMsg({ type: 'error', text: uploadData.error || 'อัปโหลดรูปภาพไม่สำเร็จ' });
+        return;
+      }
+
+      const newImageUrl = uploadData.url;
+
+      // บันทึก URL รูปภาพลงฐานข้อมูลผ่าน /api/user/profile
+      const profileRes = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileImage: newImageUrl }),
+      });
+      const profileData = await profileRes.json();
+
+      if (!profileRes.ok || !profileData.success) {
+        setStatusMsg({ type: 'error', text: profileData.error || 'บันทึกรูปโปรไฟล์ไม่สำเร็จ' });
+        return;
+      }
+
+      // อัปเดตสถานะในหน้าและ NextAuth Session
+      setProfileImage(newImageUrl);
+      if (session) {
+        await updateSession({ image: newImageUrl });
+      }
+      setStatusMsg({ type: 'success', text: 'อัปเดตรูปโปรไฟล์สำเร็จเรียบร้อยแล้ว!' });
+    } catch {
+      setStatusMsg({ type: 'error', text: 'เกิดข้อผิดพลาดในการอัปโหลดรูปโปรไฟล์' });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  // ----------------------------------------------------------------------------
+  // 3. ฟังก์ชันรีเซ็ตฟอร์ม (ยกเลิกการแก้ไข คืนค่าเป็นข้อมูลล่าสุดจากฐานข้อมูล)
   // ----------------------------------------------------------------------------
   const handleResetProfile = () => {
     setFirstName(originalProfile.firstName);
@@ -135,7 +225,7 @@ export default function ProfilePage() {
   };
 
   // ----------------------------------------------------------------------------
-  // 3. ฟังก์ชันบันทึกข้อมูลโปรไฟล์และเปลี่ยนรหัสผ่าน (ส่งไปยัง API PUT /api/user/profile)
+  // 4. ฟังก์ชันบันทึกข้อมูลโปรไฟล์และเปลี่ยนรหัสผ่าน (ส่งไปยัง API PUT /api/user/profile)
   // ----------------------------------------------------------------------------
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,20 +284,20 @@ export default function ProfilePage() {
 
   // คำนวณชื่อผู้ใช้ที่จะนำไปแสดงผล และดึง URL รูปโปรไฟล์
   const userDisplayName = `${firstName} ${lastName}`.trim() || session?.user?.name || profile.fullName || 'ผู้ใช้งาน';
-  const rawImage = session?.user?.image;
-  const avatarUrl = (rawImage && rawImage.startsWith('http')) ? rawImage : getInitialsAvatar(userDisplayName);
+  const rawImage = profileImage || session?.user?.image;
+  const avatarUrl = (rawImage && (rawImage.startsWith('http') || rawImage.startsWith('/'))) ? rawImage : getInitialsAvatar(userDisplayName);
 
   return (
     <div className="font-sans bg-slate-900 min-h-screen text-slate-800 antialiased text-xs">
-      {/* 4.1 แบนเนอร์หัวข้อหน้าเพจ */}
+      {/* แบนเนอร์หัวข้อหน้าเพจ */}
       <header className="bg-slate-950 text-white pt-10 pb-20 border-b border-slate-800/80">
         <div className="max-w-5xl mx-auto px-4">
           <h1 className="text-xl font-bold tracking-tight">จัดการบัญชีผู้ใช้</h1>
-          <p className="text-slate-400 text-xs mt-1">อัปเดตข้อมูลส่วนตัว ตั้งค่าความปลอดภัย และยืนยันตัวตน</p>
+          <p className="text-slate-400 text-xs mt-1">อัปเดตข้อมูลส่วนตัว ตั้งค่าความปลอดภัย และตรวจสอบสถานะบัญชี</p>
         </div>
       </header>
 
-      {/* 4.2 เลย์เอาต์ส่วนเนื้อหาหลัก (แบ่งเป็น Sidebar ซ้าย และ Form ขวา) */}
+      {/* เลย์เอาต์ส่วนเนื้อหาหลัก (แบ่งเป็น Sidebar ซ้าย และ Form ขวา) */}
       <div className="max-w-5xl mx-auto px-4 pb-16 -mt-12 flex flex-col lg:flex-row gap-6">
         {/* แผงข้อมูลผู้ใช้สรุปด้านซ้าย */}
         <ProfileSidebar
@@ -216,9 +306,12 @@ export default function ProfilePage() {
           avatarUrl={avatarUrl}
           favoritesCount={favorites.length}
           appointmentsCount={appointments.length}
+          isVerified={isVerified}
+          isUploadingAvatar={isUploadingAvatar}
+          onAvatarChange={handleAvatarUpload}
         />
 
-        {/* ฟอร์มแก้ไขข้อมูลและเปลี่ยนรหัสผ่านด้านขวา */}
+        {/* ฟอร์มแก้ไขข้อมูลและเปลี่ยนรหัสผ่านด้านขวา (การ์ดแบบหน้าเดียวเลื่อนลงมา) */}
         <ProfileForm
           firstName={firstName}
           setFirstName={setFirstName}
@@ -230,9 +323,9 @@ export default function ProfilePage() {
           setLineId={setLineId}
           email={email}
           emailNotification={emailNotification}
-          setEmailNotification={setEmailNotification}
+          setEmailNotification={handleEmailNotifChange}
           smsNotification={smsNotification}
-          setSmsNotification={setSmsNotification}
+          setSmsNotification={handleSmsNotifChange}
           currentPassword={currentPassword}
           setCurrentPassword={setCurrentPassword}
           newPassword={newPassword}
