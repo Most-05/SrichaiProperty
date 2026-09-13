@@ -47,6 +47,8 @@ export default function AgentEditPropertyPage() {
     title: '', typeId: '1', listingType: 'sale', description: '',
     price: '', bedrooms: '0', bathrooms: '0',
     usableArea: '',
+    // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ — หน้านี้ไม่เคยมีช่องกรอกพวกนี้เลย
+    commonFee: '', parking: '0', floors: '1', ownership: 'ขายขาด (Freehold)',
     provinceId: '', amphureId: '', districtId: '',
     location: ''
   });
@@ -118,6 +120,10 @@ export default function AgentEditPropertyPage() {
           bedrooms: String(p.bedrooms ?? 0),
           bathrooms: String(p.bathrooms ?? 0),
           usableArea: p.area_sqm ? String(p.area_sqm) : '',
+          commonFee: p.commonFee !== null && p.commonFee !== undefined ? String(p.commonFee) : '',
+          parking: p.parking !== null && p.parking !== undefined ? String(p.parking) : '0',
+          floors: p.floors !== null && p.floors !== undefined ? String(p.floors) : '1',
+          ownership: p.ownership || 'ขายขาด (Freehold)',
           provinceId: p.province_id ? String(p.province_id) : '',
           amphureId: p.amphure_id ? String(p.amphure_id) : '',
           districtId: p.district_id ? String(p.district_id) : '',
@@ -378,12 +384,19 @@ export default function AgentEditPropertyPage() {
               <h2 className="font-extrabold text-slate-900 text-xs">ราคาและรายละเอียดเชิงลึก</h2>
             </div>
 
-            <div>
-              <label className="block font-bold mb-1 text-slate-700">ราคา (บาท) <span className="text-red-500">*</span></label>
-              <input type="number" min="1" step="1" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" required />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold mb-1 text-slate-700">ราคา (บาท) <span className="text-red-500">*</span></label>
+                <input type="number" min="1" step="1" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" required />
+              </div>
+              {/* 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ — หน้านี้ไม่เคยมีช่องนี้เลย */}
+              <div>
+                <label className="block font-bold mb-1 text-slate-700">ค่าส่วนกลาง (บาท / เดือน)</label>
+                <input type="number" min="0" value={f.commonFee} onChange={e => setF({ ...f, commonFee: e.target.value })} placeholder="฿ 0 (ถ้าไม่มีใส่ 0)" className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" />
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border text-center">
+            <div className="grid grid-cols-5 gap-2 bg-slate-50 p-3 rounded-xl border text-center">
               <div>
                 <label className="block text-[9px] font-bold text-slate-500 mb-1">🛏️ ห้องนอน</label>
                 <input type="number" min="0" value={f.bedrooms} onChange={e => setF({ ...f, bedrooms: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
@@ -393,9 +406,25 @@ export default function AgentEditPropertyPage() {
                 <input type="number" min="0" value={f.bathrooms} onChange={e => setF({ ...f, bathrooms: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
               <div>
+                <label className="block text-[9px] font-bold text-slate-500 mb-1">🚗 ที่จอดรถ</label>
+                <input type="number" min="0" value={f.parking} onChange={e => setF({ ...f, parking: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-slate-500 mb-1">🏢 จำนวนชั้น</label>
+                <input type="number" min="0" value={f.floors} onChange={e => setF({ ...f, floors: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
+              </div>
+              <div>
                 <label className="block text-[9px] font-bold text-slate-500 mb-1">📐 พื้นที่ (ตร.ม.)</label>
                 <input type="number" min="0" value={f.usableArea} onChange={e => setF({ ...f, usableArea: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
+            </div>
+
+            <div>
+              <label className="block font-bold mb-1 text-slate-700">สิทธิ์การถือครอง</label>
+              <select value={f.ownership} onChange={e => setF({ ...f, ownership: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs">
+                <option value="ขายขาด (Freehold)">ขายขาด (Freehold)</option>
+                <option value="เช่าระยะยาว (Leasehold)">เช่าระยะยาว (Leasehold)</option>
+              </select>
             </div>
           </div>
 
