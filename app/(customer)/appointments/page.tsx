@@ -195,13 +195,32 @@ export default function AppointmentsPage() {
   // ----------------------------------------------------------------------------
   // 3. คำนวณยอดรวมนัดหมายในแต่ละกลุ่ม และกรองรายการตามแท็บที่เลือก
   // ----------------------------------------------------------------------------
-  const upcomingCount = appointments.filter(apt => apt.status === 'approved' || apt.status === 'pending').length;
-  const cancelledCount = appointments.filter(apt => apt.status === 'cancelled' || apt.status === 'rejected').length;
+  // ดึงวันที่ปัจจุบันรูปแบบ YYYY-MM-DD ตามเวลาท้องถิ่น
+  const getTodayKey = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayKey = getTodayKey();
+
+  // จัดกลุ่มนัดหมาย:
+  // - ยกเลิกแล้ว: status เป็น cancelled หรือ rejected
+  // - กำลังจะมาถึง: ยังไม่ยกเลิก, ยังไม่ completed และ วันที่นัด >= วันนี้
+  // - ประวัติที่ผ่านมา: status เป็น completed หรือ วันที่นัด < วันนี้ (ที่ไม่ได้ยกเลิก)
+  const isCancelledApt = (apt: AppointmentItem) => apt.status === 'cancelled' || apt.status === 'rejected';
+  const isPastApt = (apt: AppointmentItem) => apt.status === 'completed' || (!isCancelledApt(apt) && apt.date < todayKey);
+  const isUpcomingApt = (apt: AppointmentItem) => !isCancelledApt(apt) && apt.status !== 'completed' && apt.date >= todayKey;
+
+  const upcomingCount = appointments.filter(isUpcomingApt).length;
+  const cancelledCount = appointments.filter(isCancelledApt).length;
+  const pastCount = appointments.filter(isPastApt).length;
 
   const filteredAppointments = appointments.filter(apt => {
-    if (activeTab === 'upcoming') return apt.status === 'approved' || apt.status === 'pending';
-    if (activeTab === 'past') return apt.status === 'completed';
-    if (activeTab === 'cancelled') return apt.status === 'cancelled' || apt.status === 'rejected';
+    if (activeTab === 'upcoming') return isUpcomingApt(apt);
+    if (activeTab === 'past') return isPastApt(apt);
+    if (activeTab === 'cancelled') return isCancelledApt(apt);
     return false;
   });
 
@@ -240,6 +259,9 @@ export default function AppointmentsPage() {
             className={`px-4 py-2 border-b-2 font-bold text-xs whitespace-nowrap transition cursor-pointer ${activeTab === 'past' ? 'border-slate-900 text-slate-900 font-extrabold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
           >
             ประวัติที่ผ่านมา
+            {pastCount > 0 && (
+              <span className="bg-slate-200 text-slate-700 ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold">{pastCount}</span>
+            )}
           </button>
 
           <button 
@@ -265,7 +287,15 @@ export default function AppointmentsPage() {
             </div>
           ) : (
             filteredAppointments.map((apt) => {
-              const statusDetails = getStatusDetails(apt.status);
+              const pastThisApt = isPastApt(apt);
+              const cancelledThisApt = isCancelledApt(apt);
+              let statusDetails = getStatusDetails(apt.status);
+
+              // ถ้านัดหมายผ่านพ้นวันนัดมาแล้ว และไม่ได้ถูกยกเลิก ให้แสดงป้ายเข้าชมแล้ว/เสร็จสิ้น
+              if (pastThisApt && !cancelledThisApt && apt.status !== 'completed') {
+                statusDetails = { text: "เข้าชมแล้ว", bg: "bg-slate-100 border-slate-200", color: "text-slate-600" };
+              }
+
               const dateObj = new Date(apt.date);
               const dayStr = isNaN(dateObj.getTime()) ? apt.date : dateObj.getDate().toString();
               const monthStr = isNaN(dateObj.getTime()) ? 'ส.ค.' : MONTH_NAMES_TH[dateObj.getMonth()];
@@ -274,7 +304,7 @@ export default function AppointmentsPage() {
                 <div 
                   key={apt.id} 
                   className={`bg-white rounded-2xl p-4 sm:p-5 border shadow-sm flex flex-col lg:flex-row gap-4 hover:shadow-md transition relative overflow-hidden ${
-                    apt.status === 'cancelled' || apt.status === 'rejected' ? 'bg-slate-50/80 border-slate-200 opacity-85' : 'border-slate-200'
+                    cancelledThisApt ? 'bg-slate-50/80 border-slate-200 opacity-85' : 'border-slate-200'
                   }`}
                 >
                   {/* แสดงวันที่และรอบเวลา */}
@@ -349,7 +379,8 @@ export default function AppointmentsPage() {
                       <ChatIcon className="w-3.5 h-3.5" /> แชทกับนายหน้า
                     </button>
 
-                    {apt.status === 'completed' && (
+                    {/* ปุ่มให้คะแนนการบริการ (แสดงเฉพาะนัดในประวัติที่ไม่ได้ยกเลิก) */}
+                    {pastThisApt && !cancelledThisApt && (
                       <button
                         onClick={() => setReviewModalApt({ id: String(apt.id), agentName: apt.agentName, propertyName: apt.propertyName })}
                         className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-black text-xs transition cursor-pointer flex items-center gap-1"
@@ -367,7 +398,8 @@ export default function AppointmentsPage() {
                       </Link>
                     )}
 
-                    {(apt.status === 'approved' || apt.status === 'pending') && (
+                    {/* ปุ่มยกเลิกนัด: แสดงเฉพาะนัดที่ยังไม่ถึงวันนัดหมายเท่านั้น */}
+                    {!pastThisApt && !cancelledThisApt && (apt.status === 'approved' || apt.status === 'pending') && (
                       <button
                         onClick={() => openCancelModal(apt)}
                         className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-bold text-xs transition cursor-pointer active:scale-95"

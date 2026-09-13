@@ -44,7 +44,23 @@ export async function GET(request: Request) {
     // 1.2 ตรวจสอบจาก URL Query Parameters ว่าผู้ใช้ต้องการดูในมุมมองนายหน้า (?view=agent) หรือไม่
     const isAgent = new URL(request.url).searchParams.get("view") === "agent" && user.role_id === "agent";
 
-    // 1.3 ดึงข้อมูลนัดหมายจากฐานข้อมูล PostgreSQL ผ่าน Prisma ORM
+    // 1.3 ปรับสถานะนัดหมายที่พ้นกำหนดวันแล้ว (Auto-complete past appointments)
+    // ถ้านัดหมายใดได้รับการอนุมัติแล้ว (approved) แต่วันที่นัดหมายผ่านพ้นไปแล้ว (ก่อนวันนี้)
+    // ให้ปรับสถานะเป็น 'completed' (เข้าชมแล้ว/เสร็จสิ้น) ในฐานข้อมูลโดยอัตโนมัติ
+    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+    const todayDate = new Date(`${todayStr}T00:00:00.000Z`);
+
+    await db.appointments.updateMany({
+      where: {
+        appointment_date: { lt: todayDate },
+        status: "approved"
+      },
+      data: {
+        status: "completed"
+      }
+    });
+
+    // 1.4 ดึงข้อมูลนัดหมายจากฐานข้อมูล PostgreSQL ผ่าน Prisma ORM
     // - ถ้าเป็นนายหน้า: ค้นหาแถวที่ agent_id === user.id
     // - ถ้าเป็นลูกค้า: ค้นหาแถวที่ customer_id === user.id
     const appointments = await db.appointments.findMany({

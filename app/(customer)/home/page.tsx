@@ -75,10 +75,19 @@ export default function CustomerHomePage() {
       .slice(0, 4);
   }, [properties]);
 
-  // 3.3 นับจำนวนนัดหมายที่กำลังจะมาถึงของผู้ใช้
-  const upcomingCount = useMemo(() => 
-    appointments.filter((a) => ['upcoming', 'pending', 'approved'].includes(a.status)).length
-  , [appointments]);
+  // 3.3 นับจำนวนนัดหมายที่กำลังจะมาถึงของผู้ใช้ (เฉพาะนัดที่ยังไม่ถึงวัน และยังไม่เสร็จสิ้น/ยกเลิก)
+  const upcomingCount = useMemo(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayKey = `${year}-${month}-${day}`;
+
+    return appointments.filter((a) => 
+      ['upcoming', 'pending', 'approved'].includes(a.status) &&
+      (!a.date || a.date >= todayKey)
+    ).length;
+  }, [appointments]);
 
   // ----------------------------------------------------------------------------
   // 4. RENDERING SECTION (การแสดงผล UI)
