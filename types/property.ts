@@ -27,4 +27,9 @@ export interface Property {
   provinceName?: string;
   amphureName?: string;
   districtName?: string;
+  // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+  commonFee?: number | null;
+  parking?: number | null;
+  floors?: number | null;
+  ownership?: string | null;
 }

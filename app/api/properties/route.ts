@@ -105,6 +105,11 @@ export async function GET() {
           description: p.description || "",
           latitude: p.latitude ? Number(p.latitude) : null,
           longitude: p.longitude ? Number(p.longitude) : null,
+          // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมให้หน้ารายละเอียดบ้านแสดงผล
+          commonFee: p.common_fee ? Number(p.common_fee) : null,
+          parking: p.parking_spaces ?? null,
+          floors: p.floors ?? null,
+          ownership: p.ownership_type || null,
           province_id: p.province_id,
           amphure_id: p.amphure_id,
           district_id: p.district_id,
@@ -150,7 +155,8 @@ export async function POST(request: Request) {
     const {
       title, price, listing_type, listingType, type_id, type, location, description,
       bedrooms, bathrooms, area_sqm, areaSqm,
-      province_id, amphure_id, district_id, latitude, longitude, images, doc, viewingSlots
+      province_id, amphure_id, district_id, latitude, longitude, images, doc, viewingSlots,
+      commonFee, parking, floors, ownership // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ (ดู schema.prisma)
     } = body;
 
     // 2.4 ตรวจสอบความถูกต้องของข้อมูล (Data Validation)
@@ -169,6 +175,15 @@ export async function POST(request: Request) {
 
     if ((bedrooms !== undefined && Number(bedrooms) < 0) || (bathrooms !== undefined && Number(bathrooms) < 0)) {
       return NextResponse.json({ error: "จำนวนห้องต้องไม่ติดลบ" }, { status: 400 });
+    }
+
+    // 🔑 KEYWORD: validate ฟิลด์สเปคเพิ่มเติม
+    if ((parking !== undefined && parking !== null && parking !== "" && Number(parking) < 0) ||
+        (floors !== undefined && floors !== null && floors !== "" && Number(floors) < 0)) {
+      return NextResponse.json({ error: "จำนวนที่จอดรถ/ชั้น ต้องไม่ติดลบ" }, { status: 400 });
+    }
+    if (commonFee !== undefined && commonFee !== null && commonFee !== "" && Number(commonFee) < 0) {
+      return NextResponse.json({ error: "ค่าส่วนกลางต้องไม่ติดลบ" }, { status: 400 });
     }
 
     // 2.5 จัดการประเภทการลงประกาศและประเภทบ้าน
@@ -193,7 +208,12 @@ export async function POST(request: Request) {
         amphure_id: amphure_id ? parseInt(amphure_id) : 9011,
         district_id: district_id ? parseInt(district_id) : 901101,
         latitude: latitude ? parseFloat(latitude) : 7.0089,
-        longitude: longitude ? parseFloat(longitude) : 100.4812
+        longitude: longitude ? parseFloat(longitude) : 100.4812,
+        // 🔑 KEYWORD: บันทึกฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+        common_fee: commonFee !== undefined && commonFee !== null && commonFee !== "" ? parseFloat(commonFee) : null,
+        parking_spaces: parking !== undefined && parking !== null && parking !== "" ? parseInt(parking) : null,
+        floors: floors !== undefined && floors !== null && floors !== "" ? parseInt(floors) : null,
+        ownership_type: ownership || null
       }
     });
 
