@@ -206,7 +206,7 @@ export async function POST(request: Request) {
       "บันทึกคำขอนัดหมายเข้าชมโครงการ",
       `ยื่นคำขอนัดหมายเข้าชม "${property.title}" ประจำวันที่ ${date} เรียบร้อยแล้ว ระบบอยู่ระหว่างส่งเรื่องให้นายหน้าพิจารณา`,
       "appointment",
-      "/customer/appointments"
+      "/appointments"
     );
 
     return NextResponse.json({ success: true, data: newAppointment });
@@ -252,7 +252,7 @@ export async function PATCH(request: Request) {
             "การนำชมโครงการเสร็จสิ้น",
             `การเข้าชมโครงการ "${prop?.title || "อสังหาริมทรัพย์"}" เสร็จสมบูรณ์แล้ว ขอเชิญท่านร่วมบันทึกประเมินความพึงพอใจในการให้บริการ`,
             "review",
-            "/customer/appointments"
+            "/appointments"
           );
         }
         return NextResponse.json({ success: true, data: updated });
@@ -296,7 +296,7 @@ export async function PATCH(request: Request) {
         const notiContent = action === "confirm"
           ? `รายการนัดหมายเข้าชม "${propertyTitle}" ได้รับการยืนยันจากนายหน้าเรียบร้อยแล้ว`
           : `รายการนัดหมายเข้าชม "${propertyTitle}" ถูกปฏิเสธโดยนายหน้า (เหตุผล: ${rejectReason}) รอบเวลานี้เปิดให้จองใหม่แล้ว หรือเลือกช่วงเวลาอื่นได้`;
-        sendNotification(appointment.customer_id, notiTitle, notiContent, "appointment", "/customer/appointments");
+        sendNotification(appointment.customer_id, notiTitle, notiContent, "appointment", "/appointments");
       }
 
       return NextResponse.json({ success: true, data: updated });
@@ -431,7 +431,7 @@ export async function DELETE(request: Request) {
         "แจ้งยกเลิกรายการนัดหมาย",
         `นายหน้าผู้ดูแลโครงการได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr}${reasonText}`,
         "appointment",
-        "/customer/appointments"
+        "/appointments"
       );
     }
 

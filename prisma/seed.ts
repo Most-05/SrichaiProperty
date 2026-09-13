@@ -202,7 +202,7 @@ async function main() {
   await prisma.notifications.deleteMany({});
   await prisma.notifications.createMany({
     data: [
-      { user_id: cust1.id, title: "ยืนยันคำขอนัดหมายเข้าชมโครงการ", content: "รายการนัดหมายเข้าชมบ้านเดี่ยว สไตล์โมเดิร์น เอกมัย ได้รับการยืนยันจากนายหน้าเรียบร้อยแล้ว", type: "appointment", link_url: "/customer/appointments", is_read: false },
+      { user_id: cust1.id, title: "ยืนยันคำขอนัดหมายเข้าชมโครงการ", content: "รายการนัดหมายเข้าชมบ้านเดี่ยว สไตล์โมเดิร์น เอกมัย ได้รับการยืนยันจากนายหน้าเรียบร้อยแล้ว", type: "appointment", link_url: "/appointments", is_read: false },
       { user_id: admin.id, title: "แจ้งลงทะเบียนบัญชีนายหน้าใหม่", content: "คุณธีรเดช วงศ์สวัสดิ์ ได้ลงทะเบียนในฐานะนายหน้าอสังหาริมทรัพย์ โปรดเข้าตรวจสอบเอกสารยืนยันตัวตน (KYC)", type: "agent_register", link_url: "/admin/dashboard", is_read: false }
     ]
   });
