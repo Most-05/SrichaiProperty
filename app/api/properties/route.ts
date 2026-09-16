@@ -285,7 +285,8 @@ export async function PATCH(request: Request) {
   try {
     // 3.1 ตรวจสอบสิทธิ์การเข้าถึง ต้องเป็นแอดมินเท่านั้น
     const session = await getServerSession(authOptions);
-    if (!session || (session.user as { role?: string })?.role !== "admin") {
+    // type ของ session.user.role ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
+    if (!session || session.user?.role !== "admin") {
       return NextResponse.json({ error: "อนุญาตเฉพาะผู้ดูแลระบบเท่านั้น" }, { status: 401 });
     }
 
