@@ -143,13 +143,13 @@ export const authOptions: NextAuthOptions = {
     // หน้าที่คือ "ยัด" ข้อมูลสำคัญ (id, role, phone, status) เข้าไปเก็บไว้ใน token
     async jwt({ token, user, account }) {
       // กรณีนี้คือ "เพิ่งล็อกอินสำเร็จ" (user มาจาก authorize() หรือ profile() ของ provider)
+      // type ของฟิลด์พวกนี้ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
       if (user) {
-        const u = user as { id: string; role: string; phone?: string | null; image?: string | null; status?: string | null };
-        token.id = u.id;
-        token.role = u.role || "customer";
-        token.phone = u.phone || null;
-        token.picture = u.image || null;
-        token.status = u.status || "pending";
+        token.id = user.id;
+        token.role = user.role || "customer";
+        token.phone = user.phone || null;
+        token.picture = user.image || null;
+        token.status = user.status || "pending";
       }
       // กรณีล็อกอินผ่าน social: ข้อมูลจาก provider ไม่มี role/status ของเรา
       // ต้อง query ฐานข้อมูลอีกครั้งเพื่อเอาข้อมูลจริงมาแทนที่ในทุกครั้งที่ token ถูกสร้าง/ต่ออายุ
@@ -170,13 +170,13 @@ export const authOptions: NextAuthOptions = {
     //  session callback: รันเมื่อฝั่ง client เรียก useSession() หรือ /api/auth/session
     // หน้าที่คือเอาข้อมูลจาก token มาแปะใส่ session.user เพื่อให้ frontend อ่าน role ได้
     async session({ session, token }) {
+      // type ของฟิลด์พวกนี้ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
       if (session.user) {
-        const s = session.user as { id: string; role: string; phone?: string | null; image?: string | null; status?: string | null };
-        s.id = token.id as string;
-        s.role = token.role as string; // <-- ค่านี้แหละที่หน้า login เอาไปเช็คว่าจะ redirect ไปไหน
-        s.phone = token.phone as string | null;
-        s.status = token.status as string | null;
-        session.user.image = token.picture as string | null;
+        session.user.id = token.id;
+        session.user.role = token.role; // <-- ค่านี้แหละที่หน้า login เอาไปเช็คว่าจะ redirect ไปไหน
+        session.user.phone = token.phone;
+        session.user.status = token.status;
+        session.user.image = token.picture;
       }
       return session;
     }
