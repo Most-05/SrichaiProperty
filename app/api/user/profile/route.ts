@@ -19,7 +19,8 @@ import bcrypt from "bcryptjs"; // ตรวจสอบรหัสผ่าน�
 async function getAuthUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return { error: NextResponse.json({ error: "กรุณาล็อกอินก่อนใช้งาน" }, { status: 401 }) };
-  const userId = (session.user as { id?: string }).id;
+  // type ของ session.user.id ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
+  const userId = session.user.id;
   const userEmail = session.user.email;
   return { userId, userEmail };
 }
