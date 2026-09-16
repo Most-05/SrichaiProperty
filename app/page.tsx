@@ -30,7 +30,8 @@ export default function Home() {
   // ลูกค้าที่ล็อกอินแล้วให้ไปหน้า /home (พอร์ตัลส่วนตัว) แทนหน้าแรกสาธารณะนี้
   const { data: session, status } = useSession();
   const router = useRouter();
-  const role = (session?.user as { role?: string } | undefined)?.role;
+  // type ของ session.user.role ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
+  const role = session?.user?.role;
 
   useEffect(() => {
     if (status === 'authenticated' && role !== 'admin' && role !== 'agent') {
