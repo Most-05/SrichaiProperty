@@ -41,7 +41,8 @@ export async function POST(
     // 1.2 นายหน้าเปิดดูประกาศตัวเอง (เช่น เช็คว่าหน้าตาออกมาโอเคไหม) ไม่ควรถูกนับเป็นยอดวิว
     //     เพราะยอดวิวมีไว้วัดความสนใจจากผู้ซื้อจริง ถ้านับตัวเองด้วยสถิติจะเพี้ยน
     const session = await getServerSession(authOptions);
-    const viewerId = (session?.user as { id?: string } | undefined)?.id;
+    // type ของ session.user.id ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
+    const viewerId = session?.user?.id;
     if (viewerId) {
       const property = await db.properties.findUnique({ where: { id }, select: { agent_id: true } });
       if (property?.agent_id === viewerId) {
