@@ -6,7 +6,8 @@ import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเ�
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
-  return (session?.user as { role?: string })?.role === "admin";
+  // type ของ session.user.role ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
+  return session?.user?.role === "admin";
 }
 
 function parseNoti(content: string) {
