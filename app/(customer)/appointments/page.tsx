@@ -20,6 +20,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import ReviewModal from '@/components/customer/ReviewModal';
+import { NO_SHOW_LIMIT } from '@/lib/constants';
 
 function CalendarIcon({ className }: { className?: string }) {
   return (
@@ -221,6 +222,8 @@ export default function AppointmentsPage() {
   const upcomingCount = appointments.filter(isUpcomingApt).length;
   const cancelledCount = appointments.filter(isCancelledApt).length;
   const pastCount = appointments.filter(isPastApt).length;
+  // 🔑 KEYWORD: เตือนลูกค้าก่อนโดนบล็อกจากประวัติไม่มาตามนัด (ดู NO_SHOW_LIMIT)
+  const noShowCount = appointments.filter(a => a.status === 'no_show').length;
 
   const filteredAppointments = appointments.filter(apt => {
     if (activeTab === 'upcoming') return isUpcomingApt(apt);
@@ -286,6 +289,26 @@ export default function AppointmentsPage() {
             )}
           </button>
         </div>
+
+        {/* 🔑 KEYWORD: เตือนลูกค้าที่มีประวัติไม่มาตามนัด ก่อนจะถูกจำกัดการจอง */}
+        {noShowCount > 0 && noShowCount < NO_SHOW_LIMIT && (
+          <div className="mb-6 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs font-bold text-amber-800">
+            <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              คุณมีประวัติไม่มาตามนัด {noShowCount} ครั้ง หากสะสมครบ {NO_SHOW_LIMIT} ครั้ง
+              ระบบจะจำกัดการจองนัดใหม่ชั่วคราว กรุณายกเลิกนัดล่วงหน้าหากไม่สะดวกไปตามนัด
+            </span>
+          </div>
+        )}
+        {noShowCount >= NO_SHOW_LIMIT && (
+          <div className="mb-6 flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
+            <AlertIcon className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              บัญชีของคุณมีประวัติไม่มาตามนัดครบ {NO_SHOW_LIMIT} ครั้ง จึงถูกจำกัดการจองนัดใหม่ชั่วคราว
+              กรุณาติดต่อทีมงานหากต้องการความช่วยเหลือ
+            </span>
+          </div>
+        )}
 
         {/* 4.3 รายการการ์ดนัดหมาย */}
         <div className="space-y-4">
