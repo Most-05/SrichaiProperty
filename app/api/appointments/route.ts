@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
-import { autoCompleteOverdueAppointments } from "@/lib/services/noShowService"; // auto-complete นัดที่เลย grace period ยังไม่มีใครยืนยันผล
+import { autoCompleteOverdueAppointments, appointmentNeedsResult } from "@/lib/services/noShowService"; // auto-complete + เช็คว่านัดไหนรอยืนยันผลอยู่
 import { NO_SHOW_LIMIT } from "@/lib/constants"; // ใช้แจ้งเตือนลูกค้าว่าเหลือโควตาก่อนถูกจำกัดการจองกี่ครั้ง
 
 /**
@@ -108,6 +108,11 @@ export async function GET(request: Request) {
         status: apt.status,
         note: apt.note || "",
         cancelReason: apt.cancel_reason || "",
+        noShowNote: apt.no_show_note || "",
+        // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+        // true = นัดนี้ยืนยันแล้ว(approved) และวันนัดผ่านไปแล้ว แต่นายหน้ายังไม่กดยืนยันผล
+        // หน้า agent/appointments ใช้ธงนี้เพื่อแยกเป็นแท็บ "รอยืนยันผล" ต่างหาก
+        needsResult: appointmentNeedsResult({ status: apt.status, appointment_date: apt.appointment_date }),
         // ข้อมูลรีวิวที่ลูกค้าเคยให้คะแนนไว้ (ถ้ายังไม่เคยรีวิว จะเป็น null)
         review: apt.reviews ? {
           id: apt.reviews.id,
