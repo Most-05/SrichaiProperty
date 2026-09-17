@@ -1,0 +1,58 @@
+// 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+// เดิมระบบเดาเองว่านัดที่ผ่านวันไปแล้ว = สำเร็จเสมอ (auto-complete ทันที) ทำให้สถิติ
+// "นัดสำเร็จ" ของนายหน้าไม่ตรงความจริง และลูกค้าที่ไม่เคยไปดูบ้านก็รีวิวได้
+// ไฟล์นี้รวม logic ที่เกี่ยวกับการยืนยันผลจริง (มาจริง/ไม่มาตามนัด) ไว้ที่เดียว
+// ตามแพตเทิร์นเดิมของโปรเจกต์ (ดู slaService.ts, viewingSlotService.ts)
+import { db } from '@/lib/db';
+import { NO_SHOW_LIMIT, VISIT_CONFIRM_GRACE_DAYS } from '@/lib/constants';
+
+/**
+ * วันที่ปัจจุบันแบบ "เที่ยงคืนตามเวลาไทย" สำหรับเทียบกับ appointment_date (เป็น @db.Date ไม่มีเวลา)
+ * ใช้ Intl.DateTimeFormat timeZone Asia/Bangkok เหมือนที่ app/api/appointments/route.ts ใช้เดิม
+ * เพื่อไม่ให้ผลเพี้ยนตอนใกล้เที่ยงคืน (server รันด้วยเวลา UTC)
+ */
+export function getTodayDateBangkok(): Date {
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+  return new Date(`${todayStr}T00:00:00.000Z`);
+}
+
+/**
+ * นัดหมายนี้ "รอนายหน้ายืนยันผล" อยู่หรือไม่
+ * เงื่อนไข: นายหน้ารับนัดแล้ว (approved) และวันนัดผ่านไปแล้ว แต่ยังไม่ถูกยืนยันผล/auto-complete
+ * (ถ้าเลยกำหนด VISIT_CONFIRM_GRACE_DAYS ไปแล้ว autoCompleteOverdueAppointments() จะเปลี่ยนเป็น
+ * completed ให้เองก่อนถึงจุดนี้ ดังนั้นถ้าเจอ status ยัง approved แปลว่ายังไม่เลยกำหนด)
+ */
+export function appointmentNeedsResult(appointment: { status: string | null; appointment_date: Date }): boolean {
+  return appointment.status === 'approved' && appointment.appointment_date < getTodayDateBangkok();
+}
+
+/**
+ * เปลี่ยนสถานะนัดที่ผ่านวันไปแล้วเกิน grace period ให้เป็น completed ให้เองอัตโนมัติ
+ * (กันกรณีนายหน้าลืมกดยืนยันผล ไม่ให้นัดค้างสถานะ "รอผล" ตลอดไป — ให้ประโยชน์แก่ลูกค้า)
+ * ไม่ตั้ง visit_confirmed_at เพราะไม่มีใครยืนยันจริง ต่างจากนายหน้ากด "ลูกค้ามาแล้ว" เอง
+ */
+export async function autoCompleteOverdueAppointments(): Promise<void> {
+  const graceCutoff = new Date(getTodayDateBangkok());
+  graceCutoff.setUTCDate(graceCutoff.getUTCDate() - VISIT_CONFIRM_GRACE_DAYS);
+
+  await db.appointments.updateMany({
+    where: {
+      status: 'approved',
+      appointment_date: { lt: graceCutoff }
+    },
+    data: { status: 'completed' }
+  });
+}
+
+/** นับจำนวนครั้งที่ลูกค้าคนนี้เคยเบี้ยวนัด (status = no_show) สะสมทั้งหมด */
+export async function countNoShows(customerId: string): Promise<number> {
+  return db.appointments.count({
+    where: { customer_id: customerId, status: 'no_show' }
+  });
+}
+
+/** ลูกค้าคนนี้เบี้ยวนัดครบ NO_SHOW_LIMIT แล้วหรือยัง (ครบแล้ว = จองนัดใหม่ไม่ได้) */
+export async function isCustomerBlockedByNoShow(customerId: string): Promise<boolean> {
+  const count = await countNoShows(customerId);
+  return count >= NO_SHOW_LIMIT;
+}
