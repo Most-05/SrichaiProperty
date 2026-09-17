@@ -5,6 +5,7 @@ import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหร�
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
 import { autoCompleteOverdueAppointments } from "@/lib/services/noShowService"; // auto-complete นัดที่เลย grace period ยังไม่มีใครยืนยันผล
+import { NO_SHOW_LIMIT } from "@/lib/constants"; // ใช้แจ้งเตือนลูกค้าว่าเหลือโควตาก่อนถูกจำกัดการจองกี่ครั้ง
 
 /**
  * ==============================================================================
@@ -254,7 +255,7 @@ export async function PATCH(request: Request) {
     // --------------------------------------------------------------------------
     // (ก) กรณีฝั่งนายหน้าจัดการ: ยืนยัน (confirm), ปฏิเสธ (reject), หรือ ปิดงาน (complete)
     // --------------------------------------------------------------------------
-    if (["confirm", "reject", "complete"].includes(action)) {
+    if (["confirm", "reject", "complete", "no_show"].includes(action)) {
       // ตรวจสอบสิทธิ์: ต้องเป็นนายหน้าเจ้าของคิวงานนี้เท่านั้น
       if (user.role_id !== "agent" || appointment.agent_id !== user.id) {
         return NextResponse.json({ error: "คุณไม่มีสิทธิ์จัดการนัดหมายนี้" }, { status: 403 });
@@ -271,6 +272,33 @@ export async function PATCH(request: Request) {
             "การนำชมโครงการเสร็จสิ้น",
             `การเข้าชมโครงการ "${prop?.title || "อสังหาริมทรัพย์"}" เสร็จสมบูรณ์แล้ว ขอเชิญท่านร่วมบันทึกประเมินความพึงพอใจในการให้บริการ`,
             "review",
+            "/appointments"
+          );
+        }
+        return NextResponse.json({ success: true, data: updated });
+      }
+
+      // 🔑 KEYWORD: นายหน้ายืนยันผลว่าลูกค้าไม่มาตามนัด (No-show)
+      // ต้องระบุเหตุผลเสมอเหมือนปฏิเสธนัด — เก็บลง no_show_note คนละคอลัมน์กับ cancel_reason
+      if (action === "no_show") {
+        if (appointment.status !== "approved") {
+          return NextResponse.json({ error: "ยืนยันผลได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
+        }
+        const noShowNote = typeof reason === "string" ? reason.trim() : "";
+        if (!noShowNote) {
+          return NextResponse.json({ error: "กรุณาระบุเหตุผลที่ลูกค้าไม่มาตามนัด" }, { status: 400 });
+        }
+        const updated = await db.appointments.update({
+          where: { id },
+          data: { status: "no_show", no_show_note: noShowNote, visit_confirmed_at: new Date() }
+        });
+        if (appointment.customer_id) {
+          const prop = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } }) : null;
+          sendNotification(
+            appointment.customer_id,
+            "นัดหมายถูกบันทึกว่าไม่มาตามนัด",
+            `นายหน้าบันทึกว่าคุณไม่ได้เข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" ตามนัดหมาย (เหตุผล: ${noShowNote}) หากมีนัดที่ไม่มาตามนัดสะสมครบ ${NO_SHOW_LIMIT} ครั้ง ระบบจะจำกัดการจองนัดใหม่ชั่วคราว`,
+            "appointment",
             "/appointments"
           );
         }
