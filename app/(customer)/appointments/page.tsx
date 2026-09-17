@@ -73,9 +73,10 @@ interface AppointmentItem {
   date: string;
   timeSlot: string;
   timeSlotText: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | string;
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show' | string;
   note: string;
   cancelReason?: string;
+  noShowNote?: string;
   agentName: string;
   agentPhone: string;
   agentImage?: string;
@@ -99,6 +100,8 @@ const getStatusDetails = (status: string) => {
       return { text: "ยกเลิกแล้ว", bg: "bg-red-50 border-red-200", color: "text-red-700" };
     case 'rejected':
       return { text: "ปฏิเสธแล้ว", bg: "bg-rose-50 border-rose-200", color: "text-rose-700" };
+    case 'no_show':
+      return { text: "ไม่มาตามนัด", bg: "bg-red-50 border-red-200", color: "text-red-700" };
     default:
       return { text: "เข้าชมแล้ว", bg: "bg-slate-100 border-slate-200", color: "text-slate-600" };
   }
@@ -300,9 +303,14 @@ export default function AppointmentsPage() {
               const cancelledThisApt = isCancelledApt(apt);
               let statusDetails = getStatusDetails(apt.status);
 
-              // ถ้านัดหมายผ่านพ้นวันนัดมาแล้ว และไม่ได้ถูกยกเลิก ให้แสดงป้ายเข้าชมแล้ว/เสร็จสิ้น
-              if (pastThisApt && !cancelledThisApt && apt.status !== 'completed') {
-                statusDetails = { text: "เข้าชมแล้ว", bg: "bg-slate-100 border-slate-200", color: "text-slate-600" };
+              // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+              // เดิมนัดที่ผ่านวันไปแล้วและยังไม่ถูกยกเลิก จะโชว์ "เข้าชมแล้ว" ทันที ไม่ว่า status จะเป็นอะไร
+              // (สมเหตุสมผลตอนที่ระบบ auto-complete ทันที เพราะแทบไม่มีช่วงที่ status ยังไม่ใช่ completed)
+              // ตอนนี้นัดที่ผ่านวันแล้วรอนายหน้ายืนยันผลได้นานถึง 7 วัน (ดู VISIT_CONFIRM_GRACE_DAYS)
+              // ต้องแยกให้ชัดว่า "รอผล" กับ "เข้าชมแล้วจริง" ไม่ใช่อันเดียวกัน — no_show ก็มีป้ายของตัวเองแล้ว
+              // (จาก getStatusDetails) จึงไม่ต้อง override ทับ เหลือ override เฉพาะกรณี approved ที่ยังรอผลจริงๆ
+              if (pastThisApt && apt.status === 'approved') {
+                statusDetails = { text: "รอนายหน้ายืนยันผล", bg: "bg-amber-50 border-amber-200", color: "text-amber-700" };
               }
 
               const dateObj = new Date(apt.date);
@@ -354,6 +362,14 @@ export default function AppointmentsPage() {
                       </div>
                     )}
 
+                    {/* 🔑 KEYWORD: แสดงเหตุผลที่นายหน้าบันทึกว่าไม่มาตามนัด (คนละคอลัมน์กับ cancelReason) */}
+                    {apt.status === 'no_show' && apt.noShowNote && (
+                      <div className="mt-1.5 text-xs bg-red-50 text-red-700 p-2 rounded-lg border border-red-100 font-bold flex items-start gap-1">
+                        <ChatIcon className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>เหตุผลที่บันทึกว่าไม่มาตามนัด: {apt.noShowNote}</span>
+                      </div>
+                    )}
+
                     {/* 🔑 KEYWORD: จองรอบใหม่หลังถูกปฏิเสธ */}
                     {/* นายหน้าปฏิเสธแล้วรอบเวลาจะถูกปลดล็อกทันที ลูกค้าจองรอบใหม่ได้เลยจากตรงนี้ */}
                     {apt.status === 'rejected' && (
@@ -388,10 +404,13 @@ export default function AppointmentsPage() {
                       <ChatIcon className="w-3.5 h-3.5" /> แชทกับนายหน้า
                     </button>
 
-                    {/* ส่วนการให้คะแนนรีวิวนายหน้า (สำหรับนัดในประวัติที่ไม่ได้ยกเลิก):
+                    {/* ส่วนการให้คะแนนรีวิวนายหน้า (เฉพาะนัดที่นายหน้ายืนยันแล้วว่าเข้าชมจริง status='completed'):
                         - กรณีที่ 1: ลูกค้าเคยรีวิวแล้ว -> โชว์คะแนนดาวที่เคยให้ พร้อมปุ่มกด "แก้ไขรีวิว"
-                        - กรณีที่ 2: ยังไม่เคยรีวิว -> โชว์ปุ่มสีเหลือง "ให้คะแนนการบริการ" */}
-                    {pastThisApt && !cancelledThisApt && (
+                        - กรณีที่ 2: ยังไม่เคยรีวิว -> โชว์ปุ่มสีเหลือง "ให้คะแนนการบริการ"
+                        🔑 KEYWORD: เดิมเช็คแค่ pastThisApt && !cancelledThisApt ทำให้รีวิวได้แม้นัดจะ
+                        ยังไม่ถูกยืนยันผล (needsResult) หรือแม้แต่นัดที่บันทึกว่า 'ไม่มาตามนัด' ก็รีวิวได้
+                        เปลี่ยนมาเช็ค status === 'completed' ตรงๆ ให้รีวิวได้เฉพาะนัดที่เข้าชมจริงเท่านั้น */}
+                    {apt.status === 'completed' && (
                       apt.review ? (
                         <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/80 rounded-xl px-2.5 py-1">
                           <span className="text-amber-800 font-extrabold text-[11px] flex items-center gap-1">
