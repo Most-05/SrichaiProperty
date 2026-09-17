@@ -13,7 +13,7 @@ import Image from 'next/image';
 
 interface AgentAppointment {
   id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show';
   date: string; // YYYY-MM-DD
   timeSlot: 'morning' | 'afternoon';
   note: string;
@@ -25,6 +25,10 @@ interface AgentAppointment {
   originalDate: string | null;
   originalTimeSlot: string | null;
   wasEdited: boolean;
+  // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+  // true = approved แล้ว วันนัดผ่านไปแล้ว แต่ยังไม่มีใครยืนยันผล (ดู noShowService.ts ฝั่ง API)
+  needsResult: boolean;
+  noShowNote: string;
 }
 
 const MONTH_NAMES_TH = [
@@ -32,7 +36,7 @@ const MONTH_NAMES_TH = [
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
 ];
 
-type TabKey = 'new' | 'upcoming' | 'done';
+type TabKey = 'new' | 'upcoming' | 'needsResult' | 'done';
 
 function formatDateTH(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -206,12 +210,20 @@ export default function AgentAppointmentsPage() {
 
   // --- แยกกลุ่มตามแท็บ ---
   const newRequests = useMemo(() => appointments.filter(a => a.status === 'pending'), [appointments]);
-  const upcoming = useMemo(() => appointments.filter(a => a.status === 'approved'), [appointments]);
-  const doneOrCancelled = useMemo(() => appointments.filter(a => a.status === 'completed' || a.status === 'rejected' || a.status === 'cancelled'), [appointments]);
+  // 🔑 KEYWORD: แยก "นัดหมายเร็วๆ นี้" ออกจาก "รอยืนยันผล"
+  // เดิมทั้งคู่ใช้ status === 'approved' ปนกัน (นัดที่ผ่านวันไปแล้วก็ยังอยู่ในนี้) ตอนนี้แยกด้วย
+  // needsResult: upcoming = ยังไม่ถึงวันนัด, needsResultList = ถึงวันแล้วรอนายหน้ายืนยันผล
+  const upcoming = useMemo(() => appointments.filter(a => a.status === 'approved' && !a.needsResult), [appointments]);
+  const needsResultList = useMemo(() => appointments.filter(a => a.needsResult), [appointments]);
+  const doneOrCancelled = useMemo(
+    () => appointments.filter(a => a.status === 'completed' || a.status === 'rejected' || a.status === 'cancelled' || a.status === 'no_show'),
+    [appointments]
+  );
 
   const listForActiveTab =
     activeTab === 'new' ? newRequests :
     activeTab === 'upcoming' ? upcoming :
+    activeTab === 'needsResult' ? needsResultList :
     doneOrCancelled;
 
   // เรียงตามความด่วน (วันที่ใกล้ที่สุดก่อน)
@@ -385,6 +397,14 @@ export default function AgentAppointmentsPage() {
                 className={`px-4 py-2.5 border-b-2 font-black text-xs whitespace-nowrap transition cursor-pointer ${activeTab === 'upcoming' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
               >
                 นัดหมายเร็วๆ นี้ (Upcoming)
+              </button>
+              {/* 🔑 KEYWORD: แท็บรอยืนยันผลการนัดหมาย (No-show) */}
+              <button
+                onClick={() => setActiveTab('needsResult')}
+                className={`px-4 py-2.5 border-b-2 font-black text-xs whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'needsResult' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
+              >
+                รอยืนยันผล
+                {needsResultList.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />}
               </button>
               <button
                 onClick={() => setActiveTab('done')}
