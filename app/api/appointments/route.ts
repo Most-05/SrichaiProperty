@@ -264,7 +264,9 @@ export async function PATCH(request: Request) {
       // นายหน้ากดปิดงานเมื่อพาลูกค้าชมสถานที่จริงเรียบร้อยแล้ว (status -> completed)
       if (action === "complete") {
         if (appointment.status !== "approved") return NextResponse.json({ error: "ปิดงานได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
-        const updated = await db.appointments.update({ where: { id }, data: { status: "completed" } });
+        // บันทึก visit_confirmed_at ด้วย เพื่อให้รู้ว่านายหน้ายืนยันผลจริง (ต่างจาก
+        // auto-complete ที่ไม่มีใครยืนยัน — ดู autoCompleteOverdueAppointments())
+        const updated = await db.appointments.update({ where: { id }, data: { status: "completed", visit_confirmed_at: new Date() } });
         if (appointment.customer_id) {
           const prop = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } }) : null;
           sendNotification(
