@@ -479,7 +479,7 @@ export default function AgentAppointmentsPage() {
                 <div
                   key={apt.id}
                   className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col md:flex-row gap-4 relative overflow-hidden transition-all hover:shadow-md ${
-                    apt.status === 'cancelled' ? 'bg-slate-50/80 border-red-200 opacity-80' : 'border-slate-100'
+                    apt.status === 'cancelled' || apt.status === 'no_show' ? 'bg-slate-50/80 border-red-200 opacity-80' : 'border-slate-100'
                   }`}
                 >
 
@@ -507,7 +507,7 @@ export default function AgentAppointmentsPage() {
                         apt.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                         'bg-red-50 text-red-600 border-red-200'
                       }`}>
-                        {apt.status === 'pending' ? 'รอยืนยัน' : apt.status === 'approved' ? 'ยืนยันแล้ว' : apt.status === 'completed' ? 'เสร็จสิ้น' : apt.status === 'cancelled' ? 'ลูกค้ายกเลิกแล้ว' : 'ปฏิเสธแล้ว'}
+                        {apt.status === 'pending' ? 'รอยืนยัน' : apt.status === 'approved' ? 'ยืนยันแล้ว' : apt.status === 'completed' ? 'เสร็จสิ้น' : apt.status === 'cancelled' ? 'ลูกค้ายกเลิกแล้ว' : apt.status === 'no_show' ? 'ไม่มาตามนัด' : 'ปฏิเสธแล้ว'}
                       </span>
                     </div>
 
