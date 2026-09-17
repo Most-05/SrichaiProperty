@@ -4,7 +4,7 @@ export interface Appointment {
   date: string;
   timeSlot: string;
   note: string;
-  status: 'upcoming' | 'past' | 'cancelled' | 'pending' | 'approved' | 'completed' | 'rejected';
+  status: 'upcoming' | 'past' | 'cancelled' | 'pending' | 'approved' | 'completed' | 'rejected' | 'no_show';
   propertyName: string;
   propertyPrice: string;
   propertyImage: string;
