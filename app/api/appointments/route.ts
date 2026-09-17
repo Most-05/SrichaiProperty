@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
+import { autoCompleteOverdueAppointments } from "@/lib/services/noShowService"; // auto-complete นัดที่เลย grace period ยังไม่มีใครยืนยันผล
 
 /**
  * ==============================================================================
@@ -44,21 +45,13 @@ export async function GET(request: Request) {
     // 1.2 ตรวจสอบจาก URL Query Parameters ว่าผู้ใช้ต้องการดูในมุมมองนายหน้า (?view=agent) หรือไม่
     const isAgent = new URL(request.url).searchParams.get("view") === "agent" && user.role_id === "agent";
 
-    // 1.3 ปรับสถานะนัดหมายที่พ้นกำหนดวันแล้ว (Auto-complete past appointments)
-    // ถ้านัดหมายใดได้รับการอนุมัติแล้ว (approved) แต่วันที่นัดหมายผ่านพ้นไปแล้ว (ก่อนวันนี้)
-    // ให้ปรับสถานะเป็น 'completed' (เข้าชมแล้ว/เสร็จสิ้น) ในฐานข้อมูลโดยอัตโนมัติ
-    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
-    const todayDate = new Date(`${todayStr}T00:00:00.000Z`);
-
-    await db.appointments.updateMany({
-      where: {
-        appointment_date: { lt: todayDate },
-        status: "approved"
-      },
-      data: {
-        status: "completed"
-      }
-    });
+    // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+    // เดิมนัดที่ผ่านวันไปแล้วจะถูก auto-complete ทันที (ระบบเดาเองว่าสำเร็จเสมอ) ทำให้
+    // สถิติ "นัดสำเร็จ" ไม่ตรงความจริง และปุ่ม "ปิดงาน" ของนายหน้าแทบไม่มีโอกาสได้ใช้
+    // ตอนนี้เปลี่ยนเป็น: รอนายหน้ายืนยันผลจริงก่อน (ดูปุ่มยืนยันในหน้า agent/appointments)
+    // ถ้าเลยกำหนด VISIT_CONFIRM_GRACE_DAYS แล้วนายหน้ายังไม่ยืนยัน ค่อย auto-complete ให้เอง
+    // (กันนัดค้างสถานะ "รอผล" ตลอดไปถ้านายหน้าลืมกด — ดู lib/services/noShowService.ts)
+    await autoCompleteOverdueAppointments();
 
     // 1.4 ดึงข้อมูลนัดหมายจากฐานข้อมูล PostgreSQL ผ่าน Prisma ORM
     // - ถ้าเป็นนายหน้า: ค้นหาแถวที่ agent_id === user.id
