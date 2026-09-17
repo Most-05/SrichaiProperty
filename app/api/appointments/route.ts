@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
-import { autoCompleteOverdueAppointments, appointmentNeedsResult } from "@/lib/services/noShowService"; // auto-complete + เช็คว่านัดไหนรอยืนยันผลอยู่
+import { autoCompleteOverdueAppointments, appointmentNeedsResult, isCustomerBlockedByNoShow } from "@/lib/services/noShowService"; // auto-complete + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อกจากประวัติเบี้ยวนัด
 import { NO_SHOW_LIMIT } from "@/lib/constants"; // ใช้แจ้งเตือนลูกค้าว่าเหลือโควตาก่อนถูกจำกัดการจองกี่ครั้ง
 
 /**
@@ -167,6 +167,16 @@ export async function POST(request: Request) {
     });
     if (existing) {
       return NextResponse.json({ error: "คุณมีนัดหมายค้างอยู่สำหรับบ้านหลังนี้แล้ว กรุณารอผลหรือยกเลิกนัดเดิมก่อนจองใหม่" }, { status: 400 });
+    }
+
+    // 🔑 KEYWORD: บล็อกลูกค้าเบี้ยวนัดซ้ำ (No-show)
+    // 2.4.1 ลูกค้าที่ไม่มาตามนัด (no_show) สะสมครบ NO_SHOW_LIMIT ครั้ง จองนัดใหม่ไม่ได้
+    // กันนายหน้าเสียเวลาเปิดวันว่างรอลูกค้าที่มีประวัติไม่มาซ้ำๆ
+    if (await isCustomerBlockedByNoShow(user.id)) {
+      return NextResponse.json(
+        { error: `บัญชีของคุณมีประวัติไม่มาตามนัดครบ ${NO_SHOW_LIMIT} ครั้ง จึงถูกจำกัดการจองนัดใหม่ชั่วคราว กรุณาติดต่อทีมงานหากต้องการความช่วยเหลือ` },
+        { status: 400 }
+      );
     }
 
     // 2.5 แปลงข้อความรอบเวลาให้อยู่ในคีย์มาตรฐาน DB ('morning' หรือ 'afternoon')
