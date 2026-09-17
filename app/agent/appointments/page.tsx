@@ -56,7 +56,7 @@ export default function AgentAppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('new');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [busyAction, setBusyAction] = useState<'confirm' | 'reject' | 'complete' | null>(null);
+  const [busyAction, setBusyAction] = useState<'confirm' | 'reject' | 'complete' | 'no_show' | null>(null);
   const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
 
   // ซ่อนข้อความแจ้งผลอัตโนมัติหลังผ่านไป 3 วินาที
@@ -121,9 +121,9 @@ export default function AgentAppointmentsPage() {
     }
   }, [sessionStatus]);
 
-  const handleAction = async (id: string, action: 'confirm' | 'reject' | 'complete', reason?: string) => {
-    // การปฏิเสธใช้โมดัลเลือกเหตุผลแทน (ดู rejectingApt) จึงไม่ต้องถามยืนยันซ้ำอีก
-    if (action !== 'reject') {
+  const handleAction = async (id: string, action: 'confirm' | 'reject' | 'complete' | 'no_show', reason?: string) => {
+    // การปฏิเสธและ no_show ใช้โมดัลเลือกเหตุผลแทน (ดู rejectingApt / noShowApt) จึงไม่ต้องถามยืนยันซ้ำอีก
+    if (action !== 'reject' && action !== 'no_show') {
       const confirmMsg = action === 'confirm'
         ? 'ยืนยันรับคิวนัดหมายนี้ใช่หรือไม่?'
         : 'ทำเครื่องหมายว่านัดหมายนี้เสร็จสิ้นแล้วใช่หรือไม่?';
@@ -147,7 +147,9 @@ export default function AgentAppointmentsPage() {
             ? '✓ ยืนยันรับคิวเรียบร้อยแล้ว — ย้ายไปแท็บ "นัดหมายเร็วๆ นี้" แล้ว'
             : action === 'reject'
               ? '✓ ปฏิเสธคำขอเรียบร้อยแล้ว — ย้ายไปแท็บ "เสร็จสิ้น / ยกเลิก" แล้ว'
-              : '✓ ปิดงานนัดหมายเรียบร้อยแล้ว'
+              : action === 'no_show'
+                ? '✓ บันทึกผลว่าลูกค้าไม่มาตามนัดแล้ว — ย้ายไปแท็บ "เสร็จสิ้น / ยกเลิก" แล้ว'
+                : '✓ ปิดงานนัดหมายเรียบร้อยแล้ว'
         });
       } else {
         setToast({ kind: 'error', text: data.error || 'เกิดข้อผิดพลาด' });
@@ -196,6 +198,43 @@ export default function AgentAppointmentsPage() {
     const targetId = rejectingApt.id;
     closeRejectModal();
     await handleAction(targetId, 'reject', finalReason);
+  };
+
+  // === โมดัล "ยืนยันผลว่าลูกค้าไม่มาตามนัด" (No-show) — mirror โมดัลปฏิเสธด้านบน ===
+  // เหตุผลจะถูกส่งไปเก็บใน no_show_note (คนละคอลัมน์กับ cancel_reason)
+  const NO_SHOW_REASONS = [
+    'ลูกค้าไม่มาตามนัดโดยไม่แจ้งล่วงหน้า',
+    'ลูกค้าแจ้งขอยกเลิกกะทันหันหลังถึงเวลานัด',
+    'ติดต่อลูกค้าไม่ได้ในวันนัดหมาย',
+    'อื่นๆ'
+  ];
+
+  const [noShowApt, setNoShowApt] = useState<AgentAppointment | null>(null);
+  const [noShowReasonOption, setNoShowReasonOption] = useState<string>(NO_SHOW_REASONS[0]);
+  const [customNoShowReason, setCustomNoShowReason] = useState('');
+
+  const openNoShowModal = (apt: AgentAppointment) => {
+    setNoShowApt(apt);
+    setNoShowReasonOption(NO_SHOW_REASONS[0]);
+    setCustomNoShowReason('');
+  };
+
+  const closeNoShowModal = () => {
+    setNoShowApt(null);
+    setCustomNoShowReason('');
+  };
+
+  const confirmNoShow = async () => {
+    if (!noShowApt) return;
+    const finalReason = noShowReasonOption === 'อื่นๆ' ? customNoShowReason.trim() : noShowReasonOption;
+    if (noShowReasonOption === 'อื่นๆ' && !finalReason) {
+      setToast({ kind: 'error', text: 'กรุณาระบุเหตุผลที่ลูกค้าไม่มาตามนัด' });
+      return;
+    }
+
+    const targetId = noShowApt.id;
+    closeNoShowModal();
+    await handleAction(targetId, 'no_show', finalReason);
   };
 
   const handleCalPrevMonth = () => {
@@ -554,9 +593,9 @@ export default function AgentAppointmentsPage() {
                         </>
                       )}
 
-                      {apt.status === 'approved' && (
+                      {apt.status === 'approved' && !apt.needsResult && (
                         <>
-                          <button 
+                          <button
                             onClick={async () => {
                               try {
                                 const res = await fetch('/api/chat/sessions', {
@@ -595,9 +634,36 @@ export default function AgentAppointmentsPage() {
                         </>
                       )}
 
-                      {(apt.status === 'completed' || apt.status === 'rejected') && (
+                      {/* 🔑 KEYWORD: ปุ่มยืนยันผลการนัดหมาย (No-show) — วันนัดผ่านไปแล้ว รอผลจริง */}
+                      {apt.needsResult && (
+                        <>
+                          <button
+                            disabled={busyId === apt.id}
+                            onClick={() => handleAction(apt.id, 'complete')}
+                            className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-lg text-[10px] shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 cursor-pointer disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-1.5"
+                          >
+                            {busyId === apt.id && busyAction === 'complete' ? (
+                              <>
+                                <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                                กำลังบันทึก...
+                              </>
+                            ) : (
+                              <>✓ ลูกค้ามาแล้ว</>
+                            )}
+                          </button>
+                          <button
+                            disabled={busyId === apt.id}
+                            onClick={() => openNoShowModal(apt)}
+                            className="w-full px-3 py-2 bg-red-50 hover:bg-red-500 hover:text-white text-red-600 border border-red-200 hover:border-red-500 font-bold rounded-lg text-[10px] transition-all duration-150 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                          >
+                            {busyId === apt.id && busyAction === 'no_show' ? 'กำลังบันทึก...' : '✗ ลูกค้าไม่มา'}
+                          </button>
+                        </>
+                      )}
+
+                      {(apt.status === 'completed' || apt.status === 'rejected' || apt.status === 'no_show') && (
                         <span className="text-[10px] text-slate-400 font-bold text-center w-full">
-                          {apt.status === 'completed' ? 'ปิดงานแล้ว ✓' : 'ถูกปฏิเสธไปแล้ว'}
+                          {apt.status === 'completed' ? 'ปิดงานแล้ว ✓' : apt.status === 'no_show' ? 'บันทึกว่าไม่มาตามนัด' : 'ถูกปฏิเสธไปแล้ว'}
                         </span>
                       )}
                     </div>
@@ -676,6 +742,80 @@ export default function AgentAppointmentsPage() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow disabled:opacity-50"
               >
                 {busyId === rejectingApt.id ? 'กำลังปฏิเสธ...' : 'ยืนยันปฏิเสธ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔑 KEYWORD: โมดัลยืนยันผลว่าลูกค้าไม่มาตามนัด (No-show) */}
+      {noShowApt && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-extrabold text-red-600 text-base flex items-center gap-1.5">
+                <span>🚫</span> ยืนยันว่าลูกค้าไม่มาตามนัด
+              </h3>
+              <button onClick={closeNoShowModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-slate-500">นัดหมายของ:</p>
+              <p className="text-sm font-extrabold text-slate-900">{noShowApt.customerName}</p>
+              <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{noShowApt.propertyTitle}</p>
+              <p className="text-[11px] font-bold text-slate-600 mt-1">
+                📅 {formatDateTH(noShowApt.date)}, {timeSlotLabel(noShowApt.timeSlot)}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-extrabold text-slate-700">กรุณาเลือกเหตุผล:</label>
+
+              {NO_SHOW_REASONS.map((reasonOpt, idx) => (
+                <label key={idx} className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white transition cursor-pointer text-xs font-bold text-slate-700">
+                  <input
+                    type="radio"
+                    name="agentNoShowReason"
+                    value={reasonOpt}
+                    checked={noShowReasonOption === reasonOpt}
+                    onChange={(e) => setNoShowReasonOption(e.target.value)}
+                    className="accent-red-600"
+                  />
+                  <span>{reasonOpt}</span>
+                </label>
+              ))}
+
+              {noShowReasonOption === 'อื่นๆ' && (
+                <textarea
+                  rows={2}
+                  placeholder="พิมพ์ระบุเหตุผลเพิ่มเติม..."
+                  value={customNoShowReason}
+                  onChange={(e) => setCustomNoShowReason(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-red-500 mt-2"
+                />
+              )}
+            </div>
+
+            <p className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 leading-relaxed">
+              ℹ️ ลูกค้าจะเห็นบันทึกนี้ และไม่สามารถรีวิวนัดหมายนี้ได้ — ถ้าลูกค้าเบี้ยวนัดสะสมครบ
+              จำนวนที่กำหนด ระบบจะจำกัดการจองนัดใหม่ชั่วคราว
+            </p>
+
+            <div className="flex items-center justify-end gap-2 border-t pt-3">
+              <button
+                type="button"
+                onClick={closeNoShowModal}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer"
+              >
+                ย้อนกลับ
+              </button>
+              <button
+                type="button"
+                onClick={confirmNoShow}
+                disabled={busyId === noShowApt.id}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow disabled:opacity-50"
+              >
+                {busyId === noShowApt.id ? 'กำลังบันทึก...' : 'ยืนยันว่าไม่มาตามนัด'}
               </button>
             </div>
           </div>
