@@ -483,9 +483,10 @@ export default function AgentAppointmentsPage() {
                   }`}
                 >
 
-                  {/* แถบสีข้างซ้ายบอกสถานะ */}
+                  {/* แถบสีข้างซ้ายบอกสถานะ — needsResult แยกเป็นสีส้มเหมือน pending เพื่อบอกว่า "ต้องรีบจัดการ" */}
                   <div className={`absolute left-0 top-0 bottom-0 w-1 ${
                     apt.status === 'pending' ? 'bg-amber-400' :
+                    apt.needsResult ? 'bg-amber-500' :
                     apt.status === 'approved' ? 'bg-blue-500' :
                     apt.status === 'completed' ? 'bg-emerald-500' : 'bg-red-500'
                   }`} />
@@ -503,11 +504,12 @@ export default function AgentAppointmentsPage() {
                       </div>
                       <span className={`ml-auto text-[9px] font-black px-2 py-1 rounded-full border ${
                         apt.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        apt.needsResult ? 'bg-amber-50 text-amber-700 border-amber-200' :
                         apt.status === 'approved' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                         apt.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                         'bg-red-50 text-red-600 border-red-200'
                       }`}>
-                        {apt.status === 'pending' ? 'รอยืนยัน' : apt.status === 'approved' ? 'ยืนยันแล้ว' : apt.status === 'completed' ? 'เสร็จสิ้น' : apt.status === 'cancelled' ? 'ลูกค้ายกเลิกแล้ว' : apt.status === 'no_show' ? 'ไม่มาตามนัด' : 'ปฏิเสธแล้ว'}
+                        {apt.needsResult ? 'รอยืนยันผล' : apt.status === 'pending' ? 'รอยืนยัน' : apt.status === 'approved' ? 'ยืนยันแล้ว' : apt.status === 'completed' ? 'เสร็จสิ้น' : apt.status === 'cancelled' ? 'ลูกค้ายกเลิกแล้ว' : apt.status === 'no_show' ? 'ไม่มาตามนัด' : 'ปฏิเสธแล้ว'}
                       </span>
                     </div>
 
