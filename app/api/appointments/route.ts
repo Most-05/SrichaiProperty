@@ -339,6 +339,20 @@ export async function PATCH(request: Request) {
           update: { is_booked: true }
         });
 
+        // แจ้งลูกค้าทันทีว่านายหน้าขอเลื่อน พร้อมบอกวันเก่า -> วันใหม่ ให้เห็นชัดว่าเปลี่ยนไปเป็นอะไร
+        if (appointment.customer_id) {
+          const prop = await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } });
+          const oldLabel = `${toDateKey(appointment.appointment_date)} (${appointment.time_slot === "afternoon" ? "ช่วงบ่าย" : "ช่วงเช้า"})`;
+          const newLabel = `${date} (${timeSlot === "afternoon" ? "ช่วงบ่าย" : "ช่วงเช้า"})`;
+          sendNotification(
+            appointment.customer_id,
+            "นายหน้าขอเลื่อนวันนัดหมาย",
+            `นายหน้าขอเลื่อนนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" จากวันที่ ${oldLabel} เป็นวันที่ ${newLabel} กรุณาเข้าไปกดยืนยันวันใหม่ หรือยกเลิกนัดหากไม่สะดวก`,
+            "appointment",
+            "/appointments"
+          );
+        }
+
         return NextResponse.json({ success: true, data: updated });
       }
 
