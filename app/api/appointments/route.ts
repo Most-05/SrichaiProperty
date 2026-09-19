@@ -5,7 +5,7 @@ import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหร�
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
 import { autoCompleteOverdueAppointments, appointmentNeedsResult, isCustomerBlockedByNoShow } from "@/lib/services/noShowService"; // auto-complete + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อกจากประวัติเบี้ยวนัด
-import { NO_SHOW_LIMIT } from "@/lib/constants"; // ใช้แจ้งเตือนลูกค้าว่าเหลือโควตาก่อนถูกจำกัดการจองกี่ครั้ง
+import { NO_SHOW_LIMIT, APPOINTMENT_STATUS } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
 
 /**
  * ==============================================================================
@@ -270,13 +270,46 @@ export async function PATCH(request: Request) {
     // --------------------------------------------------------------------------
     // (ก) กรณีฝั่งนายหน้าจัดการ: ยืนยัน (confirm), ปฏิเสธ (reject), หรือ ปิดงาน (complete)
     // --------------------------------------------------------------------------
-    if (["confirm", "reject", "complete", "no_show"].includes(action)) {
+    if (["confirm", "reject", "complete", "no_show", "agent_reschedule"].includes(action)) {
       // ตรวจสอบสิทธิ์: ต้องเป็นนายหน้าเจ้าของคิวงานนี้เท่านั้น
       if (user.role_id !== "agent" || appointment.agent_id !== user.id) {
         return NextResponse.json({ error: "คุณไม่มีสิทธิ์จัดการนัดหมายนี้" }, { status: 403 });
       }
 
       // นายหน้ากดปิดงานเมื่อพาลูกค้าชมสถานที่จริงเรียบร้อยแล้ว (status -> completed)
+      // 🔑 KEYWORD: นายหน้าขอเลื่อนวันนัด
+      // เดิมพอยืนยันนัดไปแล้ว (approved) นายหน้าทำอะไรกับนัดนั้นไม่ได้เลย ถ้าติดธุระไปไม่ได้จริง
+      // เหลือทางเลือกแค่โกหกว่า "ลูกค้ามาแล้ว" หรือใส่ร้ายว่า "ลูกค้าไม่มา" (ซึ่งไปนับโควตาแบนลูกค้า)
+      // ให้เลื่อนวันได้แทน แล้วส่งให้ลูกค้าเป็นคนตัดสินว่ารับวันใหม่ไหม (awaiting_customer)
+      if (action === "agent_reschedule") {
+        if (![APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.APPROVED].includes(appointment.status as never)) {
+          return NextResponse.json({ error: "เลื่อนได้เฉพาะนัดที่ยังไม่ปิดงานเท่านั้น" }, { status: 400 });
+        }
+        if (!date || !timeSlot) {
+          return NextResponse.json({ error: "กรุณาระบุวันและรอบเวลาใหม่" }, { status: 400 });
+        }
+        if (!appointment.property_id) {
+          return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์ของนัดนี้" }, { status: 400 });
+        }
+
+        // เก็บวัน+รอบ "ครั้งแรกสุด" ไว้โชว์ขีดฆ่า เขียนครั้งเดียวไม่ทับของเดิม (กฎเดียวกับตอนลูกค้าเลื่อนเอง)
+        const shouldKeepOriginal = appointment.original_date === null;
+
+        const updated = await db.appointments.update({
+          where: { id },
+          data: {
+            appointment_date: new Date(date),
+            time_slot: timeSlot,
+            status: APPOINTMENT_STATUS.AWAITING_CUSTOMER,
+            ...(shouldKeepOriginal
+              ? { original_date: appointment.appointment_date, original_time_slot: appointment.time_slot }
+              : {})
+          }
+        });
+
+        return NextResponse.json({ success: true, data: updated });
+      }
+
       if (action === "complete") {
         if (appointment.status !== "approved") return NextResponse.json({ error: "ปิดงานได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
         // 🔑 KEYWORD: กันปิดงานก่อนถึงวันนัดจริง — เดิมไม่เคยเช็ควันที่เลย ปิดงานได้ทันที
