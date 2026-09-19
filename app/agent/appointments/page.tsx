@@ -200,6 +200,60 @@ export default function AgentAppointmentsPage() {
     await handleAction(targetId, 'reject', finalReason);
   };
 
+  // 🔑 KEYWORD: นายหน้ายกเลิกนัดที่ยืนยันไปแล้ว
+  // API (DELETE /api/appointments) รองรับให้นายหน้ายกเลิกได้อยู่แล้ว แต่หน้าเว็บไม่เคยมีปุ่มให้กด
+  // ทำให้พอยืนยันนัดไปแล้วนายหน้าถอยไม่ได้เลย ถ้าติดธุระจริงต้องไปโกหกสถานะแทน
+  const CANCEL_REASONS = [
+    'ติดธุระด่วน ไม่สามารถไปตามนัดได้',
+    'เจ้าของบ้านยกเลิกการให้เข้าชมกะทันหัน',
+    'ทรัพย์นี้ปิดการขาย/มีผู้จองแล้ว',
+    'อื่นๆ'
+  ];
+
+  const [cancelingApt, setCancelingApt] = useState<AgentAppointment | null>(null);
+  const [cancelReasonOption, setCancelReasonOption] = useState<string>(CANCEL_REASONS[0]);
+  const [customCancelReason, setCustomCancelReason] = useState('');
+
+  const openCancelModal = (apt: AgentAppointment) => {
+    setCancelingApt(apt);
+    setCancelReasonOption(CANCEL_REASONS[0]);
+    setCustomCancelReason('');
+  };
+
+  const closeCancelModal = () => {
+    setCancelingApt(null);
+    setCustomCancelReason('');
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelingApt) return;
+    const finalReason = cancelReasonOption === 'อื่นๆ' ? customCancelReason.trim() : cancelReasonOption;
+    if (cancelReasonOption === 'อื่นๆ' && !finalReason) {
+      setToast({ kind: 'error', text: 'กรุณาระบุเหตุผลในการยกเลิก' });
+      return;
+    }
+
+    const targetId = cancelingApt.id;
+    closeCancelModal();
+    setBusyId(targetId);
+    try {
+      const res = await fetch(`/api/appointments?id=${encodeURIComponent(targetId)}&reason=${encodeURIComponent(finalReason)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        await loadAppointments();
+        setToast({ kind: 'success', text: '✓ ยกเลิกนัดหมายเรียบร้อยแล้ว — แจ้งเตือนลูกค้าให้แล้ว' });
+      } else {
+        setToast({ kind: 'error', text: data.error || 'ยกเลิกนัดหมายไม่สำเร็จ' });
+      }
+    } catch {
+      setToast({ kind: 'error', text: 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   // === โมดัล "ยืนยันผลว่าลูกค้าไม่มาตามนัด" (No-show) — mirror โมดัลปฏิเสธด้านบน ===
   // เหตุผลจะถูกส่งไปเก็บใน no_show_note (คนละคอลัมน์กับ cancel_reason)
   const NO_SHOW_REASONS = [
@@ -626,6 +680,17 @@ export default function AgentAppointmentsPage() {
                         </button>
                       )}
 
+                      {/* 🔑 KEYWORD: ปุ่มยกเลิกนัดฝั่งนายหน้า — นัดที่ยืนยันแล้วแต่ไปไม่ได้จริง */}
+                      {apt.status === 'approved' && !apt.needsResult && (
+                        <button
+                          disabled={busyId === apt.id}
+                          onClick={() => openCancelModal(apt)}
+                          className="w-full px-3 py-2 bg-red-50 hover:bg-red-500 hover:text-white text-red-600 border border-red-200 hover:border-red-500 font-bold rounded-lg text-[10px] transition-all duration-150 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                        >
+                          ยกเลิกนัด
+                        </button>
+                      )}
+
                       {/* 🔑 KEYWORD: ปุ่มยืนยันผลการนัดหมาย (No-show) — วันนัดผ่านไปแล้ว รอผลจริง */}
                       {apt.needsResult && (
                         <>
@@ -734,6 +799,79 @@ export default function AgentAppointmentsPage() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow disabled:opacity-50"
               >
                 {busyId === rejectingApt.id ? 'กำลังปฏิเสธ...' : 'ยืนยันปฏิเสธ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔑 KEYWORD: โมดัลยกเลิกนัดฝั่งนายหน้า */}
+      {cancelingApt && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-extrabold text-red-600 text-base flex items-center gap-1.5">
+                <span>⚠️</span> ยกเลิกนัดหมายที่ยืนยันแล้ว
+              </h3>
+              <button onClick={closeCancelModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-slate-500">นัดหมายของ:</p>
+              <p className="text-sm font-extrabold text-slate-900">{cancelingApt.customerName}</p>
+              <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{cancelingApt.propertyTitle}</p>
+              <p className="text-[11px] font-bold text-slate-600 mt-1">
+                📅 {formatDateTH(cancelingApt.date)}, {timeSlotLabel(cancelingApt.timeSlot)}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-extrabold text-slate-700">กรุณาเลือกเหตุผลในการยกเลิก:</label>
+              {CANCEL_REASONS.map((reasonOpt, idx) => (
+                <label key={idx} className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white transition cursor-pointer text-xs font-bold text-slate-700">
+                  <input
+                    type="radio"
+                    name="agentCancelReason"
+                    value={reasonOpt}
+                    checked={cancelReasonOption === reasonOpt}
+                    onChange={(e) => setCancelReasonOption(e.target.value)}
+                    className="accent-red-600"
+                  />
+                  <span>{reasonOpt}</span>
+                </label>
+              ))}
+
+              {cancelReasonOption === 'อื่นๆ' && (
+                <textarea
+                  rows={2}
+                  placeholder="พิมพ์ระบุเหตุผลเพิ่มเติม..."
+                  value={customCancelReason}
+                  onChange={(e) => setCustomCancelReason(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-red-500 mt-2"
+                />
+              )}
+            </div>
+
+            <p className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 leading-relaxed">
+              ℹ️ ลูกค้าจะได้รับแจ้งเตือนพร้อมเหตุผลนี้ และรอบเวลานี้จะกลับมาเปิดให้จองใหม่ทันที
+              — ถ้าแค่ติดธุระและอยากเลื่อนวันแทน ให้กดปุ่ม &quot;ขอเลื่อนวัน&quot; จะดีกว่า
+            </p>
+
+            <div className="flex items-center justify-end gap-2 border-t pt-3">
+              <button
+                type="button"
+                onClick={closeCancelModal}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer"
+              >
+                ย้อนกลับ
+              </button>
+              <button
+                type="button"
+                onClick={confirmCancel}
+                disabled={busyId === cancelingApt.id}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow disabled:opacity-50"
+              >
+                {busyId === cancelingApt.id ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกนัด'}
               </button>
             </div>
           </div>
