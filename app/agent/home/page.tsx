@@ -113,8 +113,8 @@ export default function AgentHomePage() {
     );
   }
 
-  const user = session?.user as { name?: string | null; status?: string | null };
-  if (user?.status === 'pending') {
+  // type ของ session.user.status ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
+  if (session?.user?.status === 'pending') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 text-center">
         <div className="bg-white rounded-3xl p-8 shadow-xl max-w-md space-y-4">
@@ -190,7 +190,7 @@ export default function AgentHomePage() {
           <span className="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold border border-white/10 inline-flex items-center gap-1.5 w-fit">
             <CalendarIcon className="w-3 h-3" /> {currentDate}
           </span>
-          <h2 className="text-2xl md:text-3xl font-black tracking-tight">สวัสดีคุณ{user?.name?.split(' ')[0] || 'นายหน้า'}</h2>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight">สวัสดีคุณ{session?.user?.name?.split(' ')[0] || 'นายหน้า'}</h2>
           <p className="text-white/80 text-xs leading-relaxed max-w-xl">
             ยินดีต้อนรับสู่ศูนย์บัญชาการนายหน้าศรีชัยพรอพเพอร์ตี้ ตรวจสอบรายการคิวนัดหมายและตอบแชทลูกค้าได้ทันที
           </p>

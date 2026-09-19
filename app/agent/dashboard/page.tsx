@@ -252,8 +252,8 @@ export default function AgentDashboardPage() {
   }
 
   // 4.2 ตรวจสอบสถานะ KYC ของบัญชีนายหน้า (ถ้ายังรออนุมัติให้แสดงหน้าแจ้งเตือน)
-  const user = session?.user as { name?: string | null; status?: string | null };
-  if (user?.status === 'pending') {
+  // type ของ session.user.status ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
+  if (session?.user?.status === 'pending') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 text-center">
         <div className="bg-white rounded-3xl p-8 shadow-xl max-w-md space-y-4">
@@ -318,7 +318,7 @@ export default function AgentDashboardPage() {
         {/* แถบหัวข้อหลัก และปุ่มสร้างประกาศใหม่ */}
         <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-slate-900">ภาพรวมการทำงาน ({user?.name || 'นายหน้า'})</h2>
+            <h2 className="text-xl md:text-2xl font-black text-slate-900">ภาพรวมการทำงาน ({session?.user?.name || 'นายหน้า'})</h2>
             <p className="text-slate-500 text-xs mt-0.5">แผงบริหารจัดการรายการประกาศและตารางนัดหมายลูกค้า</p>
           </div>
           <Link href="/agent/add-property" className="bg-blue-600 hover:bg-blue-700 text-white font-black px-5 py-3 rounded-2xl flex items-center justify-center gap-2 shadow-sm transition border-0">

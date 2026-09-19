@@ -8,7 +8,8 @@ export async function GET(request: Request) {
   try {
     // ตรวจสอบสิทธิ์: เฉพาะ Admin เท่านั้น
     const session = await getServerSession(authOptions);
-    const role = (session?.user as { role?: string })?.role;
+    // type ของ session.user.role ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
+    const role = session?.user?.role;
     if (!session || role !== "admin") {
       return NextResponse.json({ error: "Unauthorized: Admins only" }, { status: 401 });
     }
