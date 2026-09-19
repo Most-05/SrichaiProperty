@@ -454,6 +454,37 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true, data: updated });
     }
 
+    // 🔑 KEYWORD: ลูกค้ายืนยันวันใหม่ที่นายหน้าขอเลื่อน
+    // คู่กับ agent_reschedule — ลูกค้าเป็นคนตัดสินใจเอง ไม่ใช่นายหน้ายืนยันข้อเสนอตัวเอง
+    // (ถ้าไม่สะดวกก็กดยกเลิกนัดได้ตามปกติ ใช้ปุ่มยกเลิกเดิม)
+    if (action === "customer_accept") {
+      if (appointment.customer_id !== user.id) {
+        return NextResponse.json({ error: "คุณไม่มีสิทธิ์จัดการนัดหมายนี้" }, { status: 403 });
+      }
+      if (appointment.status !== APPOINTMENT_STATUS.AWAITING_CUSTOMER) {
+        return NextResponse.json({ error: "นัดหมายนี้ไม่ได้อยู่ระหว่างรอยืนยันวันใหม่" }, { status: 400 });
+      }
+
+      const updated = await db.appointments.update({
+        where: { id },
+        data: { status: APPOINTMENT_STATUS.APPROVED }
+      });
+
+      if (appointment.agent_id) {
+        const prop = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } }) : null;
+        const customerName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "ลูกค้า";
+        sendNotification(
+          appointment.agent_id,
+          "ลูกค้ายืนยันวันนัดใหม่แล้ว",
+          `คุณ ${customerName} ยืนยันวันนัดใหม่สำหรับ "${prop?.title || "อสังหาริมทรัพย์"}" วันที่ ${toDateKey(appointment.appointment_date)} เรียบร้อยแล้ว`,
+          "appointment",
+          "/agent/appointments"
+        );
+      }
+
+      return NextResponse.json({ success: true, data: updated });
+    }
+
     // 🔑 KEYWORD: ลูกค้าขอเปลี่ยนวันนัด
     // --------------------------------------------------------------------------
     // (ข) กรณีฝั่งลูกค้าจัดการ: ขอเปลี่ยนวันและเวลานัดหมายใหม่
