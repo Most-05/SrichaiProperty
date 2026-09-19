@@ -17,6 +17,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import BookingSidebar from '@/components/customer/BookingSidebar';
 import BookingCalendar from '@/components/customer/BookingCalendar';
+import { NO_SHOW_LIMIT } from '@/lib/constants';
 
 // รายชื่อเดือนภาษาไทยสำหรับแสดงผลวันที่แบบข้อความอ่านง่าย
 const MONTH_NAMES_TH = [
@@ -49,10 +50,14 @@ function BookAppointmentForm() {
   // ----------------------------------------------------------------------------
   // 3. GLOBAL CONTEXT
   // ----------------------------------------------------------------------------
-  const { properties, propertiesLoading, refreshAppointments } = useApp();
-  
+  const { properties, propertiesLoading, refreshAppointments, appointments } = useApp();
+
   // ค้นหาอสังหาริมทรัพย์ที่ตรงกับ propertyId
   const property = properties.find((p) => String(p.id) === String(propertyId));
+
+  // 🔑 KEYWORD: บล็อกลูกค้าเบี้ยวนัดซ้ำ (No-show) — คำนวณจาก appointments ที่ context โหลดมาอยู่แล้ว
+  // (ตรงกับที่ POST /api/appointments เช็คไว้อยู่แล้ว อันนี้แค่แจ้งเตือนล่วงหน้าก่อนกดจองจริง)
+  const isBlockedByNoShow = appointments.filter((a) => a.status === 'no_show').length >= NO_SHOW_LIMIT;
 
   // ----------------------------------------------------------------------------
   // 4. EFFECTS & FETCHING (ดึงข้อมูลวันว่างและวันหยุดจาก API)
@@ -125,7 +130,7 @@ function BookAppointmentForm() {
   // ----------------------------------------------------------------------------
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!property || !selectedDateStr || !selectedTimeSlot) return;
+    if (!property || !selectedDateStr || !selectedTimeSlot || isBlockedByNoShow) return;
 
     setSubmitting(true);
     try {
@@ -197,6 +202,16 @@ function BookAppointmentForm() {
 
           {/* ฟอร์มการจองนัดหมายฝั่งขวา (3 ขั้นตอน) */}
           <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-sm space-y-8">
+            {/* 🔑 KEYWORD: แจ้งเตือนก่อนจองว่าถูกจำกัดจากประวัติไม่มาตามนัด */}
+            {isBlockedByNoShow && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
+                <span>⚠️</span>
+                <span>
+                  บัญชีของคุณมีประวัติไม่มาตามนัดครบ {NO_SHOW_LIMIT} ครั้ง จึงถูกจำกัดการจองนัดใหม่ชั่วคราว
+                  กรุณาติดต่อทีมงานหากต้องการความช่วยเหลือ
+                </span>
+              </div>
+            )}
             <form onSubmit={handleBookingSubmit} className="space-y-8">
               
               {/* ================================================================
@@ -308,7 +323,7 @@ function BookAppointmentForm() {
                 {/* 🔑 KEYWORD: ปุ่มยืนยันการนัดหมาย */}
                 <button
                   type="submit"
-                  disabled={submitting || !selectedDateStr || !selectedTimeSlot}
+                  disabled={submitting || !selectedDateStr || !selectedTimeSlot || isBlockedByNoShow}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition shadow flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed text-xs"
                 >
                   {submitting

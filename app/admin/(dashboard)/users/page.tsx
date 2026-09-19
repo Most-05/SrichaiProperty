@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Badge from '@/components/ui/Badge';
+import { NO_SHOW_LIMIT } from '@/lib/constants';
 
 interface UserData {
   id: string;
@@ -15,6 +16,7 @@ interface UserData {
   role_id: string;
   status: string;
   created_at: string;
+  noShowCount: number; // 🔑 KEYWORD: จำนวนครั้งที่เคยเบี้ยวนัด (no_show) สะสม
 }
 
 interface StatsData {
@@ -133,14 +135,15 @@ export default function AdminUsersPage() {
                     <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">ข้อมูลติดต่อ (CONTACT)</th>
                     <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">บทบาท (ROLE)</th>
                     <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-center">สถานะ (STATUS)</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-center">ไม่มาตามนัด (NO-SHOW)</th>
                     <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-right">จัดการ (ACTIONS)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr><td colSpan={5} className="py-12 text-center text-slate-500 font-bold">กำลังโหลดข้อมูล...</td></tr>
+                    <tr><td colSpan={6} className="py-12 text-center text-slate-500 font-bold">กำลังโหลดข้อมูล...</td></tr>
                   ) : users.length === 0 ? (
-                    <tr><td colSpan={5} className="py-12 text-center text-slate-500 font-bold">ไม่พบผู้ใช้งาน</td></tr>
+                    <tr><td colSpan={6} className="py-12 text-center text-slate-500 font-bold">ไม่พบผู้ใช้งาน</td></tr>
                   ) : (
                     users.map((user) => (
                       <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
@@ -175,6 +178,20 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <Badge status={user.status} />
+                        </td>
+                        {/* 🔑 KEYWORD: สถิติเบี้ยวนัด (No-show) — แสดงเฉพาะบัญชีลูกค้า เพราะมีแค่ลูกค้าที่จองนัดได้ */}
+                        <td className="px-6 py-4 text-center">
+                          {user.role_id === 'customer' ? (
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${
+                              user.noShowCount >= NO_SHOW_LIMIT ? 'bg-red-50 text-red-600 border border-red-200' :
+                              user.noShowCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                              'text-slate-300'
+                            }`}>
+                              {user.noShowCount} ครั้ง{user.noShowCount >= NO_SHOW_LIMIT ? ' (ถูกจำกัด)' : ''}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
