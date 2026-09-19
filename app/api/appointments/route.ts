@@ -279,6 +279,11 @@ export async function PATCH(request: Request) {
       // นายหน้ากดปิดงานเมื่อพาลูกค้าชมสถานที่จริงเรียบร้อยแล้ว (status -> completed)
       if (action === "complete") {
         if (appointment.status !== "approved") return NextResponse.json({ error: "ปิดงานได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
+        // 🔑 KEYWORD: กันปิดงานก่อนถึงวันนัดจริง — เดิมไม่เคยเช็ควันที่เลย ปิดงานได้ทันที
+        // หลังยืนยันรับคิว ทั้งที่ลูกค้ายังไม่ได้ไปดูบ้านจริง ทำให้ระบบ No-show ไร้ความหมาย
+        if (!appointmentNeedsResult(appointment)) {
+          return NextResponse.json({ error: "ยังไม่ถึงวันนัด ยืนยันผลได้หลังจากถึงวันนัดแล้วเท่านั้น" }, { status: 400 });
+        }
         // บันทึก visit_confirmed_at ด้วย เพื่อให้รู้ว่านายหน้ายืนยันผลจริง (ต่างจาก
         // auto-complete ที่ไม่มีใครยืนยัน — ดู autoCompleteOverdueAppointments())
         const updated = await db.appointments.update({ where: { id }, data: { status: "completed", visit_confirmed_at: new Date() } });
@@ -300,6 +305,10 @@ export async function PATCH(request: Request) {
       if (action === "no_show") {
         if (appointment.status !== "approved") {
           return NextResponse.json({ error: "ยืนยันผลได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
+        }
+        // 🔑 KEYWORD: กันยืนยัน "ไม่มาตามนัด" ก่อนถึงวันนัดจริง (เหตุผลเดียวกับ complete ด้านบน)
+        if (!appointmentNeedsResult(appointment)) {
+          return NextResponse.json({ error: "ยังไม่ถึงวันนัด ยืนยันผลได้หลังจากถึงวันนัดแล้วเท่านั้น" }, { status: 400 });
         }
         const noShowNote = typeof reason === "string" ? reason.trim() : "";
         if (!noShowNote) {

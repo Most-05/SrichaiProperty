@@ -595,45 +595,35 @@ export default function AgentAppointmentsPage() {
                         </>
                       )}
 
+                      {/* 🔑 KEYWORD: นัดที่ยังไม่ถึงวันนัด (Upcoming จริงๆ) — ห้ามปิดงานได้ก่อนกำหนด
+                          เดิมมีปุ่ม "ทำเครื่องหมายเสร็จสิ้น" อยู่ตรงนี้ด้วย (มีมาตั้งแต่แรกก่อนฟีเจอร์ No-show)
+                          กดปิดงานได้ทันทีโดยไม่ต้องรอถึงวันนัดจริง ทำให้ระบบ No-show ไร้ความหมาย
+                          (นายหน้ากดปิดงานล่วงหน้าได้ตลอด เหมือนระบบเดาว่าสำเร็จเสมอแบบเดิม)
+                          เอาออก เหลือแค่แชทคุยรอได้ระหว่างรอวันนัด — ปุ่มยืนยันผลจะโผล่เฉพาะตอน
+                          needsResult = true (ผ่านวันนัดแล้ว) ในบล็อกถัดไปเท่านั้น */}
                       {apt.status === 'approved' && !apt.needsResult && (
-                        <>
-                          <button
-                            onClick={async () => {
-                              try {
-                                const res = await fetch('/api/chat/sessions', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ propertyId: apt.propertyId })
-                                });
-                                const data = await res.json();
-                                if (data.success) {
-                                  window.location.href = `/agent/chat`;
-                                } else {
-                                  window.location.href = '/agent/chat';
-                                }
-                              } catch {
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/chat/sessions', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ propertyId: apt.propertyId })
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                window.location.href = `/agent/chat`;
+                              } else {
                                 window.location.href = '/agent/chat';
                               }
-                            }}
-                            className="w-full text-center px-3 py-2 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 text-slate-700 font-bold rounded-lg text-[10px] transition-all duration-150 active:scale-95 cursor-pointer"
-                          >
-                            แชทคุย
-                          </button>
-                          <button
-                            disabled={busyId === apt.id}
-                            onClick={() => handleAction(apt.id, 'complete')}
-                            className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-lg text-[10px] shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 cursor-pointer disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-1.5"
-                          >
-                            {busyId === apt.id && busyAction === 'complete' ? (
-                              <>
-                                <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                                กำลังบันทึก...
-                              </>
-                            ) : (
-                              <>✓ ทำเครื่องหมายเสร็จสิ้น</>
-                            )}
-                          </button>
-                        </>
+                            } catch {
+                              window.location.href = '/agent/chat';
+                            }
+                          }}
+                          className="w-full text-center px-3 py-2 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 text-slate-700 font-bold rounded-lg text-[10px] transition-all duration-150 active:scale-95 cursor-pointer"
+                        >
+                          แชทคุย
+                        </button>
                       )}
 
                       {/* 🔑 KEYWORD: ปุ่มยืนยันผลการนัดหมาย (No-show) — วันนัดผ่านไปแล้ว รอผลจริง */}
