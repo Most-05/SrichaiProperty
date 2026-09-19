@@ -292,6 +292,12 @@ export async function PATCH(request: Request) {
           return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์ของนัดนี้" }, { status: 400 });
         }
 
+        // เช็คว่าวันใหม่ที่จะเลื่อนไป ตัวนายหน้าเองไม่ได้ติดนัดบ้านหลังอื่นอยู่แล้ว
+        // (กฎเดียวกับตอนลูกค้าจอง/ลูกค้าเลื่อน — นายหน้าไปนำชมได้ทีละที่)
+        if (await hasAgentBookingConflict(user.id, appointment.property_id, new Date(date), timeSlot)) {
+          return NextResponse.json({ error: "คุณติดนัดชมบ้านหลังอื่นในช่วงเวลานี้แล้ว กรุณาเลือกวันหรือเวลาอื่น" }, { status: 400 });
+        }
+
         // เก็บวัน+รอบ "ครั้งแรกสุด" ไว้โชว์ขีดฆ่า เขียนครั้งเดียวไม่ทับของเดิม (กฎเดียวกับตอนลูกค้าเลื่อนเอง)
         const shouldKeepOriginal = appointment.original_date === null;
 
