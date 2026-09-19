@@ -313,6 +313,32 @@ export async function PATCH(request: Request) {
           }
         });
 
+        // ปลดล็อกรอบเดิมคืนระบบ ให้ลูกค้าคนอื่นจองแทนได้
+        await db.property_viewing_slots.updateMany({
+          where: { property_id: appointment.property_id, available_date: appointment.appointment_date, time_slot: appointment.time_slot ?? undefined },
+          data: { is_booked: false }
+        });
+
+        // 🔑 KEYWORD: เปิดรอบวันว่างอัตโนมัติตอนนายหน้าเลื่อนนัด
+        // นายหน้าเป็นเจ้าของบ้าน มีสิทธิ์เปิดรอบอยู่แล้ว — ถ้าวันใหม่ยังไม่เคยเปิดไว้ก็สร้างให้เลย
+        // ไม่งั้นต้องไปเปิดรอบที่หน้าแก้ไขประกาศก่อนแล้วค่อยกลับมาเลื่อน (2 ขั้นตอน เสียเวลา)
+        await db.property_viewing_slots.upsert({
+          where: {
+            property_id_available_date_time_slot: {
+              property_id: appointment.property_id,
+              available_date: new Date(date),
+              time_slot: timeSlot
+            }
+          },
+          create: {
+            property_id: appointment.property_id,
+            available_date: new Date(date),
+            time_slot: timeSlot,
+            is_booked: true
+          },
+          update: { is_booked: true }
+        });
+
         return NextResponse.json({ success: true, data: updated });
       }
 
