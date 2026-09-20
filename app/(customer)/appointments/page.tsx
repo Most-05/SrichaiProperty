@@ -157,6 +157,30 @@ export default function AppointmentsPage() {
   const [customReasonText, setCustomReasonText] = useState<string>('');
   const [submittingCancel, setSubmittingCancel] = useState(false);
 
+  // 🔑 KEYWORD: ลูกค้ากดตกลงวันใหม่ที่นายหน้าขอเลื่อน
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+
+  const acceptNewDate = async (apt: AppointmentItem) => {
+    setAcceptingId(String(apt.id));
+    try {
+      const res = await fetch('/api/appointments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: apt.id, action: 'customer_accept' })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        await loadAppointments();
+      } else {
+        alert(data.error || 'ยืนยันวันใหม่ไม่สำเร็จ');
+      }
+    } catch {
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
   const openCancelModal = (apt: AppointmentItem) => {
     setCancelingApt(apt);
     setCancelReasonOption('ติดภารกิจด่วน / การเดินทางไม่สะดวก');
@@ -493,8 +517,20 @@ export default function AppointmentsPage() {
                       </Link>
                     )}
 
+                    {/* 🔑 KEYWORD: ปุ่มลูกค้ายืนยันวันใหม่ที่นายหน้าขอเลื่อน */}
+                    {/* ลูกค้าเป็นคนตัดสินใจเอง ไม่ใช่นายหน้ายืนยันข้อเสนอตัวเอง */}
+                    {apt.status === 'awaiting_customer' && (
+                      <button
+                        onClick={() => acceptNewDate(apt)}
+                        disabled={acceptingId === String(apt.id)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-black text-xs transition cursor-pointer active:scale-95 disabled:opacity-60"
+                      >
+                        {acceptingId === String(apt.id) ? 'กำลังบันทึก...' : '✓ ตกลงวันใหม่'}
+                      </button>
+                    )}
+
                     {/* ปุ่มยกเลิกนัด: แสดงเฉพาะนัดที่ยังไม่ถึงวันนัดหมายเท่านั้น */}
-                    {!pastThisApt && !cancelledThisApt && (apt.status === 'approved' || apt.status === 'pending') && (
+                    {!pastThisApt && !cancelledThisApt && (apt.status === 'approved' || apt.status === 'pending' || apt.status === 'awaiting_customer') && (
                       <button
                         onClick={() => openCancelModal(apt)}
                         className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-bold text-xs transition cursor-pointer active:scale-95"
