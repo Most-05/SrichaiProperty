@@ -254,6 +254,21 @@ export default function AgentAppointmentsPage() {
     }
   };
 
+  // 🔑 KEYWORD: นายหน้าขอเลื่อนวันนัด
+  // ติดธุระไปตามนัดไม่ได้ ให้เสนอวันใหม่แทนการยกเลิกทิ้ง — ลูกค้าเป็นคนกดรับวันใหม่เอง
+  const [reschedulingApt, setReschedulingApt] = useState<AgentAppointment | null>(null);
+  const [newDate, setNewDate] = useState('');
+
+  const openRescheduleModal = (apt: AgentAppointment) => {
+    setReschedulingApt(apt);
+    setNewDate('');
+  };
+
+  const closeRescheduleModal = () => {
+    setReschedulingApt(null);
+    setNewDate('');
+  };
+
   // === โมดัล "ยืนยันผลว่าลูกค้าไม่มาตามนัด" (No-show) — mirror โมดัลปฏิเสธด้านบน ===
   // เหตุผลจะถูกส่งไปเก็บใน no_show_note (คนละคอลัมน์กับ cancel_reason)
   const NO_SHOW_REASONS = [
@@ -680,6 +695,17 @@ export default function AgentAppointmentsPage() {
                         </button>
                       )}
 
+                      {/* 🔑 KEYWORD: ปุ่มขอเลื่อนวันนัด — ติดธุระแต่ยังอยากนำชม เสนอวันใหม่แทนยกเลิกทิ้ง */}
+                      {apt.status === 'approved' && !apt.needsResult && (
+                        <button
+                          disabled={busyId === apt.id}
+                          onClick={() => openRescheduleModal(apt)}
+                          className="w-full px-3 py-2 bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 border border-amber-300 hover:border-amber-500 font-bold rounded-lg text-[10px] transition-all duration-150 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                        >
+                          ขอเลื่อนวัน
+                        </button>
+                      )}
+
                       {/* 🔑 KEYWORD: ปุ่มยกเลิกนัดฝั่งนายหน้า — นัดที่ยืนยันแล้วแต่ไปไม่ได้จริง */}
                       {apt.status === 'approved' && !apt.needsResult && (
                         <button
@@ -799,6 +825,54 @@ export default function AgentAppointmentsPage() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow disabled:opacity-50"
               >
                 {busyId === rejectingApt.id ? 'กำลังปฏิเสธ...' : 'ยืนยันปฏิเสธ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔑 KEYWORD: โมดัลขอเลื่อนวันนัด */}
+      {reschedulingApt && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-extrabold text-amber-600 text-base flex items-center gap-1.5">
+                <span>📅</span> ขอเลื่อนวันนัดหมาย
+              </h3>
+              <button onClick={closeRescheduleModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-slate-500">นัดหมายของ:</p>
+              <p className="text-sm font-extrabold text-slate-900">{reschedulingApt.customerName}</p>
+              <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{reschedulingApt.propertyTitle}</p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">วันนัดเดิม</p>
+              <p className="text-[11px] font-bold text-slate-700">
+                {formatDateTH(reschedulingApt.date)}, {timeSlotLabel(reschedulingApt.timeSlot)}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-extrabold text-slate-700">เลือกวันใหม่ที่คุณสะดวก:</label>
+              <input
+                type="date"
+                value={newDate}
+                min={todayKey}
+                onChange={(e) => setNewDate(e.target.value)}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t pt-3">
+              <button
+                type="button"
+                onClick={closeRescheduleModal}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer"
+              >
+                ย้อนกลับ
               </button>
             </div>
           </div>
