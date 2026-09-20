@@ -407,11 +407,17 @@ export default function AppointmentsPage() {
                     {/* 🔑 KEYWORD: โชว์วันนัดเดิมขีดฆ่าเมื่อนัดถูกเลื่อน */}
                     {/* ข้อมูลนี้ API ส่งมาให้ตั้งแต่แรกแล้ว แต่หน้าลูกค้าไม่เคยเอามาแสดง
                         ทั้งที่ลูกค้าคือฝ่ายที่ต้องรู้มากที่สุดว่านัดถูกย้ายจากวันไหนมาวันไหน */}
-                    {apt.wasEdited && apt.originalDate && (
-                      <p className="text-[11px] font-bold text-slate-400 line-through">
-                        เดิม: {apt.originalDate} ({apt.originalTimeSlot === 'afternoon' ? 'ช่วงบ่าย' : 'ช่วงเช้า'})
-                      </p>
-                    )}
+                    {apt.wasEdited && apt.originalDate && (() => {
+                      const od = new Date(apt.originalDate);
+                      const odLabel = isNaN(od.getTime())
+                        ? apt.originalDate
+                        : `${od.getDate()} ${MONTH_NAMES_TH[od.getMonth()]} ${od.getFullYear() + 543}`;
+                      return (
+                        <p className="text-[11px] font-bold text-slate-400 line-through">
+                          เดิม: {odLabel} ({apt.originalTimeSlot === 'afternoon' ? 'ช่วงบ่าย' : 'ช่วงเช้า'})
+                        </p>
+                      );
+                    })()}
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                       <span>นายหน้า: {apt.agentName} ({apt.agentPhone})</span>
                     </div>
