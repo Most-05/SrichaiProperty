@@ -74,10 +74,14 @@ interface AppointmentItem {
   date: string;
   timeSlot: string;
   timeSlotText: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show' | string;
+  status: 'pending' | 'approved' | 'awaiting_customer' | 'rejected' | 'completed' | 'cancelled' | 'no_show' | string;
   note: string;
   cancelReason?: string;
   noShowNote?: string;
+  // 🔑 KEYWORD: วันนัดเดิมก่อนถูกเลื่อน (API ส่งมาให้อยู่แล้ว แต่หน้านี้ไม่เคยเอามาแสดง)
+  originalDate?: string | null;
+  originalTimeSlot?: string | null;
+  wasEdited?: boolean;
   agentName: string;
   agentPhone: string;
   agentImage?: string;
@@ -101,6 +105,8 @@ const getStatusDetails = (status: string) => {
       return { text: "ยกเลิกแล้ว", bg: "bg-red-50 border-red-200", color: "text-red-700" };
     case 'rejected':
       return { text: "ปฏิเสธแล้ว", bg: "bg-rose-50 border-rose-200", color: "text-rose-700" };
+    case 'awaiting_customer':
+      return { text: "นายหน้าขอเลื่อนวัน", bg: "bg-purple-50 border-purple-200", color: "text-purple-700" };
     case 'no_show':
       return { text: "ไม่มาตามนัด", bg: "bg-red-50 border-red-200", color: "text-red-700" };
     default:
@@ -373,6 +379,15 @@ export default function AppointmentsPage() {
                     </span>
                     <h3 className="font-extrabold text-slate-900 text-sm line-clamp-1">{apt.propertyName}</h3>
                     <div className="text-blue-700 font-extrabold text-xs">{apt.propertyPrice}</div>
+
+                    {/* 🔑 KEYWORD: โชว์วันนัดเดิมขีดฆ่าเมื่อนัดถูกเลื่อน */}
+                    {/* ข้อมูลนี้ API ส่งมาให้ตั้งแต่แรกแล้ว แต่หน้าลูกค้าไม่เคยเอามาแสดง
+                        ทั้งที่ลูกค้าคือฝ่ายที่ต้องรู้มากที่สุดว่านัดถูกย้ายจากวันไหนมาวันไหน */}
+                    {apt.wasEdited && apt.originalDate && (
+                      <p className="text-[11px] font-bold text-slate-400 line-through">
+                        เดิม: {apt.originalDate} ({apt.originalTimeSlot === 'afternoon' ? 'ช่วงบ่าย' : 'ช่วงเช้า'})
+                      </p>
+                    )}
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                       <span>นายหน้า: {apt.agentName} ({apt.agentPhone})</span>
                     </div>
