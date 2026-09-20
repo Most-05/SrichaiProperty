@@ -258,15 +258,47 @@ export default function AgentAppointmentsPage() {
   // ติดธุระไปตามนัดไม่ได้ ให้เสนอวันใหม่แทนการยกเลิกทิ้ง — ลูกค้าเป็นคนกดรับวันใหม่เอง
   const [reschedulingApt, setReschedulingApt] = useState<AgentAppointment | null>(null);
   const [newDate, setNewDate] = useState('');
+  const [newTimeSlot, setNewTimeSlot] = useState<'morning' | 'afternoon'>('morning');
 
   const openRescheduleModal = (apt: AgentAppointment) => {
     setReschedulingApt(apt);
     setNewDate('');
+    setNewTimeSlot(apt.timeSlot);
   };
 
   const closeRescheduleModal = () => {
     setReschedulingApt(null);
     setNewDate('');
+  };
+
+  const confirmReschedule = async () => {
+    if (!reschedulingApt) return;
+    if (!newDate) {
+      setToast({ kind: 'error', text: 'กรุณาเลือกวันใหม่ก่อน' });
+      return;
+    }
+
+    const targetId = reschedulingApt.id;
+    closeRescheduleModal();
+    setBusyId(targetId);
+    try {
+      const res = await fetch('/api/appointments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: targetId, action: 'agent_reschedule', date: newDate, timeSlot: newTimeSlot })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        await loadAppointments();
+        setToast({ kind: 'success', text: '✓ ส่งคำขอเลื่อนวันแล้ว — รอลูกค้ากดยืนยันวันใหม่' });
+      } else {
+        setToast({ kind: 'error', text: data.error || 'เลื่อนวันนัดไม่สำเร็จ' });
+      }
+    } catch {
+      setToast({ kind: 'error', text: 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์' });
+    } finally {
+      setBusyId(null);
+    }
   };
 
   // === โมดัล "ยืนยันผลว่าลูกค้าไม่มาตามนัด" (No-show) — mirror โมดัลปฏิเสธด้านบน ===
@@ -866,6 +898,30 @@ export default function AgentAppointmentsPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <label className="block text-xs font-extrabold text-slate-700">เลือกรอบเวลา:</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['morning', 'afternoon'] as const).map(slot => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setNewTimeSlot(slot)}
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                      newTimeSlot === slot ? 'border-amber-400 bg-amber-50' : 'border-slate-200 hover:border-amber-300'
+                    }`}
+                  >
+                    <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
+                    <p className="text-[9px] text-slate-500 font-bold">{slot === 'morning' ? '10:00 - 12:00' : '13:00 - 15:00'}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 leading-relaxed">
+              ℹ️ ลูกค้าจะได้รับแจ้งเตือนวันใหม่ และต้องกดยืนยันเองก่อนนัดจะกลับมาเป็น &quot;ยืนยันแล้ว&quot;
+              — ถ้าวันใหม่ยังไม่เคยเปิดรอบไว้ ระบบจะเปิดให้อัตโนมัติ
+            </p>
+
             <div className="flex items-center justify-end gap-2 border-t pt-3">
               <button
                 type="button"
@@ -873,6 +929,14 @@ export default function AgentAppointmentsPage() {
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer"
               >
                 ย้อนกลับ
+              </button>
+              <button
+                type="button"
+                onClick={confirmReschedule}
+                disabled={busyId === reschedulingApt.id}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs cursor-pointer shadow disabled:opacity-50"
+              >
+                {busyId === reschedulingApt.id ? 'กำลังส่ง...' : 'ส่งคำขอเลื่อนวัน'}
               </button>
             </div>
           </div>
