@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
-import { autoCompleteOverdueAppointments, appointmentNeedsResult, isCustomerBlockedByNoShow } from "@/lib/services/noShowService"; // auto-complete + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อกจากประวัติเบี้ยวนัด
+import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก
 import { NO_SHOW_LIMIT, APPOINTMENT_STATUS } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
 
 /**
@@ -53,6 +53,8 @@ export async function GET(request: Request) {
     // ถ้าเลยกำหนด VISIT_CONFIRM_GRACE_DAYS แล้วนายหน้ายังไม่ยืนยัน ค่อย auto-complete ให้เอง
     // (กันนัดค้างสถานะ "รอผล" ตลอดไปถ้านายหน้าลืมกด — ดู lib/services/noShowService.ts)
     await autoCompleteOverdueAppointments();
+    // ยกเลิกนัดที่นายหน้าขอเลื่อนไว้แต่ลูกค้าไม่เคยกดรับ จนวันที่เสนอผ่านไปแล้ว (คืนรอบว่างให้ด้วย)
+    await autoCancelExpiredRescheduleOffers();
 
     // 1.4 ดึงข้อมูลนัดหมายจากฐานข้อมูล PostgreSQL ผ่าน Prisma ORM
     // - ถ้าเป็นนายหน้า: ค้นหาแถวที่ agent_id === user.id
