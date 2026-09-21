@@ -575,7 +575,7 @@ export default function AgentAddPropertyPage() {
                   else if (isSelected) dayClass += "bg-blue-600 text-white shadow-md active:scale-95 cursor-pointer";
                   else if (hasSlots) dayClass += "border border-emerald-400 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer";
                   else if (isBusy && hasRealBookingOnDate(dateStr)) dayClass += "border border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer";
-                  else if (isBusy) dayClass += "border border-dashed border-slate-400 text-slate-500 bg-slate-50 hover:bg-slate-100 cursor-pointer";
+                  else if (isBusy) dayClass += "border border-dashed border-slate-300 text-slate-500 hover:bg-slate-50 cursor-pointer";
                   else dayClass += "text-slate-500 hover:bg-slate-50 cursor-pointer";
 
                   return (
@@ -616,9 +616,7 @@ export default function AgentAddPropertyPage() {
                               ? 'border-emerald-400 bg-emerald-50'
                               : busy
                                 ? 'border-dashed border-amber-300 bg-amber-50/60 hover:border-amber-500'
-                                : otherOpen
-                                  ? 'border-dashed border-slate-300 bg-slate-50 hover:border-blue-400'
-                                  : 'border-slate-200 hover:border-blue-400'
+                                : 'border-slate-200 hover:border-blue-400'
                           }`}
                         >
                           <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
@@ -642,9 +640,9 @@ export default function AgentAddPropertyPage() {
                             </p>
                           )}
                           {otherOpen && (
-                            <p className="text-[9px] font-bold mt-1 text-slate-500 leading-tight flex items-center gap-1">
+                            <p className="text-[9px] font-bold mt-1 text-slate-400 leading-tight flex items-center gap-1">
                               <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               <span>เปิดวันว่างให้ &quot;{otherOpen.propertyTitle}&quot; ไว้ด้วย</span>
                             </p>

@@ -596,7 +596,7 @@ export default function AgentEditPropertyPage() {
                   else if (hasBooked) dayClass += "border border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer";
                   else if (hasSlots) dayClass += "border border-emerald-400 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer";
                   else if (isBusy && hasRealBookingOnDate(dateStr)) dayClass += "border border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer";
-                  else if (isBusy) dayClass += "border border-dashed border-slate-400 text-slate-500 bg-slate-50 hover:bg-slate-100 cursor-pointer";
+                  else if (isBusy) dayClass += "border border-dashed border-slate-300 text-slate-500 hover:bg-slate-50 cursor-pointer";
                   else dayClass += "text-slate-500 hover:bg-slate-50 cursor-pointer";
 
                   return (
@@ -640,9 +640,7 @@ export default function AgentEditPropertyPage() {
                                 ? 'border-emerald-400 bg-emerald-50'
                                 : busy
                                   ? 'border-dashed border-amber-300 bg-amber-50/60 hover:border-amber-500'
-                                  : otherOpen
-                                    ? 'border-dashed border-slate-300 bg-slate-50 hover:border-blue-400'
-                                    : 'border-slate-200 hover:border-blue-400'
+                                  : 'border-slate-200 hover:border-blue-400'
                           }`}
                         >
                           <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
@@ -652,7 +650,7 @@ export default function AgentEditPropertyPage() {
                               ติดนัดที่ &quot;{busy.propertyTitle}&quot; แล้ว
                             </p>
                           ) : otherOpen ? (
-                            <p className="text-[9px] font-bold mt-1 text-slate-500 leading-tight">
+                            <p className="text-[9px] font-bold mt-1 text-slate-400 leading-tight">
                               เปิดวันว่างให้ &quot;{otherOpen.propertyTitle}&quot; ไว้ด้วย
                             </p>
                           ) : (
