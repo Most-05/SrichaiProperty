@@ -944,7 +944,7 @@ export default function AgentAppointmentsPage() {
       {/* 🔑 KEYWORD: โมดัลขอเลื่อนวันนัด */}
       {reschedulingApt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-extrabold text-amber-600 text-base flex items-center gap-1.5">
                 <span>📅</span> ขอเลื่อนวันนัดหมาย
