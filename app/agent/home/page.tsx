@@ -174,8 +174,8 @@ export default function AgentHomePage() {
                     </p>
                   </div>
                   <Link
-                    href={`/agent/edit-property/${p.propertyId}`}
-                    className="shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg text-[10px] transition"
+                    href={`/agent/schedule?propertyId=${p.propertyId}`}
+                    className="shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-[10px] transition shadow-xs"
                   >
                     เปิดวันว่างเพิ่ม
                   </Link>
