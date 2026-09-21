@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Badge from '@/components/ui/Badge';
 import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { toast } from '@/components/ui/toast';
+import { Users, Briefcase, User, AlertTriangle, Search, Bell, Phone, Shield, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface UserData {
   id: string;
@@ -16,7 +18,7 @@ interface UserData {
   role_id: string;
   status: string;
   created_at: string;
-  noShowCount: number; // 🔑 KEYWORD: จำนวนครั้งที่เคยเบี้ยวนัด (no_show) สะสม
+  noShowCount: number; // จำนวนครั้งที่เคยเบี้ยวนัด (no_show) สะสม
 }
 
 interface StatsData {
@@ -64,42 +66,43 @@ export default function AdminUsersPage() {
           ...prev,
           pending: Math.max(0, prev.pending - (newStatus === 'approved' ? 1 : 0))
         }));
+        toast.success(`อัปเดตสถานะเป็น ${newStatus} เรียบร้อยแล้ว`);
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.error);
+        toast.error("เกิดข้อผิดพลาด: " + data.error);
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล");
+      toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล");
     }
   };
 
   return (
     <>
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative z-0">
+        <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
           <h2 className="text-lg font-extrabold text-slate-800">จัดการผู้ใช้งาน (Users & Agents)</h2>
-          <div className="flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
+          <div className="flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200 w-fit">
             <span>IP: 192.168.1.1 (Secure)</span>
-            <span className="text-slate-400">🔔</span>
+            <Bell className="w-3.5 h-3.5 text-slate-400" />
           </div>
         </header>
 
-        <div className="p-8 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto">
           {/* STATS */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition">
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl">👥</div>
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><Users className="w-6 h-6" /></div>
               <div><p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">บัญชีทั้งหมด</p><h3 className="text-2xl font-black text-slate-800 mt-1">{stats.total.toLocaleString()}</h3></div>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">💼</div>
+              <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center"><Briefcase className="w-6 h-6" /></div>
               <div><p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">บัญชีนายหน้า (AGENT)</p><h3 className="text-2xl font-black text-slate-800 mt-1">{stats.agents.toLocaleString()}</h3></div>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">👤</div>
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center"><User className="w-6 h-6" /></div>
               <div><p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">บัญชีลูกค้า/ผู้ซื้อ (BUYER)</p><h3 className="text-2xl font-black text-slate-800 mt-1">{stats.buyers.toLocaleString()}</h3></div>
             </div>
             <div className="bg-amber-50 rounded-2xl border-2 border-amber-200 p-5 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl">⚠️</div>
+              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><AlertTriangle className="w-6 h-6" /></div>
               <div><p className="text-[9px] font-black text-amber-700 uppercase tracking-widest">รอตรวจสอบ (PENDING)</p><h3 className="text-2xl font-black text-amber-600 mt-1">{stats.pending.toLocaleString()} <span className="text-xs font-bold text-amber-500 ml-1">คิว</span></h3></div>
             </div>
           </div>
@@ -107,9 +110,9 @@ export default function AdminUsersPage() {
           {/* TABLE CONTAINER */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
             {/* Toolbar */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <div className="relative w-80">
-                <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+            <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative w-full sm:w-80">
+                <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 pointer-events-none"><Search className="w-4 h-4" /></span>
                 <input type="text" placeholder="ค้นหาชื่อ, รหัส User ID, อีเมล..." className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium text-slate-700" />
               </div>
               <div className="flex items-center gap-3">
@@ -128,7 +131,7 @@ export default function AdminUsersPage() {
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[720px]">
                 <thead className="bg-slate-50/50">
                   <tr>
                     <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">ข้อมูลผู้ใช้งาน (USER INFO)</th>
@@ -164,7 +167,10 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <p className="text-slate-600 font-semibold text-xs">{user.email}</p>
-                          <p className="text-slate-400 font-medium text-[10px]">📞 {user.phone || '-'}</p>
+                          <p className="text-slate-400 font-medium text-[10px] flex items-center gap-1.5 mt-0.5">
+                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>{user.phone || '-'}</span>
+                          </p>
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2.5 py-1 rounded-md text-[10px] font-black inline-flex items-center gap-1.5 border ${
@@ -172,14 +178,14 @@ export default function AdminUsersPage() {
                             user.role_id === 'agent' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
                             'bg-slate-100 text-slate-600 border-slate-200'
                           }`}>
-                            <span>{user.role_id === 'admin' ? '🛡️' : user.role_id === 'agent' ? '💼' : '👤'}</span>
+                            {user.role_id === 'admin' ? <Shield className="w-3 h-3" /> : user.role_id === 'agent' ? <Briefcase className="w-3 h-3" /> : <User className="w-3 h-3" />}
                             {user.role_id === 'admin' ? 'Admin' : user.role_id === 'agent' ? 'Agent' : 'Customer'}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <Badge status={user.status} />
                         </td>
-                        {/* 🔑 KEYWORD: สถิติเบี้ยวนัด (No-show) — แสดงเฉพาะบัญชีลูกค้า เพราะมีแค่ลูกค้าที่จองนัดได้ */}
+                        {/* สถิติเบี้ยวนัด (No-show) — แสดงเฉพาะบัญชีลูกค้า เพราะมีแค่ลูกค้าที่จองนัดได้ */}
                         <td className="px-6 py-4 text-center">
                           {user.role_id === 'customer' ? (
                             <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${
@@ -200,7 +206,7 @@ export default function AdminUsersPage() {
                                 onClick={() => handleStatusChange(user.id, 'approved')}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-md text-[10px] font-extrabold transition cursor-pointer"
                               >
-                                ✓ อนุมัติ
+                                <Check className="w-3 h-3 inline mr-1" /> อนุมัติ
                               </button>
                             )}
                             {user.status !== 'rejected' && (
@@ -208,7 +214,7 @@ export default function AdminUsersPage() {
                                 onClick={() => handleStatusChange(user.id, 'rejected')}
                                 className="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-md text-[10px] font-extrabold transition cursor-pointer"
                               >
-                                ✕ ไม่อนุมัติ
+                                <X className="w-3 h-3 inline mr-1" /> ไม่อนุมัติ
                               </button>
                             )}
                             {user.role_id === 'agent' && (
@@ -229,10 +235,10 @@ export default function AdminUsersPage() {
             <div className="mt-auto border-t border-slate-100 p-4 bg-slate-50/50 flex items-center justify-between text-slate-500 font-medium">
               <span>แสดงข้อมูล <strong className="text-slate-800">1</strong> ถึง <strong className="text-slate-800">{users.length}</strong> จาก <strong className="text-slate-800">{stats.total}</strong> รายการ</span>
               <div className="flex items-center gap-1">
-                <button className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-md hover:bg-white bg-slate-100 text-slate-400">&lt;</button>
+                <button className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-md hover:bg-white bg-slate-100 text-slate-400"><ChevronLeft className="w-4 h-4" /></button>
                 <button className="w-8 h-8 flex items-center justify-center border border-blue-500 rounded-md bg-blue-50 text-blue-600 font-bold">1</button>
                 <button className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-md hover:bg-white bg-white font-bold">2</button>
-                <button className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-md hover:bg-white bg-white">&gt;</button>
+                <button className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-md hover:bg-white bg-white"><ChevronRight className="w-4 h-4" /></button>
               </div>
             </div>
           </div>

@@ -107,7 +107,7 @@ export const propertiesRawData = [
     bedrooms: 3,
     bathrooms: 3,
     area_sqm: 210,
-    // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ (ดู schema.prisma) — ใส่ไว้ในซีดข้อมูลด้วย
+    
     // กันไม่ให้ค่าหายอีกรอบถ้ามีใครรัน `prisma db seed` ใหม่
     common_fee: 750,
     parking_spaces: 2,

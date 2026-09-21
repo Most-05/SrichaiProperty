@@ -55,6 +55,13 @@ export async function GET() {
         property_images: { 
           orderBy: { order_index: "asc" } // ดึงรูปภาพเรียงตามลำดับที่ตั้งไว้
         },
+        property_amenities: {
+          include: { amenities: true }
+        },
+        property_nearbies: {
+          include: { nearby_places: true },
+          orderBy: { distance_meters: "asc" }
+        },
         provinces: true, // ข้อมูลจังหวัด
         amphures: true,  // ข้อมูลอำเภอ
         districts: true  // ข้อมูลตำบล
@@ -89,6 +96,7 @@ export async function GET() {
           price: "฿" + Number(p.price).toLocaleString(), // จัดฟอร์แมตตัวเลขราคา (เช่น ฿2,500,000)
           listingType: p.listing_type === "rent" ? "rent" : "sale",
           type: p.property_types?.name || "อสังหาริมทรัพย์",
+          type_id: p.type_id,
           tag: isPremium ? "ทรัพย์พรีเมียม" : "ทรัพย์ทั่วไป",
           tagBg: isPremium ? "bg-amber-600" : "bg-blue-600",
           location: "📍 " + p.location,
@@ -105,11 +113,18 @@ export async function GET() {
           description: p.description || "",
           latitude: p.latitude ? Number(p.latitude) : null,
           longitude: p.longitude ? Number(p.longitude) : null,
-          // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมให้หน้ารายละเอียดบ้านแสดงผล
+          
           commonFee: p.common_fee ? Number(p.common_fee) : null,
           parking: p.parking_spaces ?? null,
           floors: p.floors ?? null,
           ownership: p.ownership_type || null,
+          amenities: p.property_amenities?.map((pa) => pa.amenities?.name).filter(Boolean) || [],
+          nearbies: p.property_nearbies?.map((pn) => ({
+            id: pn.nearby_place_id,
+            name: pn.nearby_places?.name || "",
+            type: pn.nearby_places?.type || null,
+            distance: pn.distance_meters ? Number(pn.distance_meters) : null,
+          })).filter((n) => Boolean(n.name)) || [],
           province_id: p.province_id,
           amphure_id: p.amphure_id,
           district_id: p.district_id,
@@ -156,7 +171,7 @@ export async function POST(request: Request) {
       title, price, listing_type, listingType, type_id, type, location, description,
       bedrooms, bathrooms, area_sqm, areaSqm,
       province_id, amphure_id, district_id, latitude, longitude, images, doc, viewingSlots,
-      commonFee, parking, floors, ownership // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ (ดู schema.prisma)
+      commonFee, parking, floors, ownership 
     } = body;
 
     // 2.4 ตรวจสอบความถูกต้องของข้อมูล (Data Validation)
@@ -177,7 +192,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "จำนวนห้องต้องไม่ติดลบ" }, { status: 400 });
     }
 
-    // 🔑 KEYWORD: validate ฟิลด์สเปคเพิ่มเติม
     if ((parking !== undefined && parking !== null && parking !== "" && Number(parking) < 0) ||
         (floors !== undefined && floors !== null && floors !== "" && Number(floors) < 0)) {
       return NextResponse.json({ error: "จำนวนที่จอดรถ/ชั้น ต้องไม่ติดลบ" }, { status: 400 });
@@ -209,7 +223,7 @@ export async function POST(request: Request) {
         district_id: district_id ? parseInt(district_id) : 901101,
         latitude: latitude ? parseFloat(latitude) : 7.0089,
         longitude: longitude ? parseFloat(longitude) : 100.4812,
-        // 🔑 KEYWORD: บันทึกฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+        
         common_fee: commonFee !== undefined && commonFee !== null && commonFee !== "" ? parseFloat(commonFee) : null,
         parking_spaces: parking !== undefined && parking !== null && parking !== "" ? parseInt(parking) : null,
         floors: floors !== undefined && floors !== null && floors !== "" ? parseInt(floors) : null,
@@ -228,7 +242,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // 🔑 KEYWORD: บันทึกเอกสารสิทธิ์ตอนลงประกาศ
     // 2.8 บันทึกเอกสารสิทธิ์เข้าตาราง property_documents ถ้ามีการแนบมา (เช่น โฉนดที่ดิน, สัญญา)
     if (doc) {
       await db.property_documents.create({
@@ -240,7 +253,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // 🔑 KEYWORD: บันทึกวันว่างตอนลงประกาศใหม่
     // 2.9 บันทึกรอบเวลานัดหมายเข้าชมที่นายหน้าเปิดให้จอง ลงในตาราง property_viewing_slots
     // ไม่กันชนกับบ้านหลังอื่นตรงนี้แล้ว — นายหน้าเปิดวันว่างซ้อนกันหลายบ้านได้ตามปกติ
     // (นายหน้าไปนำชมได้ทีละที่ แต่ถ้าวันนั้นไม่มีคนจองก็ไม่เสียโอกาสฟรีๆ)
@@ -277,7 +289,6 @@ export async function POST(request: Request) {
   }
 }
 
-// 🔑 KEYWORD: อนุมัติหรือตีกลับประกาศพร้อมเหตุผล
 // ==============================================================================
 // 3. PATCH: อัปเดตสถานะประกาศอนุมัติ / ตีกลับ (เฉพาะบัญชีผู้ดูแลระบบ / admin)
 // ==============================================================================

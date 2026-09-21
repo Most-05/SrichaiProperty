@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
+import { toast } from '@/components/ui/toast';
 
 export default function RegisterPage() {
   // หน้านี้สมัครได้เฉพาะ "ลูกค้า" เท่านั้น จึง fix role เป็น 'buyer' ตายตัว (ไม่มีตัวเลือกอื่น)
@@ -38,7 +39,7 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "การสมัครสมาชิกไม่สำเร็จ");
+        toast.error(data.error || "การสมัครสมาชิกไม่สำเร็จ");
         setShowOtpModal(false);
         return;
       }
@@ -52,14 +53,14 @@ export default function RegisterPage() {
       });
 
       if (loginRes?.error) {
-        alert("สมัครสมาชิกสำเร็จเรียบร้อย! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ");
-        window.location.href = '/login';
+        toast.success("สมัครสมาชิกสำเร็จเรียบร้อย! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ");
+        setTimeout(() => { window.location.href = '/login'; }, 1000);
       } else {
-        alert("สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!");
-        window.location.href = '/home'; // พาไปหน้าแรกของลูกค้า
+        toast.success("สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!");
+        setTimeout(() => { window.location.href = '/home'; }, 800); // พาไปหน้าแรกของลูกค้า
       }
     } catch {
-      alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านเพื่อสมัครสมาชิกได้");
+      toast.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านเพื่อสมัครสมาชิกได้");
     }
     setShowOtpModal(false);
   };
@@ -84,7 +85,7 @@ export default function RegisterPage() {
     event.preventDefault(); // กันหน้าเว็บโหลดใหม่ (ปกติ submit form จะรีเฟรชหน้า)
     // เช็คก่อนว่ากรอกรหัสผ่าน 2 ช่องตรงกันไหม ก่อนจะไปขั้นต่อไป
     if (password !== confirmPassword) {
-      alert("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
+      toast.warning("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
       return;
     }
     // ถ้าตรงกัน ให้เปิด Modal ป๊อปอัปให้กรอก OTP (แล้วพอกรอกเสร็จมันจะไปเรียก verifyOtp)
@@ -110,13 +111,22 @@ export default function RegisterPage() {
           <p className="text-slate-300 text-lg font-light leading-relaxed mb-6">สร้างบัญชีผู้ใช้เพื่อรับสิทธิ์ในการบันทึกรายการโปรด พูดคุยสอบถาม และจองคิวนัดหมายชมอสังหาริมทรัพย์จริง</p>
           <div className="space-y-3.5 hidden lg:block text-left text-sm">
             <div className="flex items-center gap-3 text-slate-200">
-              <span className="text-blue-400 text-lg">✓</span> ค้นหาทำเลและข้อมูลจริง 100%
+              <svg className="w-5 h-5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>ค้นหาทำเลและข้อมูลจริง 100%</span>
             </div>
             <div className="flex items-center gap-3 text-slate-200">
-              <span className="text-blue-400 text-lg">✓</span> จองดูบ้านจริงง่ายผ่านหน้าเว็บ
+              <svg className="w-5 h-5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>จองดูบ้านจริงง่ายผ่านหน้าเว็บ</span>
             </div>
             <div className="flex items-center gap-3 text-slate-200">
-              <span className="text-blue-400 text-lg">✓</span> แชทคุยตรงกับนายหน้าผู้ดูแล
+              <svg className="w-5 h-5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>แชทคุยตรงกับนายหน้าผู้ดูแล</span>
             </div>
           </div>
         </div>
@@ -126,7 +136,6 @@ export default function RegisterPage() {
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-8 bg-white min-h-screen overflow-y-auto">
         <div className="w-full max-w-[540px] mx-auto my-auto py-8">
 
-          
           <Link href="/" className="flex items-center gap-2 mb-6 cursor-pointer group">
             <div className="w-9 h-9 bg-blue-700 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-105 transition-transform">S</div>
             <span className="text-xl font-extrabold text-slate-900 tracking-tight">Srichai<span className="text-blue-600">Property</span></span>
@@ -134,7 +143,7 @@ export default function RegisterPage() {
 
           <div className="mb-6">
             <h2 className="text-2xl font-extrabold text-slate-900 mb-1.5">สมัครสมาชิกสำหรับลูกค้า</h2>
-            <p className="text-slate-500 text-xs font-medium">เริ่มต้นลงทะเบียนเพื่อสัมผัสประสบการณ์ที่ดีที่สุด</p>
+            <p className="text-slate-500 text-xs font-medium">สร้างบัญชีเพื่อบันทึกรายการโปรดและนัดหมายชมบ้านกับนายหน้าผู้เชี่ยวชาญ</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3.5 mb-6">
@@ -296,7 +305,6 @@ export default function RegisterPage() {
             </button>
           </form>
 
-
           <p className="mt-6 text-center text-slate-600 font-medium text-xs pb-6 lg:pb-0">
             มีบัญชีผู้ใช้แล้วใช่หรือไม่? 
             <Link href="/login" className="text-blue-600 font-bold hover:underline ml-1">เข้าสู่ระบบเลย</Link>
@@ -313,7 +321,11 @@ export default function RegisterPage() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
             <div className="text-center mb-5">
-              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">📱</div>
+              <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-blue-200">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
               <h3 className="text-xl font-extrabold text-slate-900 mb-1.5">ยืนยันรหัส OTP</h3>
               <p className="text-slate-500 text-xs">เราได้ส่งรหัส 6 หลักไปที่เบอร์โทรศัพท์ของคุณแล้ว</p>
             </div>

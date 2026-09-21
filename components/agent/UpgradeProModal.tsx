@@ -13,6 +13,8 @@
  */
 
 import React, { useState } from 'react';
+import { toast } from '@/components/ui/toast';
+import { compressImage } from '@/lib/utils/compressImage';
 
 /** Props สำหรับ UpgradeProModal Component */
 interface UpgradeProModalProps {
@@ -28,12 +30,16 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
   if (!isOpen) return null;
 
   const handleCheckout = async () => {
-    if (!slipFile) return alert('กรุณาแนบไฟล์รูปภาพสลิปการโอนเงิน');
+    if (!slipFile) {
+      toast.warning('กรุณาแนบไฟล์รูปภาพสลิปการโอนเงิน');
+      return;
+    }
     setSubmittingPayment(true);
     try {
-      // ต้องส่งเป็น FormData เพราะ /api/packages/checkout รับไฟล์แนบจริง (formData.get("slip")) ไม่ใช่ JSON
+      // ⚡ บีบอัดสลิปโอนเงินก่อนส่งขึ้นเซิร์ฟเวอร์
+      const compressed = await compressImage(slipFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
       const formData = new FormData();
-      formData.append('slip', slipFile);
+      formData.append('slip', compressed.file);
       formData.append('packageId', '1');
       formData.append('amount', '599');
 
@@ -43,16 +49,16 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
       });
       const data = await res.json();
       if (data.success) {
-        alert('ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว! ทีมงานจะตรวจสอบและอนุมัติแพ็กเกจ PRO ภายใน 1-2 ชม.');
+        toast.success('ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว! ทีมงานจะตรวจสอบและอนุมัติแพ็กเกจ PRO ภายใน 1-2 ชม.');
         setSlipFile(null);
         onClose();
         if (onSuccess) onSuccess();
       } else {
-        alert('เกิดข้อผิดพลาด: ' + data.error);
+        toast.error('เกิดข้อผิดพลาด: ' + data.error);
       }
     } catch (err) {
       console.error(err);
-      alert('ส่งสลิปชำระเงินล้มเหลว');
+      toast.error('ส่งสลิปชำระเงินล้มเหลว กรุณาลองใหม่อีกครั้ง');
     } finally {
       setSubmittingPayment(false);
     }
@@ -63,9 +69,16 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
       <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left">
         <div className="flex justify-between items-center border-b pb-3">
           <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-            <span>👑</span> สมัครสมาชิก Verified PRO
+            <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+            <span>สมัครสมาชิก Verified PRO</span>
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 cursor-pointer" aria-label="ปิด">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center space-y-1">
@@ -98,20 +111,43 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
           <button
             type="button"
             onClick={() => document.getElementById('pro-slip-input')?.click()}
-            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none hover:bg-slate-100 font-bold text-slate-700 text-left cursor-pointer"
+            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none hover:bg-slate-100 font-bold text-slate-700 text-left cursor-pointer flex items-center gap-2"
           >
-            {slipFile ? `✓ ${slipFile.name}` : '📎 คลิกเพื่อเลือกไฟล์รูปภาพสลิป'}
+            {slipFile ? (
+              <>
+                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="truncate">{slipFile.name}</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+                <span>คลิกเพื่อเลือกไฟล์รูปภาพสลิป</span>
+              </>
+            )}
           </button>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">ยกเลิก</button>
+          <button onClick={onClose} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs transition cursor-pointer">ยกเลิก</button>
           <button
             onClick={handleCheckout}
             disabled={submittingPayment}
-            className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition shadow-md cursor-pointer"
+            className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition shadow-md cursor-pointer flex items-center gap-1.5"
           >
-            {submittingPayment ? 'กำลังส่งข้อมูล...' : 'ส่งสลิปชำระเงิน ➔'}
+            {submittingPayment ? (
+              <span>กำลังส่งข้อมูล...</span>
+            ) : (
+              <>
+                <span>ส่งสลิปชำระเงิน</span>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </>
+            )}
           </button>
         </div>
       </div>

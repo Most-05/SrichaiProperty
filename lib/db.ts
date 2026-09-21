@@ -25,5 +25,3 @@ export const db = new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
 
-
-

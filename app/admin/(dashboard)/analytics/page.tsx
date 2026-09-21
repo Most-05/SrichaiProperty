@@ -10,6 +10,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart';
+import { AlertTriangle, Loader2, Calendar, Eye, Users, ShieldCheck, Trophy } from 'lucide-react';
 
 type RangeType = 'day' | 'month' | 'year';
 
@@ -96,12 +97,32 @@ export default function AdminAnalyticsPage() {
   }, []);
 
   useEffect(() => {
-    loadAnalytics(range);
-  }, [range, loadAnalytics]);
+    let ignore = false;
+    fetch(`/api/admin/analytics?range=${range}`)
+      .then(res => res.json())
+      .then(json => {
+        if (!ignore) {
+          if (json.error) {
+            setFetchError(json.error);
+          } else {
+            setData(json);
+            setFetchError(null);
+          }
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setFetchError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+          setLoading(false);
+        }
+      });
+    return () => { ignore = true; };
+  }, [range]);
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative z-0">
+      <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
         <div>
           <h2 className="text-lg font-extrabold text-slate-800">สถิติและรายงาน (Analytics)</h2>
           <p className="text-[10px] text-slate-400 font-bold mt-0.5">ภาพรวมนัดหมาย ยอดเข้าชมบ้าน และผู้ใช้งานในระบบ</p>
@@ -123,49 +144,70 @@ export default function AdminAnalyticsPage() {
         </div>
       </header>
 
-      <div className="p-8 flex-1 overflow-y-auto space-y-6">
+      <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto space-y-6">
         {fetchError && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-between">
-            <span>⚠️ {fetchError}</span>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{fetchError}</span>
+            </div>
             <button onClick={() => loadAnalytics(range)} className="underline font-black">ลองใหม่</button>
           </div>
         )}
 
         {loading && !data ? (
-          <div className="py-24 text-center text-slate-400 font-bold text-sm">🔄 กำลังโหลดข้อมูลสถิติ...</div>
+          <div className="py-24 text-center text-slate-400 font-bold text-sm flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <span>กำลังโหลดข้อมูลสถิติ...</span>
+          </div>
         ) : (
           <>
             {/* 4 การ์ดสรุปตัวเลขรวม */}
-            <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-2xl p-4 border-l-4 border-blue-500 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">นัดหมายทั้งหมด</span>
                 <strong className="text-2xl font-black text-slate-900 block">{(data?.summary.totalAppointments ?? 0).toLocaleString()}</strong>
-                <span className="text-[10px] text-slate-400 font-bold block">📅 สะสมทั้งระบบ</span>
+                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-slate-400" />
+                  <span>สะสมทั้งระบบ</span>
+                </span>
               </div>
 
               <div className="bg-white rounded-2xl p-4 border-l-4 border-indigo-500 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">ยอดเข้าชมรวม</span>
                 <strong className="text-2xl font-black text-slate-900 block">{(data?.summary.totalViews ?? 0).toLocaleString()}</strong>
-                <span className="text-[10px] text-slate-400 font-bold block">👁️ ทุกประกาศรวมกัน</span>
+                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                  <Eye className="w-3 h-3 text-slate-400" />
+                  <span>ทุกประกาศรวมกัน</span>
+                </span>
               </div>
 
               <div className="bg-white rounded-2xl p-4 border-l-4 border-slate-500 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">ผู้ใช้งานทั้งหมด</span>
                 <strong className="text-2xl font-black text-slate-900 block">{(data?.summary.totalUsers ?? 0).toLocaleString()}</strong>
-                <span className="text-[10px] text-slate-400 font-bold block">👥 ลูกค้า + นายหน้า</span>
+                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                  <Users className="w-3 h-3 text-slate-400" />
+                  <span>ลูกค้า + นายหน้า</span>
+                </span>
               </div>
 
               <div className="bg-white rounded-2xl p-4 border-l-4 border-emerald-500 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">นายหน้า PRO</span>
                 <strong className="text-2xl font-black text-slate-900 block">{data?.summary.proAgentsCount ?? 0} / {data?.summary.agentsCount ?? 0}</strong>
-                <span className="text-[10px] text-slate-400 font-bold block">👑 สมาชิก Verified PRO</span>
+                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span>สมาชิก Verified PRO</span>
+                </span>
               </div>
             </section>
 
             {/* กราฟนัดหมาย แยกตามสถานะ */}
             <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
               <div className="border-b border-slate-100 pb-3">
-                <h3 className="font-extrabold text-slate-800 text-sm">📅 สถิตินัดหมาย (Appointments)</h3>
+                <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <span>สถิตินัดหมาย (Appointments)</span>
+                </h3>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">จำนวนนัดหมายแยกตามสถานะ ตามช่วงเวลาที่เลือก</p>
               </div>
 
@@ -193,7 +235,10 @@ export default function AdminAnalyticsPage() {
               {/* กราฟผู้ใช้/นายหน้าสมัครใหม่ */}
               <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="border-b border-slate-100 pb-3">
-                  <h3 className="font-extrabold text-slate-800 text-sm">👥 ผู้ใช้งาน/นายหน้าสมัครใหม่</h3>
+                  <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-slate-600" />
+                    <span>ผู้ใช้งาน/นายหน้าสมัครใหม่</span>
+                  </h3>
                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">จำนวนสมาชิกสมัครใหม่ ตามช่วงเวลาที่เลือก</p>
                 </div>
 
@@ -217,7 +262,10 @@ export default function AdminAnalyticsPage() {
               {/* Top 5 บ้านที่มีคนเข้าชมมากที่สุด (views_count เป็นตัวเลขสะสม ไม่มี log รายวัน จึงไม่มี toggle ช่วงเวลา) */}
               <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="border-b border-slate-100 pb-3">
-                  <h3 className="font-extrabold text-slate-800 text-sm">🏆 Top 5 บ้านที่มีคนเข้าชมมากที่สุด</h3>
+                  <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
+                    <Trophy className="w-4 h-4 text-amber-500" />
+                    <span>Top 5 บ้านที่มีคนเข้าชมมากที่สุด</span>
+                  </h3>
                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">อันดับยอดเข้าชมสะสมตลอดกาลของแต่ละประกาศ</p>
                 </div>
 

@@ -32,17 +32,17 @@ export default function FloatingChatWidget() {
   return (
     <Link
       href={targetChatUrl}
-      className="fixed bottom-6 right-6 z-[999] w-14 h-14 bg-gradient-to-tr from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center text-2xl transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-white/40 cursor-pointer group"
+      className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[999] w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-tr from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center text-xl sm:text-2xl transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-white/40 cursor-pointer group"
       title="เปิดกล่องข้อความแชท"
       aria-label="เปิดกล่องข้อความแชท"
     >
       {/* ไอคอนบอลลูนข้อความแชท */}
-      <svg className="w-6 h-6 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 12a8 8 0 1 1-3.4-6.5L21 4l-1 4.5A8 8 0 0 1 21 12Z" />
       </svg>
 
       {/* จุดป้ายสีเขียวแสดงสถานะออนไลน์และพร้อมใช้งาน (Online Indicator Badge) */}
-      <span className="absolute top-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></span>
+      <span className="absolute top-0 right-0 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-emerald-500 border-2 border-white rounded-full"></span>
     </Link>
   );
 }

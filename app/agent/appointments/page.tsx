@@ -25,7 +25,7 @@ interface AgentAppointment {
   originalDate: string | null;
   originalTimeSlot: string | null;
   wasEdited: boolean;
-  // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+  
   // true = approved แล้ว วันนัดผ่านไปแล้ว แต่ยังไม่มีใครยืนยันผล (ดู noShowService.ts ฝั่ง API)
   needsResult: boolean;
   noShowNote: string;
@@ -144,12 +144,12 @@ export default function AgentAppointmentsPage() {
         setToast({
           kind: 'success',
           text: action === 'confirm'
-            ? '✓ ยืนยันรับคิวเรียบร้อยแล้ว — ย้ายไปแท็บ "นัดหมายเร็วๆ นี้" แล้ว'
+            ? 'ยืนยันรับคิวเรียบร้อยแล้ว — ย้ายไปแท็บ "นัดหมายเร็วๆ นี้" แล้ว'
             : action === 'reject'
-              ? '✓ ปฏิเสธคำขอเรียบร้อยแล้ว — ย้ายไปแท็บ "เสร็จสิ้น / ยกเลิก" แล้ว'
+              ? 'ปฏิเสธคำขอเรียบร้อยแล้ว — ย้ายไปแท็บ "เสร็จสิ้น / ยกเลิก" แล้ว'
               : action === 'no_show'
-                ? '✓ บันทึกผลว่าลูกค้าไม่มาตามนัดแล้ว — ย้ายไปแท็บ "เสร็จสิ้น / ยกเลิก" แล้ว'
-                : '✓ ปิดงานนัดหมายเรียบร้อยแล้ว'
+                ? 'บันทึกผลว่าลูกค้าไม่มาตามนัดแล้ว — ย้ายไปแท็บ "เสร็จสิ้น / ยกเลิก" แล้ว'
+                : 'ปิดงานนัดหมายเรียบร้อยแล้ว'
         });
       } else {
         setToast({ kind: 'error', text: data.error || 'เกิดข้อผิดพลาด' });
@@ -350,7 +350,7 @@ export default function AgentAppointmentsPage() {
 
   // --- แยกกลุ่มตามแท็บ ---
   const newRequests = useMemo(() => appointments.filter(a => a.status === 'pending'), [appointments]);
-  // 🔑 KEYWORD: แยก "นัดหมายเร็วๆ นี้" ออกจาก "รอยืนยันผล"
+  
   // เดิมทั้งคู่ใช้ status === 'approved' ปนกัน (นัดที่ผ่านวันไปแล้วก็ยังอยู่ในนี้) ตอนนี้แยกด้วย
   // needsResult: upcoming = ยังไม่ถึงวันนัด, needsResultList = ถึงวันแล้วรอนายหน้ายืนยันผล
   // awaiting_customer (เราขอเลื่อนวัน รอลูกค้ากดรับ) ก็ถือเป็นนัดที่กำลังจะมาถึงเหมือนกัน
@@ -411,8 +411,8 @@ export default function AgentAppointmentsPage() {
       )}
 
       {/* Header */}
-      <div className="pt-20 pb-5 px-4 md:px-8 bg-white border-b border-slate-100">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <div className="pt-6 sm:pt-8 pb-5 px-4 sm:px-6 md:px-8 bg-white border-b border-slate-100">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link href="/agent/dashboard" className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-900 transition">
               ←
@@ -422,10 +422,17 @@ export default function AgentAppointmentsPage() {
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Appointments Manager</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setToast({ text: 'ฟีเจอร์สร้างนัดหมายด้วยตนเองจะเปิดให้ใช้งานเร็วๆ นี้', kind: 'success' })}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shrink-0 transition cursor-pointer"
+          >
+            + สร้างนัดหมายด้วยตนเอง
+          </button>
         </div>
       </div>
 
-      <main className="max-w-6xl w-full mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 flex-1">
+      <main className="max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 flex-1">
 
         {/* ===== Left Column: ปฏิทิน + สรุปคิวงาน ===== */}
         <div className="space-y-5">
@@ -501,7 +508,12 @@ export default function AgentAppointmentsPage() {
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
-            <h4 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">⚡ สรุปคิวงานสัปดาห์นี้</h4>
+            <h4 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>สรุปคิวงานสัปดาห์นี้</span>
+            </h4>
 
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-slate-500 font-bold">ต้องยืนยันด่วน</span>
@@ -535,8 +547,7 @@ export default function AgentAppointmentsPage() {
               >
                 นัดหมายเร็วๆ นี้ (Upcoming)
               </button>
-              {/* 🔑 KEYWORD: แท็บรอยืนยันผลการนัดหมาย (No-show) */}
-              <button
+                            <button
                 onClick={() => setActiveTab('needsResult')}
                 className={`px-4 py-2.5 border-b-2 font-black text-xs whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'needsResult' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
               >
@@ -621,9 +632,12 @@ export default function AgentAppointmentsPage() {
                         </p>
                       )}
 
-                      <p className="text-[11px] font-black text-slate-800">
-                        📅 {formatDateTH(apt.date)}, {timeSlotLabel(apt.timeSlot)}
-                        {apt.wasEdited && <span className="ml-1.5 text-[9px] font-bold text-blue-600">(แก้ไขใหม่)</span>}
+                      <p className="text-[11px] font-black text-slate-800 flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>{formatDateTH(apt.date)}, {timeSlotLabel(apt.timeSlot)}</span>
+                        {apt.wasEdited && <span className="text-[9px] font-bold text-blue-600">(แก้ไขใหม่)</span>}
                       </p>
 
                       {apt.note && (
@@ -657,7 +671,12 @@ export default function AgentAppointmentsPage() {
                                 กำลังยืนยัน...
                               </>
                             ) : (
-                              <>✓ ยืนยันรับคิวนี้</>
+                              <>
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>ยืนยันรับคิวนี้</span>
+                              </>
                             )}
                           </button>
                           <div className="flex gap-1.5 w-full">
@@ -694,13 +713,7 @@ export default function AgentAppointmentsPage() {
                         </>
                       )}
 
-                      {/* 🔑 KEYWORD: นัดที่ยังไม่ถึงวันนัด (Upcoming จริงๆ) — ห้ามปิดงานได้ก่อนกำหนด
-                          เดิมมีปุ่ม "ทำเครื่องหมายเสร็จสิ้น" อยู่ตรงนี้ด้วย (มีมาตั้งแต่แรกก่อนฟีเจอร์ No-show)
-                          กดปิดงานได้ทันทีโดยไม่ต้องรอถึงวันนัดจริง ทำให้ระบบ No-show ไร้ความหมาย
-                          (นายหน้ากดปิดงานล่วงหน้าได้ตลอด เหมือนระบบเดาว่าสำเร็จเสมอแบบเดิม)
-                          เอาออก เหลือแค่แชทคุยรอได้ระหว่างรอวันนัด — ปุ่มยืนยันผลจะโผล่เฉพาะตอน
-                          needsResult = true (ผ่านวันนัดแล้ว) ในบล็อกถัดไปเท่านั้น */}
-                      {apt.status === 'approved' && !apt.needsResult && (
+                                            {apt.status === 'approved' && !apt.needsResult && (
                         <button
                           onClick={async () => {
                             try {
@@ -777,22 +790,47 @@ export default function AgentAppointmentsPage() {
                                 กำลังบันทึก...
                               </>
                             ) : (
-                              <>✓ ลูกค้ามาแล้ว</>
+                              <>
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>ลูกค้ามาแล้ว</span>
+                              </>
                             )}
                           </button>
                           <button
                             disabled={busyId === apt.id}
                             onClick={() => openNoShowModal(apt)}
-                            className="w-full px-3 py-2 bg-red-50 hover:bg-red-500 hover:text-white text-red-600 border border-red-200 hover:border-red-500 font-bold rounded-lg text-[10px] transition-all duration-150 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                            className="w-full px-3 py-2 bg-red-50 hover:bg-red-500 hover:text-white text-red-600 border border-red-200 hover:border-red-500 font-bold rounded-lg text-[10px] transition-all duration-150 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-1.5"
                           >
-                            {busyId === apt.id && busyAction === 'no_show' ? 'กำลังบันทึก...' : '✗ ลูกค้าไม่มา'}
+                            {busyId === apt.id && busyAction === 'no_show' ? (
+                              'กำลังบันทึก...'
+                            ) : (
+                              <>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                <span>ลูกค้าไม่มา</span>
+                              </>
+                            )}
                           </button>
                         </>
                       )}
 
                       {(apt.status === 'completed' || apt.status === 'rejected' || apt.status === 'no_show') && (
-                        <span className="text-[10px] text-slate-400 font-bold text-center w-full">
-                          {apt.status === 'completed' ? 'ปิดงานแล้ว ✓' : apt.status === 'no_show' ? 'บันทึกว่าไม่มาตามนัด' : 'ถูกปฏิเสธไปแล้ว'}
+                        <span className="text-[10px] text-slate-400 font-bold text-center w-full flex items-center justify-center gap-1">
+                          {apt.status === 'completed' ? (
+                            <>
+                              <span>ปิดงานแล้ว</span>
+                              <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </>
+                          ) : apt.status === 'no_show' ? (
+                            'บันทึกว่าไม่มาตามนัด'
+                          ) : (
+                            'ถูกปฏิเสธไปแล้ว'
+                          )}
                         </span>
                       )}
                     </div>
@@ -804,23 +842,32 @@ export default function AgentAppointmentsPage() {
         </div>
       </main>
 
-      {/* 🔑 KEYWORD: โมดัลปฏิเสธนัดหมายระบุเหตุผล */}
-      {rejectingApt && (
+            {rejectingApt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-extrabold text-red-600 text-base flex items-center gap-1.5">
-                <span>🚫</span> ปฏิเสธคำขอนัดหมาย
+                <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                <span>ปฏิเสธคำขอนัดหมาย</span>
               </h3>
-              <button onClick={closeRejectModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+              <button onClick={closeRejectModal} className="text-slate-400 hover:text-slate-600 transition cursor-pointer p-1" aria-label="ปิด">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <div>
               <p className="text-xs font-bold text-slate-500">คำขอจาก:</p>
               <p className="text-sm font-extrabold text-slate-900">{rejectingApt.customerName}</p>
               <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{rejectingApt.propertyTitle}</p>
-              <p className="text-[11px] font-bold text-slate-600 mt-1">
-                📅 {formatDateTH(rejectingApt.date)}, {timeSlotLabel(rejectingApt.timeSlot)}
+              <p className="text-[11px] font-bold text-slate-600 mt-1 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>{formatDateTH(rejectingApt.date)}, {timeSlotLabel(rejectingApt.timeSlot)}</span>
               </p>
             </div>
 
@@ -1036,17 +1083,27 @@ export default function AgentAppointmentsPage() {
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-extrabold text-red-600 text-base flex items-center gap-1.5">
-                <span>🚫</span> ยืนยันว่าลูกค้าไม่มาตามนัด
+                <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                <span>ยืนยันว่าลูกค้าไม่มาตามนัด</span>
               </h3>
-              <button onClick={closeNoShowModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+              <button onClick={closeNoShowModal} className="text-slate-400 hover:text-slate-600 transition cursor-pointer p-1" aria-label="ปิด">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <div>
               <p className="text-xs font-bold text-slate-500">นัดหมายของ:</p>
               <p className="text-sm font-extrabold text-slate-900">{noShowApt.customerName}</p>
               <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{noShowApt.propertyTitle}</p>
-              <p className="text-[11px] font-bold text-slate-600 mt-1">
-                📅 {formatDateTH(noShowApt.date)}, {timeSlotLabel(noShowApt.timeSlot)}
+              <p className="text-[11px] font-bold text-slate-600 mt-1 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>{formatDateTH(noShowApt.date)}, {timeSlotLabel(noShowApt.timeSlot)}</span>
               </p>
             </div>
 

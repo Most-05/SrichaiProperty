@@ -23,10 +23,10 @@ export default function HeroSection() {
       
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
         <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white mb-3 sm:mb-4 leading-tight tracking-tight drop-shadow-md">
-          ค้นพบพื้นที่ความสุข<br />ที่คุณเรียกว่า <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-300">&quot;บ้าน&quot;</span>
+          ค้นหาบ้าน คอนโด และที่ดิน<br />ทำเลคุณภาพใน <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-300">หาดใหญ่และสงขลา</span>
         </h1>
         <p className="text-xs sm:text-sm md:text-base text-slate-200 mb-6 sm:mb-8 max-w-xl font-light drop-shadow">
-          Srichai Property Agents ศูนย์รวมอสังหาริมทรัพย์คุณภาพ พร้อมระบบจองนัดหมายเข้าชมและแชทกับนายหน้าโดยตรง
+          Srichai Property ศูนย์รวมอสังหาริมทรัพย์คัดสรร พร้อมทีมงานนายหน้ามืออาชีพดูแลทุกขั้นตอน นัดชมโครงการจริงได้สะดวกและปลอดภัย
         </p>
 
         <div className="w-full max-w-4xl bg-white border border-slate-200 shadow-lg rounded-2xl p-3 sm:p-5">

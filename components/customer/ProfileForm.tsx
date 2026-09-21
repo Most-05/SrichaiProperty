@@ -18,6 +18,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
+import { toast } from '@/components/ui/toast';
 
 /** Props สำหรับ ProfileForm Component */
 interface ProfileFormProps {
@@ -486,13 +487,13 @@ export default function ProfileForm({
                       const res = await fetch('/api/auth/delete-account', { method: 'DELETE' });
                       const data = await res.json().catch(() => null);
                       if (res.ok) {
-                        alert('ลบบัญชีของคุณเรียบร้อยแล้ว');
+                        toast.success('ลบบัญชีของคุณเรียบร้อยแล้ว');
                         signOut({ callbackUrl: '/login' });
                       } else {
-                        alert(data?.error || 'ไม่สามารถลบบัญชีได้');
+                        toast.error(data?.error || 'ไม่สามารถลบบัญชีได้');
                       }
                     } catch {
-                      alert('ไม่สามารถลบบัญชีได้');
+                      toast.error('ไม่สามารถลบบัญชีได้');
                     } finally {
                       setIsDeleting(false);
                     }

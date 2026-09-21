@@ -19,6 +19,44 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useApp } from '@/context/AppContext';
+import { toast } from '@/components/ui/toast';
+import PropertyCard from '@/components/customer/PropertyCard';
+import {
+  Sparkles,
+  Navigation,
+  MapPin,
+  Waves,
+  Dumbbell,
+  Car,
+  ShieldCheck,
+  Video,
+  Trees,
+  Smile,
+  Building2,
+  ArrowUpDown,
+  PawPrint,
+  CheckCircle2,
+  GraduationCap,
+  HeartPulse,
+  ShoppingBag,
+  Plane,
+  Compass,
+  ExternalLink,
+  Bed,
+  Bath,
+  Maximize2,
+  FileText,
+  Share2,
+  Phone,
+  MessageSquare,
+  Calendar,
+  ImageIcon,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Heart
+} from 'lucide-react';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
@@ -27,113 +65,139 @@ const PropertyLocationMap = dynamic(() => import('@/components/property/Property
 });
 
 function PinIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 21s7-6.5 7-11.5a7 7 0 1 0-14 0C5 14.5 12 21 12 21Z" />
-      <circle cx="12" cy="9.5" r="2.5" />
-    </svg>
-  );
+  return <MapPin className={className} />;
 }
 
 function BedIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 18v2M21 18v2M3 12V8a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v2" />
-    </svg>
-  );
+  return <Bed className={className} />;
 }
 
 function BathIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3Z" />
-      <path d="M7 12V6a2 2 0 0 1 3.2-1.6M4 19v1M18 19v1" />
-    </svg>
-  );
+  return <Bath className={className} />;
 }
 
 function AreaIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 3v6M3 3h6M21 21v-6M21 21h-6" />
-      <rect x="7" y="7" width="10" height="10" rx="1" />
-    </svg>
-  );
+  return <Maximize2 className={className} />;
 }
 
 function ListIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-    </svg>
-  );
+  return <FileText className={className} />;
 }
 
 function ShareIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 17H7a5 5 0 0 1 0-10h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8" />
-    </svg>
-  );
+  return <Share2 className={className} />;
 }
 
 function PhoneIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L14 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2 6a2 2 0 0 1 2-2Z" />
-    </svg>
-  );
+  return <Phone className={className} />;
 }
 
 function ChatIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12a8 8 0 1 1-3.4-6.5L21 4l-1 4.5A8 8 0 0 1 21 12Z" />
-    </svg>
-  );
+  return <MessageSquare className={className} />;
 }
 
 function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
+  return <Calendar className={className} />;
 }
 
 function ImagesIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="14" height="14" rx="2" />
-      <path d="M7 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM3 15l3.5-3.5a1.5 1.5 0 0 1 2.1 0L13 16M21 8v10a2 2 0 0 1-2 2H9" />
-    </svg>
-  );
+  return <ImageIcon className={className} />;
 }
 
 function SearchIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="7" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
+  return <Search className={className} />;
 }
 
 function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
+  return <X className={className} />;
 }
 
 function ChevronIcon({ className, direction }: { className?: string; direction: 'left' | 'right' }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d={direction === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
-    </svg>
-  );
+  return direction === 'left' ? <ChevronLeft className={className} /> : <ChevronRight className={className} />;
+}
+
+// ----------------------------------------------------------------------------
+// HELPER: ไอคอนและข้อมูลประเภทสิ่งอำนวยความสะดวก และสถานที่ใกล้เคียง
+// ----------------------------------------------------------------------------
+function getAmenityIcon(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes('ว่ายน้ำ') || n.includes('pool')) return Waves;
+  if (n.includes('ฟิตเนส') || n.includes('fitness') || n.includes('ยิม') || n.includes('gym')) return Dumbbell;
+  if (n.includes('จอดรถ') || n.includes('parking')) return Car;
+  if (n.includes('ปลอดภัย') || n.includes('security') || n.includes('รปภ')) return ShieldCheck;
+  if (n.includes('กล้อง') || n.includes('cctv') || n.includes('วงจรปิด')) return Video;
+  if (n.includes('สวน') || n.includes('park') || n.includes('garden')) return Trees;
+  if (n.includes('เด็ก') || n.includes('playground')) return Smile;
+  if (n.includes('คลับ') || n.includes('สโมสร') || n.includes('club')) return Building2;
+  if (n.includes('ลิฟต์') || n.includes('lift') || n.includes('elevator')) return ArrowUpDown;
+  if (n.includes('สัตว์') || n.includes('pet')) return PawPrint;
+  return CheckCircle2;
+}
+
+interface NearbyMeta {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  bgClass: string;
+  colorClass: string;
+}
+
+function getNearbyMeta(type?: string | null): NearbyMeta {
+  const t = (type || '').toLowerCase();
+  if (t.includes('education') || t.includes('school') || t.includes('ศึกษา') || t.includes('เรียน') || t.includes('มหา')) {
+    return {
+      icon: GraduationCap,
+      label: 'สถานศึกษา',
+      bgClass: 'bg-indigo-50 border border-indigo-100',
+      colorClass: 'text-indigo-600',
+    };
+  }
+  if (t.includes('hospital') || t.includes('hosp') || t.includes('พยาบาล') || t.includes('แพทย์') || t.includes('คลินิก')) {
+    return {
+      icon: HeartPulse,
+      label: 'สถานพยาบาล',
+      bgClass: 'bg-rose-50 border border-rose-100',
+      colorClass: 'text-rose-600',
+    };
+  }
+  if (t.includes('shopping') || t.includes('shop') || t.includes('ห้าง') || t.includes('ตลาด') || t.includes('มอลล์') || t.includes('เซ็นทรัล')) {
+    return {
+      icon: ShoppingBag,
+      label: 'ห้างสรรพสินค้า / แหล่งช้อปปิ้ง',
+      bgClass: 'bg-amber-50 border border-amber-100',
+      colorClass: 'text-amber-600',
+    };
+  }
+  if (t.includes('transport') || t.includes('transit') || t.includes('สนามบิน') || t.includes('บิน') || t.includes('สถานี') || t.includes('รถไฟ')) {
+    return {
+      icon: Plane,
+      label: 'การเดินทาง / คมนาคม',
+      bgClass: 'bg-sky-50 border border-sky-100',
+      colorClass: 'text-sky-600',
+    };
+  }
+  if (t.includes('attraction') || t.includes('attract') || t.includes('เที่ยว') || t.includes('หาด') || t.includes('ทะเล') || t.includes('สวน')) {
+    return {
+      icon: Compass,
+      label: 'สถานที่พักผ่อน / ท่องเที่ยว',
+      bgClass: 'bg-emerald-50 border border-emerald-100',
+      colorClass: 'text-emerald-600',
+    };
+  }
+  return {
+    icon: MapPin,
+    label: 'สถานที่ใกล้เคียง',
+    bgClass: 'bg-slate-100 border border-slate-200',
+    colorClass: 'text-slate-600',
+  };
+}
+
+function formatDistance(meters?: number | null): string | null {
+  if (meters == null || isNaN(meters)) return null;
+  if (meters >= 1000) {
+    const km = meters / 1000;
+    return `${km % 1 === 0 ? km : km.toFixed(1)} กม.`;
+  }
+  return `${meters} เมตร`;
 }
 
 export default function PropertyDetailPage() {
@@ -145,11 +209,25 @@ export default function PropertyDetailPage() {
 
   const { properties, propertiesLoading, favorites, toggleFavorite } = useApp();
 
-  // 🔑 KEYWORD: แก้บั๊กโชว์บ้านผิดหลัง ไม่ fallback
   // 1.1 ค้นหาข้อมูลอสังหาริมทรัพย์จาก ID ที่ตรงกันในฐานข้อมูล
   // หมายเหตุ: ห้าม fallback ไปที่บ้านหลังอื่น (เดิม || properties[0] ทำให้ id ที่หาไม่เจอ
   // ไปโชว์บ้านหลังแรกของระบบแทนแบบเนียนๆ โดยผู้ใช้ไม่รู้ตัว)
   const property = properties.find((p) => String(p.id) === String(id));
+
+  // 1.2 ค้นหาอสังหาริมทรัพย์ที่คล้ายกัน (ประเภทเดียวกัน หรือ ทำเลเดียวกัน หรือ ช่วงราคาใกล้เคียง ไม่รวมหลังปัจจุบัน)
+  const similarProperties = useMemo(() => {
+    if (!property) return [];
+    const others = properties.filter((p) => String(p.id) !== String(property.id));
+    const scored = others.map((p) => {
+      let score = 0;
+      if (p.type === property.type) score += 3;
+      if (p.province_id && property.province_id && p.province_id === property.province_id) score += 2;
+      if (p.amphure_id && property.amphure_id && p.amphure_id === property.amphure_id) score += 1;
+      return { prop: p, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 3).map((item) => item.prop);
+  }, [properties, property]);
 
   // ----------------------------------------------------------------------------
   // 2. PHOTO GALLERY MEMOIZATION (จัดการรูปภาพสำหรับแสดงผลในกริด)
@@ -251,7 +329,6 @@ export default function PropertyDetailPage() {
     );
   }
 
-  // 🔑 KEYWORD: หน้าไม่พบประกาศ
   // โหลดเสร็จแล้วแต่หา id นี้ไม่เจอจริง (ถูกลบ/ยังไม่อนุมัติ/ลิงก์ผิด) — ต้องบอกตรงๆ ไม่ใช่โชว์บ้านอื่นแทน
   if (!property) {
     return (
@@ -275,7 +352,7 @@ export default function PropertyDetailPage() {
   const handleShare = () => {
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
-      alert("คัดลอกลิงก์ไปยังคลิปบอร์ดเรียบร้อยแล้ว!");
+      toast.success("คัดลอกลิงก์ประกาศไปยังคลิปบอร์ดแล้ว!");
     }
   };
 
@@ -292,10 +369,10 @@ export default function PropertyDetailPage() {
       if (res.ok && data.success && data.sessionId) {
         window.location.href = `/chat?sessionId=${data.sessionId}`;
       } else {
-        alert(data.error || 'ไม่สามารถเปิดห้องแชทได้');
+        toast.error(data.error || 'ไม่สามารถเปิดห้องแชทได้');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดในการเปิดห้องแชท');
+      toast.error('เกิดข้อผิดพลาดในการเปิดห้องแชท');
     } finally {
       setStartingChat(false);
     }
@@ -337,9 +414,7 @@ export default function PropertyDetailPage() {
               <ShareIcon className="w-3.5 h-3.5" /> แชร์
             </button>
             <button onClick={() => toggleFavorite(property.id)} className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-bold transition text-[11px]">
-              <svg className={`w-4 h-4 ${isSaved ? 'text-rose-500 fill-rose-500' : 'text-slate-400 fill-none'}`} stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
+              <Heart className={`w-4 h-4 ${isSaved ? 'text-rose-500 fill-rose-500' : 'text-slate-400'}`} />
               <span>{isSaved ? "บันทึกแล้ว" : "บันทึก"}</span>
             </button>
           </div>
@@ -423,7 +498,7 @@ export default function PropertyDetailPage() {
               {/* ตารางข้อมูลจำเพาะ */}
               <div className="pt-2">
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-1.5"><ListIcon className="w-3.5 h-3.5" /> ข้อมูลจำเพาะ</h3>
-                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50/40 p-4 rounded-2xl border border-slate-200/50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs bg-slate-50/40 p-4 rounded-2xl border border-slate-200/50">
                   <div className="flex justify-between border-b border-slate-100 pb-2">
                     <span className="text-slate-400 font-medium">ประเภทอสังหาฯ</span>
                     <span className="font-bold text-slate-700">{property.type}</span>
@@ -432,8 +507,7 @@ export default function PropertyDetailPage() {
                     <span className="text-slate-400 font-medium">ลักษณะเด่น</span>
                     <span className="font-bold text-slate-700">{property.tag || "ทรัพย์ทั่วไป"}</span>
                   </div>
-                  {/* 🔑 KEYWORD: แสดงฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ */}
-                  {/* บ้านที่ลงประกาศก่อนมีฟีเจอร์นี้จะได้ null ทั้ง 4 ฟิลด์ — โชว์ "ไม่ระบุ" แทนที่จะพัง */}
+                                    {/* บ้านที่ลงประกาศก่อนมีฟีเจอร์นี้จะได้ null ทั้ง 4 ฟิลด์ — โชว์ "ไม่ระบุ" แทนที่จะพัง */}
                   <div className="flex justify-between border-b border-slate-100 pb-2">
                     <span className="text-slate-400 font-medium">ค่าส่วนกลาง</span>
                     <span className="font-bold text-slate-700">
@@ -455,6 +529,46 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
+              {/* สิ่งอำนวยความสะดวกและพื้นที่ส่วนกลาง */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    สิ่งอำนวยความสะดวกและพื้นที่ส่วนกลาง
+                  </h3>
+                  {property.amenities && property.amenities.length > 0 && (
+                    <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                      {property.amenities.length} รายการ
+                    </span>
+                  )}
+                </div>
+
+                {property.amenities && property.amenities.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {property.amenities.map((amenity, idx) => {
+                      const AmenityIcon = getAmenityIcon(amenity);
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50/60 border border-slate-200/60 hover:bg-blue-50/40 hover:border-blue-200/80 transition-all duration-200 group"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 group-hover:border-blue-300 flex items-center justify-center text-blue-600 shadow-2xs shrink-0 transition-colors">
+                            <AmenityIcon className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-700 group-hover:text-slate-900 line-clamp-1">
+                            {amenity}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic bg-slate-50/40 p-3.5 rounded-2xl border border-slate-200/40">
+                    นายหน้ายังไม่ได้ระบุสิ่งอำนวยความสะดวกสำหรับประกาศนี้
+                  </p>
+                )}
+              </div>
+
               {/* ข้อความรายละเอียดเพิ่มเติม */}
               <div className="space-y-3 pt-2 border-t border-slate-100">
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">รายละเอียดอสังหาริมทรัพย์</h3>
@@ -463,9 +577,26 @@ export default function PropertyDetailPage() {
                 </p>
               </div>
 
-              {/* แผนที่ OpenStreetMap */}
+              {/* แผนที่ OpenStreetMap & ปุ่มเปิด Google Maps */}
               <div className="space-y-3 pt-4 border-t border-slate-100">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">แผนที่ตั้งโครงการ</h3>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                    แผนที่ตั้งโครงการ
+                  </h3>
+                  {property.latitude != null && property.longitude != null && (
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 px-3 py-1.5 rounded-xl border border-blue-200/70 transition-all duration-200 shadow-2xs group"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+                      <span>เปิดใน Google Maps</span>
+                      <ExternalLink className="w-3 h-3 text-blue-400 group-hover:text-blue-600 ml-0.5" />
+                    </a>
+                  )}
+                </div>
                 <div className="bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 h-64 relative">
                   <PropertyLocationMap
                     latitude={property.latitude ?? null}
@@ -473,6 +604,63 @@ export default function PropertyDetailPage() {
                     height={256}
                   />
                 </div>
+              </div>
+
+              {/* สถานที่สำคัญใกล้เคียง (Nearby Places) */}
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+                    สถานที่สำคัญใกล้เคียง
+                  </h3>
+                  {property.nearbies && property.nearbies.length > 0 && (
+                    <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                      {property.nearbies.length} แห่ง
+                    </span>
+                  )}
+                </div>
+
+                {property.nearbies && property.nearbies.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {property.nearbies.map((place, idx) => {
+                      const meta = getNearbyMeta(place.type);
+                      const NearbyIcon = meta.icon;
+                      const formattedDistance = formatDistance(place.distance);
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/60 border border-slate-200/60 hover:bg-slate-50 hover:border-slate-300/80 transition-all duration-200 group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${meta.bgClass} ${meta.colorClass} shadow-2xs`}>
+                              <NearbyIcon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-extrabold text-slate-800 truncate group-hover:text-slate-900" title={place.name}>
+                                {place.name}
+                              </p>
+                              <p className="text-[10px] font-medium text-slate-400 mt-0.5">
+                                {meta.label}
+                              </p>
+                            </div>
+                          </div>
+                          {formattedDistance && (
+                            <div className="shrink-0 text-right">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-black text-slate-700 bg-white px-2.5 py-1 rounded-xl border border-slate-200/80 shadow-2xs">
+                                <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                                {formattedDistance}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic bg-slate-50/40 p-3.5 rounded-2xl border border-slate-200/40">
+                    ไม่มีข้อมูลสถานที่สำคัญใกล้เคียงที่ระบุสำหรับประกาศนี้
+                  </p>
+                )}
               </div>
 
               {/* กล่องเครื่องคำนวณสินเชื่อ (Mortgage Loan Calculator) */}
@@ -592,7 +780,10 @@ export default function PropertyDetailPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-                      <span className="text-amber-500">⭐</span> คะแนนและความคิดเห็นจากผู้เข้าชมจริง
+                      <svg className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" viewBox="0 0 24 24">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                      </svg>
+                      <span>คะแนนและความคิดเห็นจากผู้เข้าชมจริง</span>
                     </h3>
                     <p className="text-xs text-slate-500 font-medium mt-1">
                       รีวิวการให้บริการของนายหน้า {property.agentName} จากลูกค้าที่นัดหมายเข้าชมโครงการจริง
@@ -601,9 +792,15 @@ export default function PropertyDetailPage() {
                   {agentRealReviewCount > 0 && (
                     <div className="flex items-center gap-2 bg-amber-50 border border-amber-200/60 px-3.5 py-1.5 rounded-2xl shrink-0 self-start sm:self-center">
                       <span className="text-lg font-black text-amber-600">{agentRealRating.toFixed(1)}</span>
-                      <div className="flex text-amber-400 text-xs">
+                      <div className="flex items-center gap-0.5 text-amber-400">
                         {Array.from({ length: 5 }, (_, i) => (
-                          <span key={i}>{i < Math.round(agentRealRating) ? '★' : '☆'}</span>
+                          <svg 
+                            key={i} 
+                            className={`w-3.5 h-3.5 ${i < Math.round(agentRealRating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`} 
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                          </svg>
                         ))}
                       </div>
                       <span className="text-[11px] text-amber-800 font-bold">({agentRealReviewCount} รีวิว)</span>
@@ -618,7 +815,11 @@ export default function PropertyDetailPage() {
                   </div>
                 ) : reviews.length === 0 ? (
                   <div className="py-10 px-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center space-y-2">
-                    <div className="text-3xl">⭐</div>
+                    <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 border border-amber-200/60 flex items-center justify-center mx-auto">
+                      <svg className="w-5 h-5 fill-amber-400" viewBox="0 0 24 24">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                      </svg>
+                    </div>
                     <p className="text-sm font-bold text-slate-700">ยังไม่มีรีวิวสำหรับนายหน้าท่านนี้</p>
                     <p className="text-xs text-slate-400 max-w-md mx-auto">
                       เมื่อคุณนัดหมายเข้าชมโครงการและเข้าชมสถานที่จริงเสร็จสิ้น คุณสามารถร่วมบันทึกประเมินความพึงพอใจการให้บริการได้
@@ -645,9 +846,15 @@ export default function PropertyDetailPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl border border-slate-200/80 shadow-xs">
-                            <div className="flex text-amber-400 text-xs">
+                            <div className="flex items-center gap-0.5 text-amber-400">
                               {Array.from({ length: 5 }, (_, i) => (
-                                <span key={i}>{i < rev.rating ? '★' : '☆'}</span>
+                                <svg 
+                                  key={i} 
+                                  className={`w-3 h-3 ${i < rev.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`} 
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
                               ))}
                             </div>
                             <span className="text-[10px] font-extrabold text-slate-700 ml-1">{rev.rating}.0</span>
@@ -735,7 +942,84 @@ export default function PropertyDetailPage() {
           </div>
 
         </div>
+
+        {/* ========================================================================
+            ส่วนที่ 4.5: อสังหาริมทรัพย์ที่คล้ายกัน (SIMILAR / RECOMMENDED PROPERTIES)
+            ======================================================================== */}
+        {similarProperties.length > 0 && (
+          <section className="pt-8 border-t border-slate-200/80 space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-blue-600" />
+                  อสังหาริมทรัพย์ที่คล้ายกัน
+                </h2>
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  ทรัพย์ประเภทเดียวกันหรือทำเลใกล้เคียงที่คุณอาจสนใจ
+                </p>
+              </div>
+              <Link
+                href="/search"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 shrink-0"
+              >
+                ดูทั้งหมด
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {similarProperties.map((simProp) => (
+                <PropertyCard
+                  key={simProp.id}
+                  prop={simProp}
+                  isFav={favorites.includes(simProp.id)}
+                  toggleFavorite={toggleFavorite}
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
+
+      {/* ========================================================================
+          ส่วนพิเศษ: แถบ Action Bar ด้านล่างสำหรับหน้าจอมือถือ (MOBILE FIXED BOTTOM ACTION BAR)
+          ======================================================================== */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] text-slate-400 font-bold uppercase">ราคา</p>
+          <p className="text-base font-black text-blue-700 truncate">{property.price}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={phoneUrl}
+            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition border border-slate-200"
+            title="โทรหานายหน้า"
+            aria-label="โทรหานายหน้า"
+          >
+            <PhoneIcon className="w-4 h-4" />
+          </a>
+          <button
+            onClick={handleStartChat}
+            disabled={startingChat}
+            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition border border-slate-200 disabled:opacity-50"
+            title="แชทกับนายหน้า"
+            aria-label="แชทกับนายหน้า"
+          >
+            {startingChat ? (
+              <div className="w-3.5 h-3.5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <ChatIcon className="w-4 h-4" />
+            )}
+          </button>
+          <Link
+            href={`/book-appointment?propertyId=${property.id}`}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-3.5 sm:px-4 py-2.5 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+          >
+            <CalendarIcon className="w-3.5 h-3.5" />
+            <span>นัดหมายเข้าชม</span>
+          </Link>
+        </div>
+      </div>
 
       {/* ========================================================================
           ส่วนที่ 5: MODAL ซูมดูรูปภาพใหญ่เต็มจอ (FULL-SCREEN LIGHTBOX MODAL)

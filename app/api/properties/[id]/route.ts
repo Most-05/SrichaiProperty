@@ -18,7 +18,6 @@ import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหร�
 // Helper 1: ฟังก์ชันแปลงวัตถุ Date ให้เป็นข้อความวันที่รูปแบบ "YYYY-MM-DD"
 const toDateKey = (d: Date) => d.toISOString().split("T")[0];
 
-// 🔑 KEYWORD: เช็คสิทธิ์เจ้าของประกาศก่อนแก้ไข
 // Helper 2: ฟังก์ชันตรวจสอบสิทธิ์นายหน้าและยืนยันว่าเป็นเจ้าของประกาศหลังนี้จริง
 async function requireOwnerAgent(propertyId: string) {
   // 1. ตรวจสอบการเข้าสู่ระบบและสิทธิ์การใช้งาน (ต้องเป็นบทบาท 'agent')
@@ -41,7 +40,6 @@ async function requireOwnerAgent(propertyId: string) {
   return { property, error: null };
 }
 
-// 🔑 KEYWORD: ดึงข้อมูลบ้านมาแก้ไข พร้อมวันว่าง
 // ==============================================================================
 // 1. GET: ดึงข้อมูลบ้าน 1 หลัง พร้อมรูปภาพและรอบเวลานัดหมาย (สำหรับหน้าแก้ไขนายหน้า)
 // ==============================================================================
@@ -50,7 +48,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     const { id } = await context.params;
     
     // ตรวจสอบสิทธิ์ความเป็นเจ้าของก่อนดึงข้อมูล
-    const { property, error } = await requireOwnerAgent(id);
+    const { error } = await requireOwnerAgent(id);
     if (error) return error;
 
     // ดึงข้อมูลเชิงลึกเพิ่มเติม รวมตารางรูปภาพ (property_images) และรอบเวลานัดหมาย (property_viewing_slots)
@@ -82,10 +80,10 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       province_id: fullProp.province_id,
       amphure_id: fullProp.amphure_id,
       district_id: fullProp.district_id,
-      // 🔑 KEYWORD: ส่งพิกัดกลับให้หน้าแก้ไข preload แผนที่
+      
       latitude: fullProp.latitude ? Number(fullProp.latitude) : null,
       longitude: fullProp.longitude ? Number(fullProp.longitude) : null,
-      // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมกลับให้หน้าแก้ไข preload ค่าเดิม
+      
       commonFee: fullProp.common_fee ? Number(fullProp.common_fee) : null,
       parking: fullProp.parking_spaces ?? null,
       floors: fullProp.floors ?? null,
@@ -112,7 +110,6 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
   }
 }
 
-// 🔑 KEYWORD: แก้ไขประกาศ รูปภาพ วันว่าง
 // ==============================================================================
 // 2. PATCH: บันทึกการแก้ไขข้อมูลบ้าน, รูปภาพ และรอบเวลานัดหมาย
 // ==============================================================================
@@ -129,7 +126,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       title, type_id, price, description, listing_type, listingType,
       bedrooms, bathrooms, area_sqm, location,
       province_id, amphure_id, district_id, latitude, longitude, images, viewingSlots, status: newStatus,
-      commonFee, parking, floors, ownership // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+      commonFee, parking, floors, ownership 
     } = body;
 
     // ตรวจสอบความถูกต้องของข้อมูล (Validation)
@@ -149,7 +146,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       return NextResponse.json({ error: "จำนวนห้องต้องไม่ติดลบ" }, { status: 400 });
     }
 
-    // 🔑 KEYWORD: validate ฟิลด์สเปคเพิ่มเติม
     if ((parking !== undefined && parking !== null && parking !== "" && Number(parking) < 0) ||
         (floors !== undefined && floors !== null && floors !== "" && Number(floors) < 0)) {
       return NextResponse.json({ error: "จำนวนที่จอดรถ/ชั้น ต้องไม่ติดลบ" }, { status: 400 });
@@ -174,18 +170,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (province_id) updateData.province_id = parseInt(String(province_id));
     if (amphure_id) updateData.amphure_id = parseInt(String(amphure_id));
     if (district_id) updateData.district_id = parseInt(String(district_id));
-    // 🔑 KEYWORD: บันทึกพิกัดที่ปักหมุดใหม่
+    
     // เช็ค !== undefined/null (ไม่ใช่ if (latitude) เฉยๆ) เพราะ 0 เป็นพิกัดที่ถูกต้องได้ (แม้ไม่น่าเกิดกับบ้านในไทย)
     if (latitude !== undefined && latitude !== null) updateData.latitude = parseFloat(String(latitude));
     if (longitude !== undefined && longitude !== null) updateData.longitude = parseFloat(String(longitude));
-    // 🔑 KEYWORD: บันทึกฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+    
     if (commonFee !== undefined && commonFee !== null && commonFee !== "") updateData.common_fee = parseFloat(String(commonFee));
     if (parking !== undefined && parking !== null && parking !== "") updateData.parking_spaces = parseInt(String(parking));
     if (floors !== undefined && floors !== null && floors !== "") updateData.floors = parseInt(String(floors));
     if (ownership !== undefined && ownership !== null && ownership !== "") updateData.ownership_type = ownership;
     if (newStatus) updateData.status = newStatus;
 
-    // 🔑 KEYWORD: ตีกลับกลับเข้าคิวอนุมัติอัตโนมัติ
     // กฎพิเศษ: กรณีประกาศเคยถูกตีกลับ (rejected) เมื่อนายหน้าแก้ไขและกดบันทึก ให้เปลี่ยนเป็น 'pending' เพื่อส่งกลับเข้าคิวอนุมัติใหม่อัตโนมัติ
     if (property.status === "rejected") {
       updateData.status = "pending";
@@ -225,7 +220,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         });
       }
 
-      // 🔑 KEYWORD: เพิ่มวันว่างตอนแก้ไขประกาศ
       // เพิ่มรอบใหม่ที่เพิ่งถูกเลือกเข้ามา — ไม่กันชนกับบ้านหลังอื่นตรงนี้แล้ว
       // จุดกันชนจริงย้ายไปเช็คตอนลูกค้ากดจอง (ดู hasAgentBookingConflict ใน api/appointments)
       const toCreate = viewingSlots.filter((s: { date: string; timeSlot: string }) => !existingKeys.has(`${s.date}|${s.timeSlot}`));
@@ -248,7 +242,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 }
 
-// 🔑 KEYWORD: ลบประกาศอสังหาริมทรัพย์
 // ==============================================================================
 // 3. DELETE: ลบประกาศอสังหาริมทรัพย์ออกจากระบบ
 // ==============================================================================

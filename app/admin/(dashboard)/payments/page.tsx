@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast } from '@/components/ui/toast';
+import { CreditCard, Lock, Receipt, Eye, X, Clock, Check, ListFilter, AlertCircle } from 'lucide-react';
 
 interface Payment {
   id: string;
@@ -78,13 +80,14 @@ export default function AdminPaymentsPage() {
       });
       const data = await res.json();
       if (data.success) {
+        toast.success(`ทำรายการ ${action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ'} สลิปสำเร็จ`);
         setLoading(true);
         setTick(t => t + 1);
       } else {
-        alert(data.error ?? 'เกิดข้อผิดพลาด');
+        toast.error(data.error ?? 'เกิดข้อผิดพลาด');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
       setProcessingId(null);
     }
@@ -93,8 +96,8 @@ export default function AdminPaymentsPage() {
   if (unauthorized) {
     return (
       <div className="p-8 max-w-lg mx-auto text-center space-y-4 my-12">
-        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl font-black">
-          🔒
+        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+          <Lock className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-black text-slate-900">ต้องใช้สิทธิ์ Admin เข้าสู่ระบบ</h2>
         <p className="text-slate-500 text-xs leading-relaxed">
@@ -111,28 +114,33 @@ export default function AdminPaymentsPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-black text-slate-900 flex items-center gap-2">
-            💳 รายการชำระเงิน Verified PRO
+            <CreditCard className="w-5 h-5 text-amber-500" />
+            <span>รายการชำระเงิน Verified PRO</span>
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
             ตรวจสอบสลิปโอนเงินและอนุมัติสิทธิ์ Verified PRO ให้แก่นายหน้า
           </p>
         </div>
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl max-w-full overflow-x-auto no-scrollbar">
           {(['pending', 'approved', 'rejected', 'all'] as Filter[]).map(f => (
             <button
               key={f}
               onClick={() => changeFilter(f)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
                 filter === f ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              {f === 'pending' ? '⏳ รอตรวจสอบ' : f === 'approved' ? '✅ อนุมัติแล้ว' : f === 'rejected' ? '❌ ปฏิเสธ' : '📋 ทั้งหมด'}
+              {f === 'pending' && <Clock className="w-3.5 h-3.5 text-amber-600" />}
+              {f === 'approved' && <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />}
+              {f === 'rejected' && <AlertCircle className="w-3.5 h-3.5 text-red-600" />}
+              {f === 'all' && <ListFilter className="w-3.5 h-3.5 text-slate-500" />}
+              <span>{f === 'pending' ? 'รอตรวจสอบ' : f === 'approved' ? 'อนุมัติแล้ว' : f === 'rejected' ? 'ปฏิเสธ' : 'ทั้งหมด'}</span>
             </button>
           ))}
         </div>
@@ -145,14 +153,14 @@ export default function AdminPaymentsPage() {
         </div>
       ) : payments.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center text-slate-400 space-y-2">
-          <p className="text-4xl">🧾</p>
+          <Receipt className="w-12 h-12 text-slate-300 mx-auto mb-2" />
           <p className="font-bold text-sm text-slate-700">ไม่พบรายการโอนเงินในหมวดหมู่นี้</p>
           <p className="text-xs text-slate-400">เมื่อมีนายหน้าอัปเกรดและส่งสลิปโอนเงิน รายการจะแสดงขึ้นที่นี่</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
+            <table className="w-full text-xs text-left min-w-[650px]">
               <thead className="border-b border-slate-100 bg-slate-50 text-slate-400 font-bold uppercase">
                 <tr>
                   <th className="p-4">นายหน้าผู้โอน</th>
@@ -182,7 +190,8 @@ export default function AdminPaymentsPage() {
                           onClick={() => setSlipUrl(p.slipUrl)}
                           className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-extrabold transition flex items-center gap-1.5"
                         >
-                          🖼️ ดูรูปสลิป
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>ดูรูปสลิป</span>
                         </button>
                       ) : (
                         <span className="text-slate-300 font-semibold">ไม่มีสลิป</span>
@@ -237,12 +246,15 @@ export default function AdminPaymentsPage() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center border-b pb-2">
-              <p className="font-extrabold text-slate-900 text-sm">🧾 หลักฐานการโอนเงิน (สลิป)</p>
+              <p className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
+                <Receipt className="w-4 h-4 text-slate-600" />
+                <span>หลักฐานการโอนเงิน (สลิป)</span>
+              </p>
               <button 
                 onClick={() => setSlipUrl(null)} 
                 className="w-7 h-7 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 font-bold flex items-center justify-center"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="bg-slate-50 rounded-2xl p-2 flex justify-center">

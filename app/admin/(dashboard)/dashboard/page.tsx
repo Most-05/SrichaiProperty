@@ -5,6 +5,7 @@ import Link from 'next/link';
 import StatCards from '@/components/admin/StatCards';
 import ModerationList from '@/components/admin/ModerationList';
 import NotificationBell from '@/components/common/NotificationBell';
+import { Search, AlertTriangle, Check, ClipboardList, Users, FileText, Terminal, Loader2 } from 'lucide-react';
 
 const REFRESH_INTERVAL_MS = 15000;
 
@@ -159,7 +160,7 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center font-bold text-slate-500">
-        🔄 กำลังดึงข้อมูลจากระบบฐานข้อมูลกลาง...
+        <Loader2 className="w-5 h-5 animate-spin text-blue-600 inline mr-2" />กำลังดึงข้อมูลจากระบบฐานข้อมูลกลาง...
       </div>
     );
   }
@@ -179,22 +180,22 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Top Header */}
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm">
+        <header className="min-h-14 py-2.5 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 shrink-0 shadow-sm">
           {/* Search Box */}
-          <div className="relative w-80">
-            <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+          <div className="relative w-full sm:w-80 flex items-center">
+            <Search className="absolute left-3 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="ค้นหาประกาศ (ชื่อ, PRJ-XXX), รหัส/ชื่อนายหน้า..."
               aria-label="ค้นหาประกาศหรือนายหน้า"
-              className="w-full pl-8 pr-4 py-1.5 bg-slate-100 border border-slate-200 rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
+              className="w-full pl-8 pr-4 py-1.5 bg-slate-100 border border-slate-200 rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold text-xs"
             />
           </div>
 
           {/* Admin Stats Status */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 justify-between sm:justify-end w-full sm:w-auto">
             <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[9px] font-black tracking-wide border border-slate-200">
               IP: {adminIp}
             </span>
@@ -203,12 +204,15 @@ export default function AdminDashboardPage() {
         </header>
 
         {/* Dashboard Content Workspace */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
 
           {/* Error banner */}
           {fetchError && (
             <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-between">
-              <span>⚠️ {fetchError}</span>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{fetchError}</span>
+              </div>
               <button onClick={() => fetchDashboardData()} className="underline font-black">ลองใหม่</button>
             </div>
           )}
@@ -222,7 +226,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* ==================================================== */}
-          {/* 📊 4 KPI CARDS ROW                                   */}
+          {/* 4 KPI CARDS ROW                                   */}
           {/* ==================================================== */}
           <StatCards
             pendingCount={pendingCount}
@@ -232,7 +236,7 @@ export default function AdminDashboardPage() {
           />
 
           {/* ==================================================== */}
-          {/* 📝 LISTING MODERATION & TERMINAL LOGS GRID          */}
+          {/* LISTING MODERATION & TERMINAL LOGS GRID          */}
           {/* ==================================================== */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
@@ -244,7 +248,8 @@ export default function AdminDashboardPage() {
                 <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                   <div>
                     <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
-                      📋 คิวตรวจสอบประกาศ (Listing Moderation)
+                      <ClipboardList className="w-4 h-4 text-slate-600" />
+                      <span>คิวตรวจสอบประกาศ (Listing Moderation)</span>
                     </h3>
                     <p className="text-slate-400 text-[9px] mt-0.5">*แสดงเฉพาะเรื่องตรวจเช็คความถูกต้องก่อนแสดงผลสู่สาธารณะ</p>
                   </div>
@@ -264,8 +269,13 @@ export default function AdminDashboardPage() {
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="p-4 bg-slate-50 border-b border-slate-200">
                   <h3 className="font-extrabold text-slate-800 text-sm flex items-center justify-between">
-                    <span>👥 สมาชิกสมัครใหม่ (New Agents)</span>
-                    <span className="text-[9px] text-slate-400 font-black uppercase">📃 NDID Compliant Data</span>
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-slate-600" />
+                      <span>สมาชิกสมัครใหม่ (New Agents)</span>
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-black uppercase flex items-center gap-1">
+                      <FileText className="w-3 h-3" /> NDID Compliant Data
+                    </span>
                   </h3>
                 </div>
 
@@ -286,8 +296,9 @@ export default function AdminDashboardPage() {
                               {agent.name}
                               <span className="text-[9px] text-slate-400 font-semibold">{agent.timeAgo}</span>
                             </div>
-                            <span className="text-[9px] text-emerald-600 font-extrabold flex items-center gap-0.5">
-                              ✓ ยืนยันตัวตน NDID แล้ว
+                            <span className="text-[9px] text-emerald-600 font-extrabold flex items-center gap-1">
+                              <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                              <span>ยืนยันตัวตน NDID แล้ว</span>
                             </span>
                           </div>
                         </div>
@@ -312,7 +323,8 @@ export default function AdminDashboardPage() {
               <div className="bg-[#0f172a] rounded-2xl border border-slate-800 shadow-xl overflow-hidden flex flex-col h-[340px]">
                 <div className="p-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-extrabold text-xs">💻 System Audit Logs</span>
+                    <Terminal className="w-4 h-4 text-slate-400" />
+                    <span className="text-white font-extrabold text-xs">System Audit Logs</span>
                     <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
                       LIVE DB ACTIVITY
                     </span>
@@ -378,7 +390,8 @@ export default function AdminDashboardPage() {
               {/* รายงานปัญหา (User Reports) */}
               <div className="bg-red-50 border border-red-200 rounded-2xl p-5 shadow-sm space-y-4">
                 <h4 className="text-red-700 font-extrabold flex items-center gap-1.5 text-xs">
-                  ⚠️ รายงานปัญหา (User Reports)
+                  <AlertTriangle className="w-4 h-4 text-red-600" />
+                  <span>รายงานปัญหา (User Reports)</span>
                 </h4>
                 <p className="text-[10px] text-red-600 font-semibold leading-relaxed">
                   ระบบตรวจพบรายงานจากลูกค้า {reportsCount} รายการ กรณีนี้จำเป็นต้องผ่านการอนุมัติการตรวจสอบข้อมูลลูกค้าทั้งหมดก่อนบันทึกสถานะ (เพื่อการตรวจสอบความปลอดภัยระบบเท่านั้น)

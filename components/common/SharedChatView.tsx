@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image'; // ใช้แสดงรูปแนบและรูปโปรไฟล์ในหน้าจอแชท
 import { Message, MessageAvatar, MessageContent, MessageFooter } from '@/components/ui/message'; // ใช้แสดงแต่ละแถวข้อความ พร้อมรูปโปรไฟล์ กรอบข้อความ และเวลา
 import { Bubble, BubbleContent } from '@/components/ui/bubble'; // ใช้จัดสไตล์กรอบข้อความแชท (แยกฝั่งผู้ใช้กับคู่สนทนา)
+import { toast } from '@/components/ui/toast';
+import { compressImage } from '@/lib/utils/compressImage';
 
 // ==============================================================================
 // 1. INTERFACES & TYPES (กำหนดโครงสร้างข้อมูลหน้าจอแชทกลาง)
@@ -239,17 +241,19 @@ export default function SharedChatView({
     if (!file) return;
     setUploading(true);
     try {
+      // ⚡ บีบอัดรูปภาพก่อนอัปโหลดหากเป็นไฟล์รูปภาพ
+      const compressed = await compressImage(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed.file);
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
       if (res.ok && data.success && data.url) {
         await onSendMessage({ fileUrl: data.url });
       } else {
-        alert(data.error || 'อัปโหลดไฟล์ไม่สำเร็จ');
+        toast.error(data.error || 'อัปโหลดไฟล์ไม่สำเร็จ');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดขณะอัปโหลดไฟล์');
+      toast.error('เกิดข้อผิดพลาดขณะอัปโหลดไฟล์');
     } finally {
       setUploading(false);
     }
@@ -273,14 +277,15 @@ export default function SharedChatView({
   // ----------------------------------------------------------------------------
   const handleShareLocation = () => {
     if (!navigator.geolocation) {
-      alert('อุปกรณ์นี้ไม่รองรับการแชร์ตำแหน่ง');
+      toast.warning('อุปกรณ์นี้ไม่รองรับการแชร์ตำแหน่ง');
       return;
     }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         await onSendMessage({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        toast.success('แชร์ตำแหน่งปัจจุบันเรียบร้อยแล้ว');
       },
-      () => alert('ไม่สามารถเข้าถึงตำแหน่งของคุณได้ กรุณาอนุญาตการเข้าถึงตำแหน่ง'),
+      () => toast.error('ไม่สามารถเข้าถึงตำแหน่งของคุณได้ กรุณาอนุญาตการเข้าถึงตำแหน่ง'),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
@@ -292,10 +297,15 @@ export default function SharedChatView({
     if (!confirm('ลบข้อความนี้ใช่หรือไม่?')) return;
     if (onDeleteMessage) {
       await onDeleteMessage(msgId);
+      toast.success('ลบข้อความเรียบร้อยแล้ว');
     } else {
       const res = await fetch(`/api/chat/messages?messageId=${msgId}`, { method: 'DELETE' });
-      if (res.ok) window.location.reload();
-      else alert('ไม่สามารถลบข้อความได้');
+      if (res.ok) {
+        toast.success('ลบข้อความเรียบร้อยแล้ว');
+        window.location.reload();
+      } else {
+        toast.error('ไม่สามารถลบข้อความได้');
+      }
     }
   };
 
@@ -304,12 +314,15 @@ export default function SharedChatView({
     setShowMenu(false);
     if (onDeleteSession) {
       await onDeleteSession(activeSession.id);
+      toast.success('ลบห้องแชทเรียบร้อยแล้ว');
     } else {
       const res = await fetch(`/api/chat/sessions?sessionId=${activeSession.id}`, { method: 'DELETE' });
       if (res.ok) {
-        alert('ลบห้องแชทเรียบร้อยแล้ว');
+        toast.success('ลบห้องแชทเรียบร้อยแล้ว');
         window.location.reload();
-      } else alert('ไม่สามารถลบห้องแชทได้');
+      } else {
+        toast.error('ไม่สามารถลบห้องแชทได้');
+      }
     }
   };
 
@@ -330,9 +343,11 @@ export default function SharedChatView({
           body: JSON.stringify({ sessionId: activeSession.id, reason: reportReason, details: reportDetails })
         });
       }
-      alert('ส่งรายงานเรียบร้อยแล้ว');
+      toast.success('ส่งรายงานเรียบร้อยแล้ว ทีมงานจะดำเนินการตรวจสอบทันที');
       setShowReportModal(false);
       setReportDetails('');
+    } catch {
+      toast.error('ส่งรายงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsSubmittingReport(false);
     }

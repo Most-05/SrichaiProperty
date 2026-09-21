@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import AgentRegisterBanner from '@/components/auth/AgentRegisterBanner';
 import OtpVerificationModal from '@/components/auth/OtpVerificationModal';
+import { toast } from '@/components/ui/toast';
+import { compressImage } from '@/lib/utils/compressImage';
 
 export default function AgentRegisterPage() {
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -60,15 +62,12 @@ export default function AgentRegisterPage() {
     }
   };
 
-
   const [profileImage, setProfileImage] = useState('');
   const [kycDoc, setKycDoc] = useState('');
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [isUploadingKyc, setIsUploadingKyc] = useState(false);
 
-  // [ติวสอบ]: ฟังก์ชันอัปโหลดไฟล์จริงไปหลังบ้าน
-  // เมื่อเราเลือกไฟล์รูป มันจะยิงไฟล์แนบ (FormData) ไปที่ /api/upload
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'kyc') => {
+      const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'kyc') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -78,29 +77,29 @@ export default function AgentRegisterPage() {
       setIsUploadingKyc(true);
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
+      // ⚡ บีบอัดรูปภาพก่อนอัปโหลดเพื่อความรวดเร็วและประหยัดแบนด์วิดท์
+      const compressed = await compressImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
+      const formData = new FormData();
+      formData.append('file', compressed.file);
+
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       });
       const data = await res.json();
       if (data.success) {
-        // [ติวสอบ]: เมื่อหลังบ้านเซฟรูปลง Cloud สำเร็จ จะคืนค่า URL รูปกลับมา
-        // เราก็เอา URL นั้นมาเก็บใน State เพื่อส่งไปพร้อมกับข้อมูลตอนกด Register
-        if (type === 'profile') {
+                        if (type === 'profile') {
           setProfileImage(data.url);
         } else {
           setKycDoc(data.url);
         }
       } else {
-        alert(data.error || 'อัปโหลดไฟล์ล้มเหลว');
+        toast.error(data.error || 'อัปโหลดไฟล์ล้มเหลว');
       }
     } catch (err) {
       console.error(err);
-      alert('เกิดข้อผิดพลาดในการอัปโหลด');
+      toast.error('เกิดข้อผิดพลาดในการอัปโหลด');
     } finally {
       if (type === 'profile') {
         setIsUploadingProfile(false);
@@ -110,8 +109,7 @@ export default function AgentRegisterPage() {
     }
   };
 
-  // [ติวสอบ]: ฟังก์ชันนี้คือหัวใจหลักของการสมัครสมาชิก (ส่งข้อมูลไป Backend)
-  const verifyOtp = async () => {
+    const verifyOtp = async () => {
     // 1. นำชื่อและนามสกุลมาต่อกัน ก่อนส่งไป Backend
     const fullName = `${firstName} ${lastName}`.trim();
     try {
@@ -124,20 +122,19 @@ export default function AgentRegisterPage() {
 
       const data = await response.json();
 
-
       if (!response.ok) {
-        alert(data.error || "การสมัครสมาชิกไม่สำเร็จ");
+        toast.error(data.error || "การสมัครสมาชิกไม่สำเร็จ");
         setShowOtpModal(false);
         return;
       }
 
       // 3. ถ้าสำเร็จ Backend จะสร้างบัญชีให้ (แต่สถานะคือ pending เพราะ role เป็น agent)
-      alert("สมัครสมาชิกนายหน้าสำเร็จเรียบร้อย! บัญชีของคุณอยู่ระหว่างรอแอดมินตรวจสอบและอนุมัติก่อนเข้าใช้งาน");
+      toast.success("สมัครสมาชิกนายหน้าสำเร็จเรียบร้อย! บัญชีของคุณอยู่ระหว่างรอแอดมินตรวจสอบและอนุมัติ");
       setShowOtpModal(false);
       // 4. พาผู้ใช้กลับไปหน้า Login
-      window.location.href = '/login/agent';
+      setTimeout(() => { window.location.href = '/login/agent'; }, 1200);
     } catch {
-      alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านเพื่อสมัครสมาชิกได้");
+      toast.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านเพื่อสมัครสมาชิกได้");
     }
     setShowOtpModal(false);
   };
@@ -154,18 +151,16 @@ export default function AgentRegisterPage() {
     }
   };
 
-  // [ติวสอบ]: ฟังก์ชันนี้ถูกเรียกเมื่อกดปุ่ม "ส่งคำขอสมัครตัวแทน" ล่างสุดของจอ
-  const handleRegister = (event: React.FormEvent) => {
+    const handleRegister = (event: React.FormEvent) => {
     event.preventDefault(); // ป้องกันไม่ให้หน้าเว็บรีเฟรชเมื่อกดปุ่ม Submit ฟอร์ม
-    
-    // ด่านตรวจที่ 1: รหัสผ่านตรงกันไหม?
+
     if (password !== confirmPassword) {
-      alert("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
+      toast.warning("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
       return;
     }
-    // ด่านตรวจที่ 2: ติ๊กยอมรับข้อตกลงหรือยัง?
+    
     if (!agreed) {
-      alert("กรุณากดยอมรับเงื่อนไขการเป็นนายหน้า");
+      toast.warning("กรุณากดยอมรับเงื่อนไขการเป็นนายหน้า");
       return;
     }
     
@@ -325,7 +320,6 @@ export default function AgentRegisterPage() {
               </div>
             </div>
 
-
             {/* Step 3: Account & KYC */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
@@ -390,11 +384,16 @@ export default function AgentRegisterPage() {
                     ) : profileImage ? (
                       <div className="flex flex-col items-center gap-1.5">
                         <Image src={profileImage} alt="Profile Preview" width={48} height={48} className="w-12 h-12 rounded-full object-cover border border-slate-200" unoptimized />
-                        <span className="text-[9px] font-semibold text-emerald-600">✓ อัปโหลดสำเร็จ</span>
+                        <span className="text-[9px] font-semibold text-emerald-600 flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                          อัปโหลดสำเร็จ
+                        </span>
                       </div>
                     ) : (
                       <>
-                        <span className="text-2xl text-slate-400">🖼️</span>
+                        <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
                         <span className="text-[10px] font-bold text-slate-500">คลิกเพื่ออัปโหลดรูปภาพ</span>
                       </>
                     )}
@@ -417,12 +416,19 @@ export default function AgentRegisterPage() {
                       <div className="text-xs text-slate-500 animate-pulse">กำลังอัปโหลด...</div>
                     ) : kycDoc ? (
                       <div className="flex flex-col items-center gap-1.5">
-                        <span className="text-2xl text-emerald-500">📄</span>
-                        <span className="text-[9px] font-semibold text-emerald-600 truncate max-w-[150px]">✓ อัปโหลดไฟล์เรียบร้อย</span>
+                        <svg className="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-[9px] font-semibold text-emerald-600 truncate max-w-[150px] flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                          อัปโหลดไฟล์เรียบร้อย
+                        </span>
                       </div>
                     ) : (
                       <>
-                        <span className="text-2xl text-slate-400">📄</span>
+                        <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                         <span className="text-[10px] font-bold text-slate-500">คลิกเพื่ออัปโหลดไฟล์ KYC</span>
                       </>
                     )}
@@ -430,7 +436,6 @@ export default function AgentRegisterPage() {
                 </div>
               </div>
             </div>
-
 
             {/* Consent Box */}
             <div className="bg-amber-50/70 border border-amber-200/50 p-4 rounded-xl flex items-start gap-3">

@@ -1,9 +1,17 @@
+export interface PropertyNearbyItem {
+  id?: number | string;
+  name: string;
+  type?: string | null;
+  distance?: number | null;
+}
+
 export interface Property {
   id: string | number;
   title: string;
   price: string;
   listingType: 'sale' | 'rent';
   type: string;
+  type_id?: number | null;
   tag: string;
   tagBg: string;
   location: string;
@@ -27,9 +35,11 @@ export interface Property {
   provinceName?: string;
   amphureName?: string;
   districtName?: string;
-  // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+  
   commonFee?: number | null;
   parking?: number | null;
   floors?: number | null;
   ownership?: string | null;
+  amenities?: string[];
+  nearbies?: PropertyNearbyItem[];
 }

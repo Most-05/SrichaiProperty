@@ -43,7 +43,7 @@ async function main() {
   console.log("🌱 เริ่มต้นนำเข้าข้อมูลภูมิศาสตร์ประเทศไทยเข้าสู่ฐานข้อมูล...");
 
   // โหลด db client หลังจากตั้งค่า env เรียบร้อยแล้ว
-  const { db } = await import('../lib/db');
+  const { db } = await import('../../lib/db');
 
   // 1. นำเข้าจังหวัด (Provinces)
   console.log("กำลังดาวน์โหลดและนำเข้าข้อมูลจังหวัด...");

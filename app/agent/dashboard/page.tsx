@@ -21,11 +21,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FREE_LISTING_QUOTA } from '@/lib/constants';
+import { toast } from '@/components/ui/toast';
 
 // นำเข้า คอมโพเนนต์ย่อยสำหรับระบบ Agent Dashboard
 import PendingApprovalBanner from '@/components/agent/PendingApprovalBanner';
 import UpgradeProModal from '@/components/agent/UpgradeProModal';
-import PropertyStatsModal, { PropertyData } from '@/components/agent/dashboard/PropertyStatsModal';
+import PropertyStatsModal, { PropertyData } from '@/components/agent/PropertyStatsModal';
 
 function ClockIcon({ className }: { className?: string }) {
   return (
@@ -221,10 +222,13 @@ export default function AgentDashboardPage() {
       if (res.ok) {
         // หากอสังหาฯ ที่ลบอยู่กำลังเปิดดูสถิติใน Modal ให้ปิด Modal ด้วย
         if (selectedProperty?.id === propertyId) setSelectedProperty(null);
+        toast.success('ลบประกาศเรียบร้อยแล้ว');
         loadDashboard(); // รีโหลดข้อมูล Dashboard เพื่ออัปเดตตัวเลขล่าสุด
-      } else alert('ลบประกาศไม่สำเร็จ');
+      } else {
+        toast.error('ลบประกาศไม่สำเร็จ');
+      }
     } catch {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
       setDeletingId(null);
     }
@@ -235,6 +239,7 @@ export default function AgentDashboardPage() {
     const url = `${window.location.origin}/property/${propertyId}`;
     navigator.clipboard.writeText(url);
     setCopiedId(propertyId);
+    toast.success('คัดลอกลิงก์ประกาศแล้ว!');
     setTimeout(() => setCopiedId(null), 2000); // เคลียร์ข้อความแจ้งเตือนหลังผ่านไป 2 วินาที
   };
 
@@ -290,7 +295,7 @@ export default function AgentDashboardPage() {
   // [ส่วนที่ 6: การเรนเดอร์ส่วนประกอบ UI (JSX Rendering)]
   // --------------------------------------------------------------------------
   return (
-    <div className="pt-16 min-h-screen bg-slate-50/50 text-slate-800 text-xs md:text-sm font-sans antialiased">
+    <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50/50 text-slate-800 text-xs md:text-sm font-sans antialiased">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         
         {/* Banner แจ้งเตือนเมื่อมีประกาศที่รอ Admin ตรวจสอบอนุมัติ */}
@@ -343,7 +348,7 @@ export default function AgentDashboardPage() {
         )}
 
         {/* การ์ดสรุปสถิติ 4 ใบ (Summary Cards Grid) */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* การ์ดที่ 1: โควตาประกาศ */}
           <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs space-y-2 transition-all hover:border-slate-300">
             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">โควตาประกาศ</span>

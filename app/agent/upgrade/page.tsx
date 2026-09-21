@@ -93,7 +93,6 @@ export default function UpgradePage() {
     }
   };
 
-
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-[80vh]">
@@ -107,8 +106,10 @@ export default function UpgradePage() {
     return (
       <div className="pt-20 min-h-screen flex items-center justify-center p-4 bg-slate-50">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 text-center space-y-6 border border-slate-100">
-          <div className="w-20 h-20 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-amber-200">
-            <span className="text-4xl">👑</span>
+          <div className="w-20 h-20 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-amber-200 text-slate-950">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
           </div>
           <div className="space-y-1">
             <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
@@ -134,9 +135,12 @@ export default function UpgradePage() {
           <div className="space-y-2 pt-2">
             <Link
               href="/agent/add-property"
-              className="w-full block py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition text-center shadow-md shadow-amber-200/60 active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-1.5 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition shadow-md shadow-amber-200/60 active:scale-[0.98]"
             >
-              ➕ ลงประกาศบ้านพรีเมียมทันที
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>ลงประกาศบ้านพรีเมียมทันที</span>
             </Link>
             <Link
               href="/agent/home"
@@ -153,22 +157,29 @@ export default function UpgradePage() {
   // ===== SUCCESS SCREEN =====
   if (step === 'success') {
     return (
-      <div className="pt-16 min-h-screen flex items-center justify-center p-4 bg-slate-50">
+      <div className="pt-6 sm:pt-8 min-h-screen flex items-center justify-center p-4 bg-slate-50">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 text-center space-y-5 border border-slate-100">
-          <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto border-4 border-amber-200">
-            <span className="text-4xl">🎉</span>
+          <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-200 shadow-sm">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
           <div>
-            <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
               ส่งข้อมูลเรียบร้อยแล้ว
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900">รอการยืนยันจาก Admin</h1>
           <p className="text-slate-500 text-sm leading-relaxed">
-            เราได้รับสลิปการโอนเงินของคุณแล้ว ทีมงานจะตรวจสอบและเปิดใช้งาน <strong>Verified PRO 👑</strong> ให้คุณภายใน <strong>1 วันทำการ</strong>
+            เราได้รับสลิปการโอนเงินของคุณแล้ว ทีมงานจะตรวจสอบและเปิดใช้งาน <strong>Verified PRO</strong> ให้คุณภายใน <strong>1 วันทำการ</strong>
           </p>
           <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 text-left space-y-2">
-            <p className="text-xs font-bold text-amber-800">✅ สิทธิประโยชน์ที่คุณจะได้รับ</p>
+            <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>สิทธิประโยชน์ที่คุณจะได้รับ</span>
+            </p>
             <ul className="space-y-1.5">
               {[
                 'ลงประกาศไม่จำกัดจำนวน',
@@ -178,7 +189,9 @@ export default function UpgradePage() {
                 'Priority Support จากทีมงาน',
               ].map((benefit) => (
                 <li key={benefit} className="flex items-center gap-2 text-xs text-amber-900 font-semibold">
-                  <span className="text-amber-500">★</span>
+                  <svg className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" viewBox="0 0 24 24">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                  </svg>
                   {benefit}
                 </li>
               ))}
@@ -198,7 +211,7 @@ export default function UpgradePage() {
   // ===== PAYMENT STEP =====
   if (step === 'payment') {
     return (
-      <div className="pt-16 min-h-screen bg-slate-50 p-4">
+      <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50 p-4">
         <div className="max-w-lg mx-auto space-y-5">
 
           {/* Header */}
@@ -256,7 +269,7 @@ export default function UpgradePage() {
             </div>
             <div>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">PromptPay / พร้อมเพย์</p>
-              <p className="text-2xl font-black text-slate-900 mt-1">099-XXX-XXXX</p>
+              <p className="text-2xl font-black text-slate-900 mt-1 tracking-wider">081-234-5678</p>
               <p className="text-sm text-slate-500 font-semibold">บริษัท ศรีชัย พร็อพเพอร์ตี้ จำกัด</p>
             </div>
             <div className="bg-amber-50 rounded-2xl py-3 px-4 border border-amber-200">
@@ -268,7 +281,12 @@ export default function UpgradePage() {
 
           {/* Upload Slip */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-            <h3 className="font-extrabold text-slate-900 text-sm">📎 แนบสลิปการโอนเงิน</h3>
+            <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+              <span>แนบสลิปการโอนเงิน</span>
+            </h3>
 
             <div
               className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
@@ -300,15 +318,22 @@ export default function UpgradePage() {
                     className="mx-auto max-h-48 rounded-xl object-contain shadow-md"
                   />
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-emerald-600 font-bold text-xs">✓ แนบสลิปแล้ว</span>
+                    <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                      แนบสลิปแล้ว
+                    </span>
                     <span className="text-slate-400 text-xs">· {slipFile?.name}</span>
                   </div>
                   <p className="text-xs text-slate-400 font-semibold">กดเพื่อเปลี่ยนรูปสลิป</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto">
-                    <span className="text-2xl">🧾</span>
+                  <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   </div>
                   <div>
                     <p className="font-bold text-slate-700 text-sm">วางหรือกดเพื่อเลือกรูปสลิป</p>
@@ -319,15 +344,18 @@ export default function UpgradePage() {
             </div>
 
             {errorMsg && (
-              <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-xs font-bold border border-red-100">
-                ⚠️ {errorMsg}
+              <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-xs font-bold border border-red-100 flex items-center gap-2">
+                <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{errorMsg}</span>
               </div>
             )}
 
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || !slipFile}
-              className="w-full py-4 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-200 active:scale-[0.98]"
+              className="w-full py-4 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-200 active:scale-[0.98] flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
@@ -335,12 +363,20 @@ export default function UpgradePage() {
                   กำลังส่งข้อมูล...
                 </span>
               ) : (
-                '✅ ส่งหลักฐานการชำระเงิน'
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>ส่งหลักฐานการชำระเงิน</span>
+                </>
               )}
             </button>
 
-            <p className="text-center text-[11px] text-slate-400 font-semibold">
-              🔒 ข้อมูลและสลิปของคุณจะถูกเก็บเป็นความลับและปลอดภัย
+            <p className="text-center text-[11px] text-slate-400 font-semibold flex items-center justify-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span>ข้อมูลและสลิปของคุณจะถูกเก็บเป็นความลับและปลอดภัย</span>
             </p>
           </div>
 
@@ -351,7 +387,7 @@ export default function UpgradePage() {
 
   // ===== DETAILS STEP (default) =====
   return (
-    <div className="pt-16 min-h-screen bg-slate-50 p-4">
+    <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50 p-4">
       <div className="max-w-lg mx-auto space-y-5">
 
         {/* Header */}
@@ -363,7 +399,7 @@ export default function UpgradePage() {
             ←
           </Link>
           <div>
-            <h1 className="text-lg font-black text-slate-900">อัปเกรด Verified PRO 👑</h1>
+            <h1 className="text-lg font-black text-slate-900">อัปเกรด Verified PRO</h1>
             <p className="text-xs text-slate-400 font-semibold">ขั้นตอน 1 / 2 · ตรวจสอบแพ็กเกจ</p>
           </div>
         </div>
@@ -375,8 +411,11 @@ export default function UpgradePage() {
 
           <div className="flex items-start justify-between relative">
             <div className="space-y-3">
-              <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                VERIFIED PRO 👑
+              <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1">
+                <svg className="w-3 h-3 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                VERIFIED PRO
               </span>
               <h2 className="text-xl font-black tracking-tight leading-tight">
                 ขยายธุรกิจแบบ<br />ไร้ขีดจำกัด
@@ -395,22 +434,73 @@ export default function UpgradePage() {
 
         {/* Benefits */}
         <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-slate-900 text-sm">✨ สิทธิประโยชน์ที่คุณจะได้รับ</h3>
+          <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            <span>สิทธิประโยชน์ที่คุณจะได้รับ</span>
+          </h3>
           <div className="space-y-3">
             {[
-              { icon: '♾️', title: 'ลงประกาศไม่จำกัด', desc: 'จากเดิม 3 รายการ → ไม่จำกัดจำนวน' },
-              { icon: '👑', title: 'แบดจ์ Verified PRO', desc: 'ติดโปรไฟล์เพื่อสร้างความน่าเชื่อถือ' },
-              { icon: '🚀', title: 'ดันประกาศขึ้นหน้าแรก', desc: 'รับสิทธิ์ boost ฟรี 5 ครั้ง/เดือน' },
-              { icon: '📊', title: 'สถิติแบบละเอียด', desc: 'ยอดวิว, แชท, อัตราการนัดหมาย' },
-              { icon: '🎯', title: 'Priority Support', desc: 'ทีมงานดูแลคุณก่อนในทุกปัญหา' },
+              { 
+                icon: (
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.178 8c5.096 0 5.096 8 0 8-2.613 0-4.32-2.316-6.178-4-1.858 1.684-3.565 4-6.178 4-5.096 0-5.096-8 0-8 2.613 0 4.32 2.316 6.178 4 1.858-1.684 3.565-4 6.178-4z" />
+                  </svg>
+                ), 
+                title: 'ลงประกาศไม่จำกัด', 
+                desc: 'จากเดิม 3 รายการ → ไม่จำกัดจำนวน' 
+              },
+              { 
+                icon: (
+                  <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  </svg>
+                ), 
+                title: 'แบดจ์ Verified PRO', 
+                desc: 'ติดโปรไฟล์เพื่อสร้างความน่าเชื่อถือ' 
+              },
+              { 
+                icon: (
+                  <svg className="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                ), 
+                title: 'ดันประกาศขึ้นหน้าแรก', 
+                desc: 'รับสิทธิ์ boost ฟรี 5 ครั้ง/เดือน' 
+              },
+              { 
+                icon: (
+                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                ), 
+                title: 'สถิติแบบละเอียด', 
+                desc: 'ยอดวิว, แชท, อัตราการนัดหมาย' 
+              },
+              { 
+                icon: (
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ), 
+                title: 'Priority Support', 
+                desc: 'ทีมงานดูแลคุณก่อนในทุกปัญหา' 
+              },
             ].map((b) => (
-              <div key={b.title} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="text-xl shrink-0">{b.icon}</span>
+              <div key={b.title} className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="p-2 bg-white rounded-xl border border-slate-200/60 shadow-2xs shrink-0">
+                  {b.icon}
+                </div>
                 <div>
                   <p className="font-extrabold text-slate-800 text-xs">{b.title}</p>
                   <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{b.desc}</p>
                 </div>
-                <span className="ml-auto text-emerald-500 text-sm font-black">✓</span>
+                <span className="ml-auto text-emerald-600 text-xs font-black">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
               </div>
             ))}
           </div>
@@ -418,7 +508,12 @@ export default function UpgradePage() {
 
         {/* Pricing Summary */}
         <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
-          <h3 className="font-extrabold text-slate-900 text-sm">💳 สรุปคำสั่งซื้อ</h3>
+          <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+            <span>สรุปคำสั่งซื้อ</span>
+          </h3>
           <div className="space-y-2 text-xs font-semibold">
             <div className="flex justify-between text-slate-600">
               <span>Verified PRO Package · 30 วัน</span>
@@ -439,9 +534,12 @@ export default function UpgradePage() {
         {/* CTA */}
         <button
           onClick={() => setStep('payment')}
-          className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-2xl text-sm transition shadow-lg shadow-amber-200/60 active:scale-[0.98]"
+          className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-2xl text-sm transition shadow-lg shadow-amber-200/60 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
         >
-          ดำเนินการชำระเงิน →
+          <span>ดำเนินการชำระเงิน</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
         </button>
 
         <p className="text-center text-[11px] text-slate-400 font-semibold pb-4">

@@ -122,20 +122,20 @@ export default function SavedPropertiesPage() {
   };
 
   return (
-    <div className="font-sans bg-slate-50 min-h-screen text-slate-800 antialiased overflow-x-hidden text-sm flex flex-col pt-16">
+    <div className="font-sans bg-slate-50 min-h-screen text-slate-800 antialiased overflow-x-hidden text-sm flex flex-col">
       {/* แบนเนอร์หัวข้อหน้า พร้อมจำนวนรายการโปรดทั้งหมด */}
-      <div className="pt-8 pb-6 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      <div className="pt-6 sm:pt-8 pb-6 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center shadow-sm border border-rose-100 shrink-0">
               <HeartIcon className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">รายการอสังหาฯ ที่คุณถูกใจ</h1>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">รายการอสังหาฯ ที่คุณถูกใจ</h1>
               <p className="text-slate-500 text-xs">รายการบ้านและคอนโดมิเนียมที่คุณกดบันทึกไว้อย่างปลอดภัย</p>
             </div>
           </div>
-          <span className="text-xs font-black bg-rose-50 text-rose-600 px-3 py-1.5 rounded-full border border-rose-100">
+          <span className="self-start sm:self-auto text-xs font-black bg-rose-50 text-rose-600 px-3 py-1.5 rounded-full border border-rose-100">
             ทั้งหมด {items.length} รายการ
           </span>
         </div>

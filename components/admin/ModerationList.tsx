@@ -53,8 +53,10 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
                  <Image src={item.image} alt={item.title} width={64} height={64} className="w-full h-full object-cover" unoptimized />
               </div>
             ) : (
-              <div className="w-16 h-16 rounded-lg bg-slate-200 shrink-0 flex items-center justify-center text-xl">
-                 🏠
+              <div className="w-16 h-16 rounded-lg bg-slate-200 shrink-0 flex items-center justify-center text-slate-400">
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
               </div>
             )}
             <div>
@@ -62,7 +64,10 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
                 <span className="text-[10px] font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded uppercase tracking-wider">{item.code}</span>
                 {item.slaUrgent && (
                   <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded uppercase tracking-wider animate-pulse flex items-center gap-1">
-                    <span>⏱️</span> SLA: {item.sla}
+                    <svg className="w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>SLA: {item.sla}</span>
                   </span>
                 )}
               </div>
@@ -71,7 +76,10 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
                 <span className="text-amber-600 font-bold">{item.price}</span>
                 <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                 <span className="flex items-center gap-1">
-                  👤 {item.seller}
+                  <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span>{item.seller}</span>
                   {item.isVerified && <svg className="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-slate-300"></span>

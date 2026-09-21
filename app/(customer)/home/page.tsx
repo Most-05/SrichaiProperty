@@ -248,7 +248,7 @@ export default function CustomerHomePage() {
             <p className="text-slate-500 text-xs">ค้นหาอสังหาริมทรัพย์ในพื้นที่ยอดฮิต</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {locations.map((loc, i) => (
               <Link
                 key={i}
@@ -279,7 +279,7 @@ export default function CustomerHomePage() {
           ======================================================================== */}
       <section className="py-10 bg-slate-50 border-t border-slate-200">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-2">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-end items-start mb-6 gap-3">
             <div>
               <h2 className="text-xl font-extrabold text-slate-900 mb-1">ประกาศแนะนำล่าสุด</h2>
               <p className="text-slate-500 text-xs font-medium">อสังหาริมทรัพย์คุณภาพคัดสรรโดยนายหน้ามืออาชีพ</p>
@@ -291,7 +291,7 @@ export default function CustomerHomePage() {
 
           {/* แสดงผลตามสถานะการดึงข้อมูลจาก DB */}
           {propertiesLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="rounded-2xl border border-slate-200 bg-white overflow-hidden animate-pulse">
                   <div className="h-44 bg-slate-200" />
@@ -308,7 +308,7 @@ export default function CustomerHomePage() {
               <p className="text-slate-500 text-sm font-medium">ยังไม่มีประกาศแนะนำในขณะนี้</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
               {featuredProperties.map((prop) => (
                 <PropertyCard
                   key={prop.id}

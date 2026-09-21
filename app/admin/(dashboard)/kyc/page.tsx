@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminKycAgentCard, { AgentData } from '@/components/admin/AdminKycAgentCard';
+import { toast } from '@/components/ui/toast';
+import { Search, Inbox } from 'lucide-react';
 
 export default function AdminKycPage() {
   const [agents, setAgents] = useState<AgentData[]>([]);
@@ -72,15 +74,15 @@ export default function AdminKycPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("อัปเดตสถานะสำเร็จ");
+        toast.success("อัปเดตสถานะสำเร็จ");
         fetchAgents(activeTab); // refresh list
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.error);
+        toast.error("เกิดข้อผิดพลาด: " + data.error);
         fetchAgents(activeTab);
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
       fetchAgents(activeTab);
     }
   };
@@ -97,15 +99,15 @@ export default function AdminKycPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("ลบบัญชีสำเร็จ");
+        toast.success("ลบบัญชีสำเร็จ");
         fetchAgents(activeTab);
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.error);
+        toast.error("เกิดข้อผิดพลาด: " + data.error);
         fetchAgents(activeTab);
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการลบบัญชี");
+      toast.error("เกิดข้อผิดพลาดในการลบบัญชี");
       fetchAgents(activeTab);
     }
   };
@@ -113,24 +115,24 @@ export default function AdminKycPage() {
   return (
     <>
       {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative z-0">
+        <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
           <h2 className="text-lg font-extrabold text-slate-800">ตรวจสอบเอกสารยืนยันตัวตน (KYC Moderation)</h2>
           
-          <div className="relative w-72">
-            <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 text-sm">🔍</span>
+          <div className="relative w-full sm:w-72 flex items-center">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
             <input 
               type="text" 
               placeholder="ค้นหารหัส ID, ชื่อผู้ใช้..." 
-              className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-700"
+              className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-700 text-xs"
             />
           </div>
         </header>
 
         {/* Content Area */}
-        <div className="p-8 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto">
           
           {/* Tabs */}
-          <div className="flex items-center gap-2 mb-6 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200">
+          <div className="flex items-center gap-2 mb-6 bg-slate-100 p-1 rounded-xl max-w-full overflow-x-auto no-scrollbar w-fit border border-slate-200">
             <button 
               onClick={() => { setActiveTab('pending'); setLoading(true); }}
               className={`px-5 py-2 rounded-lg font-bold transition-all text-xs flex items-center gap-2 ${activeTab === 'pending' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
@@ -159,7 +161,7 @@ export default function AdminKycPage() {
             </div>
           ) : agents.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-              <div className="text-4xl mb-4">📭</div>
+              <Inbox className="w-12 h-12 mx-auto text-slate-300 mb-3" />
               <h3 className="text-lg font-bold text-slate-700 mb-1">ไม่พบรายการ{activeTab === 'pending' ? 'รอตรวจสอบ' : ''}</h3>
               <p className="text-slate-500 font-medium">ไม่มีข้อมูลนายหน้าในสถานะนี้</p>
             </div>

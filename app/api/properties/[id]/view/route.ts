@@ -18,7 +18,6 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับเพิ่มจำนวนยอดเข้าชมแบบ atomic
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit"; // กันนับยอดวิวซ้ำจากคนเดิมที่รีเฟรชรัวๆ
 
-// 🔑 KEYWORD: กันปั่นยอดวิวบ้าน
 // 1 IP นับได้ 1 วิวต่อบ้าน 1 หลัง ใน 30 นาที — รีเฟรชกี่รอบก็ไม่เพิ่ม
 // เดิมยิงกี่ครั้งก็เพิ่มทุกครั้ง กด F5 ค้างไว้ยอดวิวพุ่งได้ไม่จำกัด
 const VIEW_WINDOW_MS = 30 * 60 * 1000;
@@ -37,7 +36,6 @@ export async function POST(
       return NextResponse.json({ success: true, counted: false });
     }
 
-    // 🔑 KEYWORD: ไม่นับวิวเมื่อเจ้าของบ้านเปิดดูเอง
     // 1.2 นายหน้าเปิดดูประกาศตัวเอง (เช่น เช็คว่าหน้าตาออกมาโอเคไหม) ไม่ควรถูกนับเป็นยอดวิว
     //     เพราะยอดวิวมีไว้วัดความสนใจจากผู้ซื้อจริง ถ้านับตัวเองด้วยสถิติจะเพี้ยน
     const session = await getServerSession(authOptions);
