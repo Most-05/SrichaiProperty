@@ -603,21 +603,22 @@ export default function AgentAddPropertyPage() {
                         >
                           <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
                           <p className="text-[9px] text-slate-500 font-bold">{slot === 'morning' ? '09:00 - 12:00' : '13:00 - 17:00'}</p>
-                          {busy ? (
+                          {/* สถานะการเลือกต้องขึ้นเสมอ แม้รอบนี้จะชนกับบ้านหลังอื่น
+                              (ของเดิมโชว์ได้อย่างเดียว พอชนแล้วเลือกไว้ก็ไม่รู้ว่าเลือกติดหรือยัง) */}
+                          <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {active && (
+                              <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                            <span>{active ? 'เลือกไว้แล้ว' : 'ยังไม่ได้เลือก'}</span>
+                          </p>
+                          {busy && (
                             <p className="text-[9px] font-black mt-1 text-amber-600 leading-tight flex items-center gap-1">
                               <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               <span>ติดนัดที่ &quot;{busy.propertyTitle}&quot; แล้ว</span>
-                            </p>
-                          ) : (
-                            <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
-                              {active && (
-                                <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                              <span>{active ? 'เลือกไว้แล้ว' : 'ยังไม่ได้เลือก'}</span>
                             </p>
                           )}
                         </button>
