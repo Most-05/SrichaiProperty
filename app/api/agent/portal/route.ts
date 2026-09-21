@@ -157,7 +157,6 @@ export async function GET(request: Request) {
         };
       });
 
-      // 🔑 KEYWORD: เตือนนายหน้าเปิดวันว่างเพิ่ม
       // 2.8 เช็คว่ามีบ้านหลังไหนวันว่างใกล้หมดไหม แล้วส่งการแจ้งเตือนให้เปิดรอบเพิ่ม
       // เช็คตอนนายหน้าเปิดหน้าแรก (ไม่ต้องตั้ง cron job แยก) — ระบบเห็นตอนเขาเข้ามาใช้งานพอดี
       const [lowSlotProperties, alreadyAlertedIds] = await Promise.all([

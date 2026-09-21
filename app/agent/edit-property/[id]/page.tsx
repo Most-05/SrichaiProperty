@@ -48,7 +48,7 @@ export default function AgentEditPropertyPage() {
     title: '', typeId: '1', listingType: 'sale', description: '',
     price: '', bedrooms: '0', bathrooms: '0',
     usableArea: '',
-    // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ — หน้านี้ไม่เคยมีช่องกรอกพวกนี้เลย
+    
     commonFee: '', parking: '0', floors: '1', ownership: 'ขายขาด (Freehold)',
     provinceId: '', amphureId: '', districtId: '',
     location: ''
@@ -58,7 +58,6 @@ export default function AgentEditPropertyPage() {
   const [amphures, setAmphures] = useState<{ id: number; name_th: string }[]>([]);
   const [districts, setDistricts] = useState<{ id: number; name_th: string }[]>([]);
 
-  // 🔑 KEYWORD: พิกัดปักหมุดบ้านจริง
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -85,7 +84,6 @@ export default function AgentEditPropertyPage() {
       .catch(err => console.error(err));
   }, []);
 
-  // 🔑 KEYWORD: โหลดวันที่บ้านหลังอื่นเปิดไว้แล้ว
   // ดึงรอบเวลาที่บ้าน "หลังอื่น" ของเราเปิดไว้ (ส่ง excludePropertyId เพื่อไม่ให้นับรอบของบ้านหลังนี้เองว่าชน)
   useEffect(() => {
     if (!propertyId) return;
@@ -203,7 +201,6 @@ export default function AgentEditPropertyPage() {
 
   const getSlotsForDate = (dateStr: string) => viewingSlots.filter(s => s.date === dateStr);
 
-  // 🔑 KEYWORD: เช็ครอบที่ชนกับบ้านหลังอื่น
   // คืนค่าข้อมูลบ้านหลังอื่นที่เปิดรอบนี้ไว้แล้ว (ถ้าไม่ชนจะได้ undefined)
   const getBusySlot = (dateStr: string, timeSlot: 'morning' | 'afternoon') =>
     agentBusySlots.find(s => s.date === dateStr && s.timeSlot === timeSlot);
@@ -264,7 +261,7 @@ export default function AgentEditPropertyPage() {
           province_id: f.provinceId ? parseInt(f.provinceId) : null,
           amphure_id: f.amphureId ? parseInt(f.amphureId) : null,
           district_id: f.districtId ? parseInt(f.districtId) : null,
-          // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+          
           commonFee: f.commonFee || null, parking: f.parking, floors: f.floors, ownership: f.ownership,
           latitude, longitude, // พิกัดที่ปักหมุดไว้ (null ถ้าบ้านนี้ยังไม่เคยมีพิกัด และนายหน้าไม่ได้แตะแผนที่)
           images: uploadedImages,
@@ -329,14 +326,21 @@ export default function AgentEditPropertyPage() {
             ←
           </Link>
           {propertyStatus && (
-            <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border ${
+            <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
               propertyStatus === 'approved' || propertyStatus === 'active'
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : propertyStatus === 'rejected'
                   ? 'bg-red-50 text-red-700 border-red-200'
                   : 'bg-amber-50 text-amber-700 border-amber-200'
             }`}>
-              สถานะประกาศ: {propertyStatus === 'approved' || propertyStatus === 'active' ? 'อนุมัติแล้ว' : propertyStatus === 'rejected' ? '🔴 ถูกตีกลับ' : 'รอตรวจสอบ'}
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                propertyStatus === 'approved' || propertyStatus === 'active'
+                  ? 'bg-emerald-500'
+                  : propertyStatus === 'rejected'
+                    ? 'bg-red-500'
+                    : 'bg-amber-500'
+              }`} />
+              สถานะประกาศ: {propertyStatus === 'approved' || propertyStatus === 'active' ? 'อนุมัติแล้ว' : propertyStatus === 'rejected' ? 'ถูกตีกลับ' : 'รอตรวจสอบ'}
             </span>
           )}
         </div>
@@ -344,7 +348,12 @@ export default function AgentEditPropertyPage() {
         {/* กล่องแจ้งเหตุผลที่ถูกตีกลับ + คำแนะนำให้แก้ไขแล้วส่งใหม่ */}
         {propertyStatus === 'rejected' && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-1.5">
-            <p className="text-xs font-black text-red-700 flex items-center gap-1.5">💬 เหตุผลที่แอดมินตีกลับ</p>
+            <p className="text-xs font-black text-red-700 flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              เหตุผลที่ผู้ดูแลระบบส่งกลับมาแก้ไข
+            </p>
             <p className="text-xs text-red-600 font-medium">{rejectReason || 'ไม่ได้ระบุเหตุผลเพิ่มเติม'}</p>
             <p className="text-[11px] text-red-500 font-bold pt-1 border-t border-red-100 mt-2">
               แก้ไขข้อมูลด้านล่างให้ถูกต้องตามคำแนะนำ แล้วกด &quot;บันทึกการแก้ไข&quot; ระบบจะส่งประกาศนี้กลับเข้าคิวตรวจสอบใหม่ให้อัตโนมัติ
@@ -402,7 +411,7 @@ export default function AgentEditPropertyPage() {
                 <label className="block font-bold mb-1 text-slate-700">ราคา (บาท) <span className="text-red-500">*</span></label>
                 <input type="number" min="1" step="1" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" required />
               </div>
-              {/* 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ — หน้านี้ไม่เคยมีช่องนี้เลย */}
+              {/* ฟิลด์สเปคเพิ่มเติม */}
               <div>
                 <label className="block font-bold mb-1 text-slate-700">ค่าส่วนกลาง (บาท / เดือน)</label>
                 <input type="number" min="0" value={f.commonFee} onChange={e => setF({ ...f, commonFee: e.target.value })} placeholder="฿ 0 (ถ้าไม่มีใส่ 0)" className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" />
@@ -411,23 +420,23 @@ export default function AgentEditPropertyPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 bg-slate-50 p-3 rounded-xl border text-center">
               <div>
-                <label className="block text-[9px] font-bold text-slate-500 mb-1">🛏️ ห้องนอน</label>
+                <label className="block text-[9px] font-bold text-slate-500 mb-1">ห้องนอน</label>
                 <input type="number" min="0" value={f.bedrooms} onChange={e => setF({ ...f, bedrooms: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-slate-500 mb-1">🚿 ห้องน้ำ</label>
+                <label className="block text-[9px] font-bold text-slate-500 mb-1">ห้องน้ำ</label>
                 <input type="number" min="0" value={f.bathrooms} onChange={e => setF({ ...f, bathrooms: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-slate-500 mb-1">🚗 ที่จอดรถ</label>
+                <label className="block text-[9px] font-bold text-slate-500 mb-1">ที่จอดรถ</label>
                 <input type="number" min="0" value={f.parking} onChange={e => setF({ ...f, parking: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-slate-500 mb-1">🏢 จำนวนชั้น</label>
+                <label className="block text-[9px] font-bold text-slate-500 mb-1">จำนวนชั้น</label>
                 <input type="number" min="0" value={f.floors} onChange={e => setF({ ...f, floors: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
               <div className="col-span-2 sm:col-span-1">
-                <label className="block text-[9px] font-bold text-slate-500 mb-1">📐 พื้นที่ (ตร.ม.)</label>
+                <label className="block text-[9px] font-bold text-slate-500 mb-1">พื้นที่ใช้สอย (ตร.ม.)</label>
                 <input type="number" min="0" value={f.usableArea} onChange={e => setF({ ...f, usableArea: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
             </div>
@@ -479,8 +488,7 @@ export default function AgentEditPropertyPage() {
               <p className="text-[9px] text-slate-400 mt-1">ข้อความนี้คือที่อยู่ที่ลูกค้าจะเห็นบนหน้าประกาศ แก้ให้สอดคล้องกับจังหวัด/อำเภอที่เลือกด้วย</p>
             </div>
 
-            {/* 🔑 KEYWORD: แผนที่ปักหมุดจริงตอนแก้ไขประกาศ */}
-            {/* หน้านี้ไม่เคยมีแผนที่มาก่อนเลย — พึ่งการกรอกที่อยู่เป็นข้อความอย่างเดียว */}
+            {/* แผนที่ปักหมุดจริงตอนแก้ไขประกาศ */}
             <div>
               <label className="block font-bold mb-1 text-slate-700">ตำแหน่งบนแผนที่</label>
               <div className="rounded-2xl border overflow-hidden">
@@ -508,14 +516,19 @@ export default function AgentEditPropertyPage() {
               setUploadedImages={setUploadedImages}
             />
 
-            <p className="text-[9px] text-slate-400">รูปแรกสุดจะถูกใช้เป็นรูปหน้าปกของประกาศ กดปุ่ม ✕ บนรูปเพื่อลบออก</p>
+            <p className="text-[9px] text-slate-400">รูปแรกสุดจะถูกใช้เป็นรูปหน้าปกของประกาศ คลิกที่รูปเพื่อจัดการหรือลบออก</p>
           </div>
 
           {/* Card 5: จัดการวันว่างเข้าชม */}
           <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">5</span>
-              <h2 className="font-extrabold text-slate-900 text-xs">📅 จัดการวันเวลาที่เปิดให้เข้าชมบ้านหลังนี้</h2>
+              <h2 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                จัดการวันเวลาที่เปิดให้เข้าชมบ้านหลังนี้
+              </h2>
             </div>
             <p className="text-[10px] text-slate-500 font-medium -mt-2">
               กดวันบนปฏิทินเพื่อเปิด/ปิดรอบเช้า-รอบบ่าย รอบที่ลูกค้าจองไปแล้วจะถูกล็อกไว้ ปิดไม่ได้
@@ -557,7 +570,6 @@ export default function AgentEditPropertyPage() {
                   const hasSlots = daySlots.length > 0;
                   const hasBooked = daySlots.some(s => s.isBooked);
 
-                  // 🔑 KEYWORD: วันที่ชนกับบ้านหลังอื่นในปฏิทิน
                   // busyCount = จำนวนรอบที่บ้านหลังอื่นของเราเปิดไว้ในวันนี้ (0, 1 หรือ 2)
                   // แค่ไว้เตือนเฉยๆ ไม่ได้บล็อกไม่ให้เปิดซ้อน — นายหน้าเปิดวันเดียวกันได้หลายบ้าน
                   // ระบบล็อกจริงจะทำงานตอนมีลูกค้ากดจองรอบใดรอบหนึ่งแล้วเท่านั้น
@@ -596,7 +608,6 @@ export default function AgentEditPropertyPage() {
                       const active = Boolean(found);
                       const booked = Boolean(found?.isBooked);
 
-                      // 🔑 KEYWORD: เตือนรอบที่บ้านหลังอื่นเปิดไว้แล้ว
                       // แค่เตือนว่าไปชนกับบ้านหลังไหน ไม่ได้ปิดไม่ให้กด — เปิดซ้อนกันได้ตามปกติ
                       // (ไม่นับรอบที่บ้านหลังนี้เปิดไว้อยู่แล้ว เพราะ API กรอง excludePropertyId ให้ตั้งแต่ตอนดึงข้อมูล)
                       const busy = active ? undefined : getBusySlot(selectedCalDate, slot);
@@ -620,11 +631,21 @@ export default function AgentEditPropertyPage() {
                           <p className="text-[9px] text-slate-500 font-bold">{slot === 'morning' ? '09:00 - 12:00' : '13:00 - 17:00'}</p>
                           {busy ? (
                             <p className="text-[9px] font-black mt-1 text-amber-600 leading-tight">
-                              ℹ️ ติดนัดที่ &quot;{busy.propertyTitle}&quot; แล้ว
+                              ติดนัดที่ &quot;{busy.propertyTitle}&quot; แล้ว
                             </p>
                           ) : (
-                            <p className={`text-[9px] font-black mt-1 ${booked ? 'text-amber-600' : active ? 'text-emerald-600' : 'text-slate-400'}`}>
-                              {booked ? '🔒 มีลูกค้าจองแล้ว' : active ? '✓ เปิดรับจองอยู่' : 'ยังไม่ได้เปิด'}
+                            <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${booked ? 'text-amber-600' : active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              {booked && (
+                                <svg className="w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                              )}
+                              {active && !booked && (
+                                <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                              <span>{booked ? 'มีลูกค้าจองแล้ว' : active ? 'เปิดรับจองอยู่' : 'ยังไม่ได้เปิด'}</span>
                             </p>
                           )}
                         </button>
@@ -634,33 +655,46 @@ export default function AgentEditPropertyPage() {
                 </div>
               )}
 
-              {/* 🔑 KEYWORD: แถบคำอธิบายสีปฏิทินนายหน้า */}
+              {/* แถบคำอธิบายสีปฏิทินนายหน้า */}
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 mt-4 pt-3 border-t border-slate-100 text-[9px] font-bold text-slate-400">
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-emerald-400" /> เปิดรับจองอยู่</span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-amber-400" /> มีลูกค้าจองแล้ว</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-emerald-400 bg-emerald-100" /> เปิดรับจองอยู่</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-amber-400 bg-amber-100" /> มีลูกค้าจองแล้ว</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> เลือกอยู่</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-dashed border-slate-400" /> ติดนัดบ้านหลังอื่น (เลือกซ้อนได้ปกติ)</span>
               </div>
             </div>
 
             <div className="flex items-center gap-4 text-[10px] font-bold">
-              <span className="text-emerald-600">✓ เปิดรับจองอยู่ {viewingSlots.length - bookedCount} ช่วงเวลา</span>
-              <span className="text-amber-600">🔒 ถูกจองแล้ว {bookedCount} ช่วงเวลา</span>
+              <span className="text-emerald-600 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                เปิดรับจองอยู่ {viewingSlots.length - bookedCount} ช่วงเวลา
+              </span>
+              <span className="text-amber-600 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                ถูกจองแล้ว {bookedCount} ช่วงเวลา
+              </span>
             </div>
 
             {agentBusySlots.length > 0 && (
               <p className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 leading-relaxed">
-                ℹ️ วันที่เป็นเส้นประ คือวันที่คุณมีนัดชม<strong>บ้านหลังอื่น</strong>อยู่แล้วจริงๆ (มีลูกค้าจองไว้)
-                ยังเปิดวันนี้ให้บ้านหลังนี้ได้ตามปกติ ระบบจะกันชนให้เองตอนมีลูกค้ากดจองรอบที่ชนกันจริง
+                วันที่เป็นเส้นประ คือวันที่คุณมีนัดชม<strong>บ้านหลังอื่น</strong>อยู่แล้วจริงๆ (มีลูกค้าจองไว้)
+                ยังเปิดวันนี้ให้บ้านหลังนี้ได้ตามปกติ ระบบจะช่วยจัดการเวลาให้ตอนมีลูกค้ากดยืนยันรอบที่ชนกัน
               </p>
             )}
           </div>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Link href="/agent/dashboard" className="px-5 py-2.5 bg-slate-100 font-bold rounded-xl text-slate-600">ยกเลิก</Link>
-            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-blue-600 text-white font-extrabold rounded-xl hover:bg-blue-700 transition shadow-md disabled:opacity-60">
-              {saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข ✓'}
+            <Link href="/agent/dashboard" className="px-5 py-2.5 bg-slate-100 font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition">ยกเลิก</Link>
+            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-blue-600 text-white font-extrabold rounded-xl hover:bg-blue-700 transition shadow-md disabled:opacity-60 flex items-center gap-2">
+              {saving ? 'กำลังบันทึก...' : (
+                <>
+                  <span>บันทึกการแก้ไข</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </>
+              )}
             </button>
           </div>
 

@@ -1,4 +1,4 @@
-// 🔑 KEYWORD: ตารางลงวันว่างนายหน้าของบ้านแต่ละหลัง
+
 // === API วันเวลาที่เปิดให้ลูกค้าจองเข้าชม "บ้านแต่ละหลัง" (ผูกกับ property_id) ===
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next"; // ดึงเซสชันเพื่อยืนยันว่าเป็นนายหน้าเจ้าของบ้าน
@@ -17,7 +17,6 @@ interface AgentSession {
 const toDateKey = (d: Date) =>
   `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 
-// 🔑 KEYWORD: ดึงวันว่างของบ้านหลังเดียว
 // GET: ดึงวันว่างของบ้านหลังหนึ่งๆ — สาธารณะ (ลูกค้าและนายหน้าใช้ร่วมกันได้)
 // ใช้: /api/properties/viewing-slots?propertyId=xxxx
 export async function GET(req: Request) {
@@ -25,7 +24,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const propertyId = searchParams.get("propertyId");
 
-    // 🔑 KEYWORD: ดึงรอบที่นายหน้าติดนัดกับบ้านหลังอื่นแล้ว
     // โหมดพิเศษ: /api/properties/viewing-slots?agentBusy=1[&excludePropertyId=xxx]
     // ใช้ตอนนายหน้าเปิดหน้า "ลงประกาศ" หรือ "แก้ไขประกาศ" เพื่อรู้ล่วงหน้าว่าตัวเองมีนัดชนกับบ้านหลังอื่นวันไหนแล้ว
     // เดิมดึงจาก "วันว่างที่เปิดไว้" (property_viewing_slots) แต่ตอนนี้เปิดวันว่างซ้อนกันได้ตามปกติแล้ว
@@ -89,7 +87,6 @@ export async function GET(req: Request) {
       db.properties.findUnique({ where: { id: propertyId }, select: { agent_id: true } })
     ]);
 
-    // 🔑 KEYWORD: เตือนลูกค้าว่านายหน้าติดนัดบ้านหลังอื่น
     // นายหน้าเปิดวันว่างซ้อนกันได้หลายบ้าน (ดู viewingSlotService) รอบไหนของบ้านหลังนี้
     // ที่ตรงกับนัดจริงของนายหน้าคนเดียวกันที่บ้านหลังอื่น ต้องบอกลูกค้าไว้ก่อนกดจอง
     // (ฝั่งเซิร์ฟเวอร์กันซ้ำอยู่แล้วที่ api/appointments แต่ฝั่งนี้ทำให้ลูกค้าไม่เสียเวลากดแล้วโดนปฏิเสธ)
@@ -129,7 +126,6 @@ export async function GET(req: Request) {
   }
 }
 
-// 🔑 KEYWORD: เปิดวันว่างให้บ้าน กันชนวันว่าง
 // POST: นายหน้าเปิดวันว่างเพิ่มให้บ้านหลังที่ลงประกาศไปแล้ว (ใช้ตอนแก้ไขทีหลัง)
 export async function POST(req: Request) {
   try {
@@ -190,7 +186,6 @@ export async function POST(req: Request) {
   }
 }
 
-// 🔑 KEYWORD: ปิดวันว่างบ้าน ลบวันว่าง
 // DELETE: นายหน้าปิดวันว่างของบ้านหลังนี้ (ทำไม่ได้ถ้าลูกค้าจองไปแล้ว)
 export async function DELETE(req: Request) {
   try {

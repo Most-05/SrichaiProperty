@@ -382,7 +382,12 @@ function ScheduleContent() {
                     <div className="space-y-0.5">
                       {booked > 0 && (
                         <div className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1 py-0.5 rounded text-center sm:text-left truncate" title={`นัด ${booked} คิว`}>
-                          <span className="sm:hidden">📅 {booked}</span>
+                          <span className="sm:hidden inline-flex items-center justify-center gap-0.5">
+                            <svg className="w-2.5 h-2.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {booked}
+                          </span>
                           <span className="hidden sm:inline">นัด {booked} คิว</span>
                         </div>
                       )}

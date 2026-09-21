@@ -37,7 +37,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm leading-relaxed text-slate-400 max-w-md">
-              ระบบบริหารจัดการการซื้อขายอสังหาริมทรัพย์ กรณีศึกษา Srichai Property Agents แพลตฟอร์มที่รวมผู้ซื้อและนายหน้าไว้ในที่เดียว
+              Srichai Property — แพลตฟอร์มศูนย์รวมบ้านเดี่ยว คอนโดมิเนียม และอสังหาริมทรัพย์คุณภาพในหาดใหญ่และสงขลา พร้อมทีมงานนายหน้ามืออาชีพดูแลและให้คำปรึกษาทุกขั้นตอน
             </p>
           </div>
 
@@ -93,12 +93,12 @@ export default function Footer() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <a
-                  href="https://maps.google.com/?q=มหาวิทยาลัยสงขลานครินทร์"
+                  href="https://maps.google.com/?q=108+ถนนปุณณกัณฑ์+หาดใหญ่+สงขลา"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-blue-400 transition"
                 >
-                  มหาวิทยาลัยสงขลานครินทร์
+                  108 ถ.ปุณณกัณฑ์ ต.คอหงส์ อ.หาดใหญ่ จ.สงขลา 90110
                 </a>
               </li>
               <li className="flex items-center gap-2">
@@ -113,7 +113,9 @@ export default function Footer() {
                 <svg aria-hidden="true" className="w-4 h-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-                <span title="เบอร์ตัวอย่างสำหรับโครงงานสาธิต">074-XXX-XXX (ตัวอย่าง)</span>
+                <a href="tel:074288888" className="hover:text-blue-400 transition">
+                  074-288-888, 081-234-5678
+                </a>
               </li>
             </ul>
           </div>
@@ -121,7 +123,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4 text-center sm:text-left">
-          <p>&copy; {new Date().getFullYear()} Srichai Property Agents. โครงงานระบบบริหารจัดการการซื้อขายอสังหาริมทรัพย์.</p>
+          <p>&copy; {new Date().getFullYear()} บริษัท ศรีชัย พร็อพเพอร์ตี้ จำกัด (Srichai Property Co., Ltd.) สงวนลิขสิทธิ์.</p>
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 font-medium">
             <Link href="/privacy-policy" className="hover:text-blue-400 transition flex items-center gap-1">
               <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

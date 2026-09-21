@@ -97,9 +97,25 @@ export default function ChatRoom({
       {/* 4. ปุ่มลัด Quick Actions & ช่องพิมพ์ข้อความ */}
       <div className="p-4 border-t bg-white space-y-3 shrink-0">
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => sendQuickAction('location')} className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-500 rounded-xl text-[10px] font-extrabold border transition">📍 ส่งพิกัดจุดนัดพบ</button>
-          <button onClick={() => sendQuickAction('document')} className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-500 rounded-xl text-[10px] font-extrabold border transition">📄 ส่งไฟล์เอกสารบ้าน</button>
-          <button onClick={() => sendQuickAction('callback')} className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-500 rounded-xl text-[10px] font-extrabold border transition">📋 ขอเบอร์ติดต่อกลับ</button>
+          <button onClick={() => sendQuickAction('location')} className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-xl text-[10px] font-extrabold border border-slate-200 transition flex items-center gap-1.5 cursor-pointer">
+            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            ส่งพิกัดจุดนัดพบ
+          </button>
+          <button onClick={() => sendQuickAction('document')} className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-xl text-[10px] font-extrabold border border-slate-200 transition flex items-center gap-1.5 cursor-pointer">
+            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            ส่งไฟล์เอกสารบ้าน
+          </button>
+          <button onClick={() => sendQuickAction('callback')} className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-xl text-[10px] font-extrabold border border-slate-200 transition flex items-center gap-1.5 cursor-pointer">
+            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            ขอเบอร์ติดต่อกลับ
+          </button>
         </div>
 
         <div className="relative bg-[#f8fafc] border rounded-2xl p-1.5 flex items-center shadow-xs">
@@ -111,11 +127,18 @@ export default function ChatRoom({
             placeholder={`ตอบกลับ${activeContact.name.split(' ')[0]}... ข้อมูลบันทึกตามมาตรฐาน PDPA`}
             className="w-full bg-transparent border-none outline-none pl-3 pr-12 text-slate-800 placeholder-slate-400 font-semibold text-xs py-2"
           />
-          <button onClick={() => handleSendMessage()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold text-xs transition">ส่ง 📤</button>
+          <button 
+            onClick={() => handleSendMessage()} 
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold text-xs transition flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <span>ส่ง</span>
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
         </div>
       </div>
     </section>
   );
 }
-
 

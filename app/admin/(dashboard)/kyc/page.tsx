@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminKycAgentCard, { AgentData } from '@/components/admin/AdminKycAgentCard';
 import { toast } from '@/components/ui/toast';
+import { Search, Inbox } from 'lucide-react';
 
 export default function AdminKycPage() {
   const [agents, setAgents] = useState<AgentData[]>([]);
@@ -117,8 +118,8 @@ export default function AdminKycPage() {
         <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
           <h2 className="text-lg font-extrabold text-slate-800">ตรวจสอบเอกสารยืนยันตัวตน (KYC Moderation)</h2>
           
-          <div className="relative w-full sm:w-72">
-            <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 text-sm">🔍</span>
+          <div className="relative w-full sm:w-72 flex items-center">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
             <input 
               type="text" 
               placeholder="ค้นหารหัส ID, ชื่อผู้ใช้..." 
@@ -160,7 +161,7 @@ export default function AdminKycPage() {
             </div>
           ) : agents.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-              <div className="text-4xl mb-4">📭</div>
+              <Inbox className="w-12 h-12 mx-auto text-slate-300 mb-3" />
               <h3 className="text-lg font-bold text-slate-700 mb-1">ไม่พบรายการ{activeTab === 'pending' ? 'รอตรวจสอบ' : ''}</h3>
               <p className="text-slate-500 font-medium">ไม่มีข้อมูลนายหน้าในสถานะนี้</p>
             </div>

@@ -215,9 +215,12 @@ export default function SearchSidebar({
             {setIsMobileDrawerOpen && (
               <button 
                 onClick={() => setIsMobileDrawerOpen(false)} 
-                className="lg:hidden w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 font-bold"
+                className="lg:hidden w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 font-bold transition-colors cursor-pointer"
+                aria-label="ปิดเมนูค้นหา"
               >
-                ✕
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             )}
           </div>

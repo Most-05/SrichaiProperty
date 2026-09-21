@@ -20,7 +20,6 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css'; // จำเป็นต่อการจัดวาง tile/marker ให้ถูกตำแหน่ง ถ้าลืม import แผนที่จะเพี้ยนทั้งหน้า
 
-// 🔑 KEYWORD: แก้ไอคอนหมุดหาย/เพี้ยนใน Next.js
 // Leaflet คำนวณ path รูปไอคอนเริ่มต้นจากตำแหน่งไฟล์ CSS ของตัวเอง แต่ bundler (Turbopack/Webpack)
 // ย้าย/เปลี่ยนชื่อไฟล์รูปตอน build ทำให้ path เดิมหาไฟล์ไม่เจอ ไอคอนหมุดเลยหายไปเงียบๆ (ไม่ error ให้เห็น)
 // แก้โดยชี้ไปที่ CDN ของ leaflet เวอร์ชันเดียวกับที่ใช้ตรงๆ แทน ไม่ต้องพึ่ง path ที่ bundler คำนวณให้
@@ -48,7 +47,6 @@ interface PropertyLocationMapProps {
   onChange?: (lat: number, lng: number) => void;
 }
 
-// 🔑 KEYWORD: คลิกบนแผนที่เพื่อย้ายหมุด
 // ต้องแยกเป็น component ลูกเพราะ useMapEvents ใช้ได้เฉพาะภายใน MapContainer เท่านั้น
 function ClickToMoveMarker({ onMove }: { onMove: (lat: number, lng: number) => void }) {
   useMapEvents({
@@ -80,7 +78,7 @@ export default function PropertyLocationMap({ latitude, longitude, height = 176,
           eventHandlers={
             editable && onChange
               ? {
-                  // 🔑 KEYWORD: ลากหมุดได้โดยตรง
+                  
                   dragend: (e) => {
                     const latlng = e.target.getLatLng();
                     onChange(latlng.lat, latlng.lng);
@@ -92,11 +90,14 @@ export default function PropertyLocationMap({ latitude, longitude, height = 176,
         {editable && onChange && <ClickToMoveMarker onMove={onChange} />}
       </MapContainer>
 
-      {/* 🔑 KEYWORD: โชว์พิกัดปัจจุบันเป็นตัวเลข */}
-      {/* ให้ผู้ใช้เห็นค่า lat/lng จริงที่กำลังจะบันทึก ไม่ใช่แค่หมุดลอยๆ บนแผนที่ */}
+      {/* โชว์พิกัดปัจจุบันเป็นตัวเลข */}
       {editable && (
-        <div className="absolute bottom-2 left-2 z-[1000] bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg border shadow text-[10px] font-bold text-slate-700 pointer-events-none">
-          📍 {position[0].toFixed(6)}, {position[1].toFixed(6)}
+        <div className="absolute bottom-2 left-2 z-[1000] bg-white/95 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold text-slate-700 pointer-events-none flex items-center gap-1.5">
+          <svg className="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>{position[0].toFixed(6)}, {position[1].toFixed(6)}</span>
         </div>
       )}
     </div>

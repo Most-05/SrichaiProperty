@@ -83,12 +83,27 @@ export default function RecentListings({ properties, favorites, toggleFavorite }
                   <h3 className="text-sm font-bold text-slate-900 mb-1 line-clamp-1">{prop.title}</h3>
                   <p className="text-slate-500 text-xs mb-4 flex items-center">{prop.location}</p>
                   
-                  <div className="flex items-center justify-between text-slate-600 border-t border-b border-slate-100 py-2.5 mb-3 bg-slate-50 px-3 rounded-lg text-xs">
-                    <span>🛏️ {prop.bedrooms}</span>
+                  <div className="flex items-center justify-between text-slate-600 border-t border-b border-slate-100 py-2.5 mb-3 bg-slate-50 px-3 rounded-lg text-xs font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v11m0-4h18m0-7v11M3 11h18M7 7h4v4H7z" />
+                      </svg>
+                      {prop.bedrooms} นอน
+                    </span>
                     <div className="w-px h-5 bg-slate-200" />
-                    <span>🚿 {prop.bathrooms}</span>
+                    <span className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16a1 1 0 011 1v3a4 4 0 01-4 4H7a4 4 0 01-4-4v-3a1 1 0 011-1zM6 12V5a2 2 0 012-2h1a2 2 0 012 2v1" />
+                      </svg>
+                      {prop.bathrooms} น้ำ
+                    </span>
                     <div className="w-px h-5 bg-slate-200" />
-                    <span>📏 {prop.area} ตร.ม.</span>
+                    <span className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                      </svg>
+                      {prop.area} ตร.ม.
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2">

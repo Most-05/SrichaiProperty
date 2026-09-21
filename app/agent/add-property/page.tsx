@@ -72,7 +72,6 @@ export default function AgentAddPropertyPage() {
   const [amphures, setAmphures] = useState<{ id: number; name_th: string }[]>([]);
   const [districts, setDistricts] = useState<{ id: number; name_th: string }[]>([]);
 
-  // 🔑 KEYWORD: พิกัดปักหมุดบ้านจริง
   // null = ยังไม่เคยแตะแผนที่ ตอนส่งฟอร์มจะให้ backend ใช้ค่า default เดิม (พิกัดหาดใหญ่)
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -104,7 +103,6 @@ export default function AgentAddPropertyPage() {
     fetch('/api/locations?type=provinces').then(r => r.json()).then(d => Array.isArray(d) && setProvinces(d));
   }, []);
 
-  // 🔑 KEYWORD: โหลดวันที่บ้านหลังอื่นเปิดไว้แล้ว
   // ----------------------------------------------------------------------------
   // [4.1] Effect: ดึงรอบเวลาที่บ้านหลังอื่นของเราเปิดไว้แล้ว มากันไม่ให้เลือกซ้อน
   // (นายหน้าไปนำชมได้ทีละที่ ถ้าเปิดวัน+รอบเดียวกันไว้ 2 หลัง ลูกค้าจะจองชนกันเอง)
@@ -151,7 +149,6 @@ export default function AgentAddPropertyPage() {
   // ดึงรายการสล็อตเวลาของวันที่กำหนด
   const getSlotsForDate = (dateStr: string) => viewingSlots.filter(s => s.date === dateStr);
 
-  // 🔑 KEYWORD: เช็ครอบที่ชนกับบ้านหลังอื่น
   // คืนค่าข้อมูลบ้านหลังอื่นที่เปิดรอบนี้ไว้แล้ว (ถ้าไม่ชนจะได้ undefined)
   const getBusySlot = (dateStr: string, timeSlot: 'morning' | 'afternoon') =>
     agentBusySlots.find(s => s.date === dateStr && s.timeSlot === timeSlot);
@@ -222,7 +219,7 @@ export default function AgentAddPropertyPage() {
           latitude, longitude, // พิกัดจริงที่ปักหมุดไว้ (null = ไม่เคยแตะแผนที่ → backend ใช้ default พิกัดหาดใหญ่แทน)
           description: f.description, bedrooms: parseInt(f.bedrooms), bathrooms: parseInt(f.bathrooms),
           area_sqm: parseFloat(f.usableArea) || parseFloat(f.landArea) || 120,
-          // 🔑 KEYWORD: ส่งฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ
+          
           // เดิมฟอร์มเก็บค่าพวกนี้ไว้ครบ (มี validation ด้วย) แต่ไม่เคยส่งไปกับ payload เลย
           commonFee: f.commonFee || null, parking: f.parking, floors: f.floors, ownership: f.ownership,
           images: uploadedImages.length > 0 ? uploadedImages : [f.image],
@@ -382,8 +379,7 @@ export default function AgentAddPropertyPage() {
               </div>
             </div>
 
-            {/* 🔑 KEYWORD: เลือกตำบลตอนลงประกาศ */}
-            {/* เดิมหน้านี้ดึงรายชื่อตำบลมาเก็บไว้เฉยๆ ไม่มีช่องให้เลือก แล้วส่งตำบลแรกของอำเภอไปเสมอ
+                        {/* เดิมหน้านี้ดึงรายชื่อตำบลมาเก็บไว้เฉยๆ ไม่มีช่องให้เลือก แล้วส่งตำบลแรกของอำเภอไปเสมอ
                 ทำให้บ้านทุกหลังในอำเภอเดียวกันถูกบันทึกเป็นตำบลเดียวกันหมด (ข้อมูลผิด) */}
             <div>
               <label className="block font-bold mb-1 text-slate-700">ตำบล / แขวง <span className="text-red-500">*</span></label>
@@ -398,8 +394,7 @@ export default function AgentAddPropertyPage() {
               <input type="text" value={f.address} onChange={e => setF({ ...f, address: e.target.value })} placeholder="เช่น 123/45 ซ.ปุณณกัณฑ์ 10 ถ.ปุณณกัณฑ์" className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium text-xs" required />
             </div>
 
-            {/* 🔑 KEYWORD: แผนที่ปักหมุดจริงตอนลงประกาศ */}
-            {/* เดิมเป็น <iframe pointer-events-none> พิกัดตายตัวทุกบ้าน กดปักหมุดไม่ได้จริงเลย */}
+                        {/* เดิมเป็น <iframe pointer-events-none> พิกัดตายตัวทุกบ้าน กดปักหมุดไม่ได้จริงเลย */}
             <div className="rounded-2xl border overflow-hidden">
               <PropertyLocationMap
                 latitude={latitude}
@@ -409,8 +404,12 @@ export default function AgentAddPropertyPage() {
                 onChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
               />
             </div>
-            <p className="text-[10px] text-slate-500 font-medium">
-              📍 คลิกหรือลากหมุดบนแผนที่เพื่อระบุตำแหน่งบ้านจริง (ถ้าไม่เลือก ระบบจะใช้พิกัดกลางหาดใหญ่แทน)
+            <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>คลิกหรือลากหมุดบนแผนที่เพื่อระบุตำแหน่งบ้านจริง (ถ้าไม่เลือก ระบบจะใช้พิกัดกลางหาดใหญ่แทน)</span>
             </p>
           </div>
 
@@ -428,7 +427,12 @@ export default function AgentAddPropertyPage() {
 
             {/* PDPA Warning Alert */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[10px] text-amber-900 space-y-2">
-              <div className="font-bold flex items-center gap-1 text-amber-800">⚠️ คำเตือนข้อมูลส่วนบุคคล (PDPA)</div>
+              <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>คำเตือนข้อมูลส่วนบุคคล (PDPA)</span>
+              </div>
               <p className="leading-relaxed">เอกสารนี้ใช้สำหรับให้ทีมงานตรวจสอบความถูกต้องเท่านั้น <span className="font-bold underline">จะไม่ถูกแสดงสู่สาธารณะ</span> กรุณาปิดซ่อนเลขบัตรประชาชนในเอกสารก่อนอัปโหลด</p>
 
               <input
@@ -464,7 +468,9 @@ export default function AgentAddPropertyPage() {
               {f.doc ? (
                 <div className="flex items-center gap-2 bg-white border rounded-lg p-2">
                   {f.doc.toLowerCase().endsWith('.pdf') ? (
-                    <span className="text-lg shrink-0">📄</span>
+                    <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   ) : (
                     <Image src={f.doc} alt="เอกสารสิทธิ์" width={32} height={32} className="w-8 h-8 rounded object-cover border shrink-0" unoptimized />
                   )}
@@ -473,9 +479,12 @@ export default function AgentAddPropertyPage() {
                   <button
                     type="button"
                     onClick={() => { setF(prev => ({ ...prev, doc: '' })); setDocFileName(''); }}
-                    className="text-red-500 font-bold hover:text-red-700 shrink-0 cursor-pointer"
+                    className="text-red-500 font-bold hover:text-red-700 shrink-0 cursor-pointer flex items-center gap-1"
                   >
-                    ✕ ลบ
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>ลบ</span>
                   </button>
                 </div>
               ) : (
@@ -498,7 +507,12 @@ export default function AgentAddPropertyPage() {
           <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">5</span>
-              <h2 className="font-extrabold text-slate-900 text-xs">📅 วันเวลาที่เปิดให้เข้าชมบ้านหลังนี้</h2>
+              <h2 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>วันเวลาที่เปิดให้เข้าชมบ้านหลังนี้</span>
+              </h2>
             </div>
             <p className="text-[10px] text-slate-500 font-medium -mt-2">
               เลือกวันและช่วงเวลาที่คุณสะดวกให้ลูกค้าจองเข้าชมบ้านหลังนี้ (เลือกได้หลายวัน ไม่บังคับ สามารถกลับมาเพิ่มทีหลังได้)
@@ -537,7 +551,6 @@ export default function AgentAddPropertyPage() {
                   const isPast = cellDate < todayStart;
                   const hasSlots = getSlotsForDate(dateStr).length > 0;
 
-                  // 🔑 KEYWORD: วันที่ชนกับบ้านหลังอื่นในปฏิทิน
                   // busyCount = จำนวนรอบที่บ้านหลังอื่นของเราเปิดไว้ในวันนี้ (0, 1 หรือ 2)
                   // แค่ไว้เตือนเฉยๆ ไม่ได้บล็อกไม่ให้เปิดซ้อน — นายหน้าเปิดวันเดียวกันได้หลายบ้าน
                   // ระบบล็อกจริงจะทำงานตอนมีลูกค้ากดจองรอบใดรอบหนึ่งแล้วเท่านั้น
@@ -573,7 +586,6 @@ export default function AgentAddPropertyPage() {
                     {(['morning', 'afternoon'] as const).map(slot => {
                       const active = getSlotsForDate(selectedCalDate).some(s => s.timeSlot === slot);
 
-                      // 🔑 KEYWORD: เตือนรอบที่บ้านหลังอื่นเปิดไว้แล้ว
                       // แค่เตือนว่าไปชนกับบ้านหลังไหน ไม่ได้ปิดไม่ให้กด — เปิดซ้อนกันได้ตามปกติ
                       const busy = getBusySlot(selectedCalDate, slot);
 
@@ -593,12 +605,20 @@ export default function AgentAddPropertyPage() {
                           <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
                           <p className="text-[9px] text-slate-500 font-bold">{slot === 'morning' ? '09:00 - 12:00' : '13:00 - 17:00'}</p>
                           {busy ? (
-                            <p className="text-[9px] font-black mt-1 text-amber-600 leading-tight">
-                              ℹ️ ติดนัดที่ &quot;{busy.propertyTitle}&quot; แล้ว
+                            <p className="text-[9px] font-black mt-1 text-amber-600 leading-tight flex items-center gap-1">
+                              <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>ติดนัดที่ &quot;{busy.propertyTitle}&quot; แล้ว</span>
                             </p>
                           ) : (
-                            <p className={`text-[9px] font-black mt-1 ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
-                              {active ? '✓ เลือกไว้แล้ว' : 'ยังไม่ได้เลือก'}
+                            <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              {active && (
+                                <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                              <span>{active ? 'เลือกไว้แล้ว' : 'ยังไม่ได้เลือก'}</span>
                             </p>
                           )}
                         </button>
@@ -608,7 +628,7 @@ export default function AgentAddPropertyPage() {
                 </div>
               )}
 
-              {/* 🔑 KEYWORD: แถบคำอธิบายสีปฏิทินนายหน้า */}
+              {/* คำอธิบายสีปฏิทินนายหน้า */}
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 mt-4 pt-3 border-t border-slate-100 text-[9px] font-bold text-slate-400">
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-emerald-400" /> เปิดว่างไว้</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> เลือกอยู่</span>
@@ -617,16 +637,24 @@ export default function AgentAddPropertyPage() {
             </div>
 
             {viewingSlots.length > 0 && (
-              <p className="text-[10px] font-bold text-emerald-600">
-                ✓ เลือกไว้แล้วทั้งหมด {viewingSlots.length} ช่วงเวลา
+              <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>เลือกไว้แล้วทั้งหมด {viewingSlots.length} ช่วงเวลา</span>
               </p>
             )}
 
             {agentBusySlots.length > 0 && (
-              <p className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 leading-relaxed">
-                ℹ️ วันที่เป็นเส้นประ คือวันที่คุณมีนัดชม<strong>บ้านหลังอื่น</strong>อยู่แล้วจริงๆ (มีลูกค้าจองไว้)
-                ยังเปิดวันนี้ให้บ้านหลังนี้ได้ตามปกติ ระบบจะกันชนให้เองตอนมีลูกค้ากดจองรอบที่ชนกันจริง
-              </p>
+              <div className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 leading-relaxed flex items-start gap-1.5">
+                <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  วันที่เป็นเส้นประ คือวันที่คุณมีนัดชม<strong>บ้านหลังอื่น</strong>อยู่แล้วจริงๆ (มีลูกค้าจองไว้)
+                  ยังเปิดวันนี้ให้บ้านหลังนี้ได้ตามปกติ ระบบจะกันชนให้เองตอนมีลูกค้ากดจองรอบที่ชนกันจริง
+                </span>
+              </div>
             )}
           </div>
 
@@ -643,8 +671,13 @@ export default function AgentAddPropertyPage() {
 
             <div className="flex items-center justify-end gap-3 pt-4">
               <Link href="/agent/home" className="px-5 py-2.5 bg-slate-100 font-bold rounded-xl text-slate-600">ยกเลิก</Link>
-              <button type="submit" disabled={loading} className="px-6 py-2.5 bg-blue-600 text-white font-extrabold rounded-xl hover:bg-blue-700 transition shadow-md">
-                {loading ? 'กำลังบันทึก...' : 'ส่งคำขอลงประกาศ ➔'}
+              <button type="submit" disabled={loading} className="px-6 py-2.5 bg-blue-600 text-white font-extrabold rounded-xl hover:bg-blue-700 transition shadow-md flex items-center gap-1.5 cursor-pointer">
+                <span>{loading ? 'กำลังบันทึก...' : 'ส่งคำขอลงประกาศ'}</span>
+                {!loading && (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
