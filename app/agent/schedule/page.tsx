@@ -5,15 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
-  Calendar as CalendarIcon, 
-  Clock, 
   Plus, 
   ChevronLeft, 
   ChevronRight, 
   User, 
   Phone, 
   AlertCircle, 
-  Check, 
   X,
   Home
 } from 'lucide-react';
@@ -492,9 +489,17 @@ function ScheduleContent() {
                           )}
                         </div>
                         {mSlot?.customerName ? (
-                          <div className="flex items-center gap-1 text-[10px] text-blue-900 font-semibold truncate">
-                            <User className="w-3 h-3 shrink-0 text-blue-700" />
-                            <span className="truncate">{mSlot.customerName}</span>
+                          <div className="space-y-0.5 mt-1">
+                            <div className="flex items-center gap-1 text-[10px] text-blue-900 font-semibold truncate">
+                              <User className="w-3 h-3 shrink-0 text-blue-700" />
+                              <span className="truncate">{mSlot.customerName}</span>
+                            </div>
+                            {mSlot.customerPhone && (
+                              <div className="flex items-center gap-1 text-[10px] text-blue-700 font-medium">
+                                <Phone className="w-2.5 h-2.5 shrink-0 text-blue-600" />
+                                <span>{mSlot.customerPhone}</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-[10px] text-slate-400">
@@ -528,9 +533,17 @@ function ScheduleContent() {
                           )}
                         </div>
                         {aSlot?.customerName ? (
-                          <div className="flex items-center gap-1 text-[10px] text-blue-900 font-semibold truncate">
-                            <User className="w-3 h-3 shrink-0 text-blue-700" />
-                            <span className="truncate">{aSlot.customerName}</span>
+                          <div className="space-y-0.5 mt-1">
+                            <div className="flex items-center gap-1 text-[10px] text-blue-900 font-semibold truncate">
+                              <User className="w-3 h-3 shrink-0 text-blue-700" />
+                              <span className="truncate">{aSlot.customerName}</span>
+                            </div>
+                            {aSlot.customerPhone && (
+                              <div className="flex items-center gap-1 text-[10px] text-blue-700 font-medium">
+                                <Phone className="w-2.5 h-2.5 shrink-0 text-blue-600" />
+                                <span>{aSlot.customerPhone}</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-[10px] text-slate-400">
