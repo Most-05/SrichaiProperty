@@ -58,6 +58,10 @@ export async function GET() {
         property_amenities: {
           include: { amenities: true }
         },
+        property_nearbies: {
+          include: { nearby_places: true },
+          orderBy: { distance_meters: "asc" }
+        },
         provinces: true, // ข้อมูลจังหวัด
         amphures: true,  // ข้อมูลอำเภอ
         districts: true  // ข้อมูลตำบล
@@ -114,6 +118,12 @@ export async function GET() {
           floors: p.floors ?? null,
           ownership: p.ownership_type || null,
           amenities: p.property_amenities?.map((pa) => pa.amenities?.name).filter(Boolean) || [],
+          nearbies: p.property_nearbies?.map((pn) => ({
+            id: pn.nearby_place_id,
+            name: pn.nearby_places?.name || "",
+            type: pn.nearby_places?.type || null,
+            distance: pn.distance_meters ? Number(pn.distance_meters) : null,
+          })).filter((n) => Boolean(n.name)) || [],
           province_id: p.province_id,
           amphure_id: p.amphure_id,
           district_id: p.district_id,

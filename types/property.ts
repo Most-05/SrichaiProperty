@@ -1,3 +1,10 @@
+export interface PropertyNearbyItem {
+  id?: number | string;
+  name: string;
+  type?: string | null;
+  distance?: number | null;
+}
+
 export interface Property {
   id: string | number;
   title: string;
@@ -33,4 +40,5 @@ export interface Property {
   floors?: number | null;
   ownership?: string | null;
   amenities?: string[];
+  nearbies?: PropertyNearbyItem[];
 }

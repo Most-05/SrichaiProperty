@@ -33,8 +33,81 @@ import {
   Dumbbell,
   ShieldCheck,
   Bed,
-  Bath
+  Bath,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+
+/**
+ * คอมโพเนนต์ Dropdown สไตล์มินิมอล พร้อม Lucide Icon สวยงามสำหรับ Hero Search และ Sort
+ */
+function HeroCustomSelect<T extends string>({
+  value,
+  onChange,
+  options,
+  className = '',
+  buttonClassName = '',
+}: {
+  value: T;
+  onChange: (val: T) => void;
+  options: { value: T; label: string }[];
+  className?: string;
+  buttonClassName?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`w-full flex items-center justify-between gap-1.5 py-2 px-3 text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors cursor-pointer rounded-xl md:rounded-full hover:bg-slate-50 focus:outline-hidden ${buttonClassName}`}
+      >
+        <span className="truncate">{selected.label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-blue-600' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 top-full mt-1.5 min-w-[170px] w-full bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150">
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer flex items-center justify-between ${
+                  isSelected 
+                    ? 'bg-blue-50 text-blue-700 font-extrabold' 
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span>{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0 ml-2" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const DEFAULT_FILTERS: FilterState = {
   province: '',
@@ -364,30 +437,33 @@ function SearchPageContent() {
 
             <div className="w-px bg-slate-200 hidden md:block h-6" />
 
-            <div className="w-full md:w-32">
-              <select
+            {/* ดรอปดาวน์ ซื้อ / เช่า (Custom Dropdown) */}
+            <div className="w-full md:w-36">
+              <HeroCustomSelect
                 value={activeTab}
-                onChange={(e) => setActiveTab(e.target.value as 'buy' | 'rent')}
-                className="w-full bg-transparent border-none py-2 px-3 text-xs font-bold text-slate-700 cursor-pointer outline-none focus:ring-0"
-              >
-                <option value="buy">ซื้อ (Buy)</option>
-                <option value="rent">เช่า (Rent)</option>
-              </select>
+                onChange={(val) => setActiveTab(val as 'buy' | 'rent')}
+                options={[
+                  { value: 'buy', label: 'ซื้อ (Buy)' },
+                  { value: 'rent', label: 'เช่า (Rent)' },
+                ]}
+              />
             </div>
 
             <div className="w-px bg-slate-200 hidden md:block h-6" />
 
-            <div className="w-full md:w-40">
-              <select
+            {/* ดรอปดาวน์ ประเภทอสังหาฯ (Custom Dropdown) */}
+            <div className="w-full md:w-44">
+              <HeroCustomSelect
                 value={propertyType}
-                onChange={(e) => setPropertyType(e.target.value)}
-                className="w-full bg-transparent border-none py-2 px-3 text-xs font-bold text-slate-700 cursor-pointer outline-none focus:ring-0"
-              >
-                <option value="all">ประเภททั้งหมด</option>
-                <option value="house">บ้านเดี่ยว (House)</option>
-                <option value="condo">คอนโดมิเนียม (Condo)</option>
-                <option value="townhome">ทาวน์โฮม (Townhome)</option>
-              </select>
+                onChange={(val) => setPropertyType(val)}
+                options={[
+                  { value: 'all', label: 'ประเภททั้งหมด' },
+                  { value: 'house', label: 'บ้านเดี่ยว (House)' },
+                  { value: 'condo', label: 'คอนโดมิเนียม (Condo)' },
+                  { value: 'townhome', label: 'ทาวน์โฮม (Townhome)' },
+                  { value: 'land', label: 'ที่ดิน (Land)' },
+                ]}
+              />
             </div>
 
             <button
@@ -510,17 +586,19 @@ function SearchPageContent() {
                   ตัวกรอง {activeChips.length > 0 && `(${activeChips.length})`}
                 </button>
 
-                <div className="flex items-center gap-1 text-xs">
+                <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-slate-400 font-medium whitespace-nowrap">เรียงตาม:</span>
-                  <select
+                  <HeroCustomSelect
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'latest' | 'price_asc' | 'price_desc')}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 font-bold text-slate-700 cursor-pointer text-xs focus:ring-0 focus:border-slate-300 outline-none"
-                  >
-                    <option value="latest">ล่าสุด</option>
-                    <option value="price_asc">ราคา: ต่ำ &rarr; สูง</option>
-                    <option value="price_desc">ราคา: สูง &rarr; ต่ำ</option>
-                  </select>
+                    onChange={(val) => setSortBy(val as 'latest' | 'price_asc' | 'price_desc')}
+                    className="w-36"
+                    buttonClassName="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5"
+                    options={[
+                      { value: 'latest', label: 'ล่าสุด' },
+                      { value: 'price_asc', label: 'ราคา: ต่ำ → สูง' },
+                      { value: 'price_desc', label: 'ราคา: สูง → ต่ำ' },
+                    ]}
+                  />
                 </div>
               </div>
             </div>

@@ -20,6 +20,27 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useApp } from '@/context/AppContext';
 import { toast } from '@/components/ui/toast';
+import {
+  Sparkles,
+  Navigation,
+  MapPin,
+  Waves,
+  Dumbbell,
+  Car,
+  ShieldCheck,
+  Video,
+  Trees,
+  Smile,
+  Building2,
+  ArrowUpDown,
+  PawPrint,
+  CheckCircle2,
+  GraduationCap,
+  HeartPulse,
+  ShoppingBag,
+  Plane,
+  Compass
+} from 'lucide-react';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
@@ -135,6 +156,90 @@ function ChevronIcon({ className, direction }: { className?: string; direction: 
       <path d={direction === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
     </svg>
   );
+}
+
+// ----------------------------------------------------------------------------
+// HELPER: ไอคอนและข้อมูลประเภทสิ่งอำนวยความสะดวก และสถานที่ใกล้เคียง
+// ----------------------------------------------------------------------------
+function getAmenityIcon(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes('ว่ายน้ำ') || n.includes('pool')) return Waves;
+  if (n.includes('ฟิตเนส') || n.includes('fitness') || n.includes('ยิม') || n.includes('gym')) return Dumbbell;
+  if (n.includes('จอดรถ') || n.includes('parking')) return Car;
+  if (n.includes('ปลอดภัย') || n.includes('security') || n.includes('รปภ')) return ShieldCheck;
+  if (n.includes('กล้อง') || n.includes('cctv') || n.includes('วงจรปิด')) return Video;
+  if (n.includes('สวน') || n.includes('park') || n.includes('garden')) return Trees;
+  if (n.includes('เด็ก') || n.includes('playground')) return Smile;
+  if (n.includes('คลับ') || n.includes('สโมสร') || n.includes('club')) return Building2;
+  if (n.includes('ลิฟต์') || n.includes('lift') || n.includes('elevator')) return ArrowUpDown;
+  if (n.includes('สัตว์') || n.includes('pet')) return PawPrint;
+  return CheckCircle2;
+}
+
+interface NearbyMeta {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  bgClass: string;
+  colorClass: string;
+}
+
+function getNearbyMeta(type?: string | null): NearbyMeta {
+  const t = (type || '').toLowerCase();
+  if (t.includes('education') || t.includes('school') || t.includes('ศึกษา') || t.includes('เรียน') || t.includes('มหา')) {
+    return {
+      icon: GraduationCap,
+      label: 'สถานศึกษา',
+      bgClass: 'bg-indigo-50 border border-indigo-100',
+      colorClass: 'text-indigo-600',
+    };
+  }
+  if (t.includes('hospital') || t.includes('hosp') || t.includes('พยาบาล') || t.includes('แพทย์') || t.includes('คลินิก')) {
+    return {
+      icon: HeartPulse,
+      label: 'สถานพยาบาล',
+      bgClass: 'bg-rose-50 border border-rose-100',
+      colorClass: 'text-rose-600',
+    };
+  }
+  if (t.includes('shopping') || t.includes('shop') || t.includes('ห้าง') || t.includes('ตลาด') || t.includes('มอลล์') || t.includes('เซ็นทรัล')) {
+    return {
+      icon: ShoppingBag,
+      label: 'ห้างสรรพสินค้า / แหล่งช้อปปิ้ง',
+      bgClass: 'bg-amber-50 border border-amber-100',
+      colorClass: 'text-amber-600',
+    };
+  }
+  if (t.includes('transport') || t.includes('transit') || t.includes('สนามบิน') || t.includes('บิน') || t.includes('สถานี') || t.includes('รถไฟ')) {
+    return {
+      icon: Plane,
+      label: 'การเดินทาง / คมนาคม',
+      bgClass: 'bg-sky-50 border border-sky-100',
+      colorClass: 'text-sky-600',
+    };
+  }
+  if (t.includes('attraction') || t.includes('attract') || t.includes('เที่ยว') || t.includes('หาด') || t.includes('ทะเล') || t.includes('สวน')) {
+    return {
+      icon: Compass,
+      label: 'สถานที่พักผ่อน / ท่องเที่ยว',
+      bgClass: 'bg-emerald-50 border border-emerald-100',
+      colorClass: 'text-emerald-600',
+    };
+  }
+  return {
+    icon: MapPin,
+    label: 'สถานที่ใกล้เคียง',
+    bgClass: 'bg-slate-100 border border-slate-200',
+    colorClass: 'text-slate-600',
+  };
+}
+
+function formatDistance(meters?: number | null): string | null {
+  if (meters == null || isNaN(meters)) return null;
+  if (meters >= 1000) {
+    const km = meters / 1000;
+    return `${km % 1 === 0 ? km : km.toFixed(1)} กม.`;
+  }
+  return `${meters} เมตร`;
 }
 
 export default function PropertyDetailPage() {
@@ -453,6 +558,46 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
+              {/* สิ่งอำนวยความสะดวกและพื้นที่ส่วนกลาง */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    สิ่งอำนวยความสะดวกและพื้นที่ส่วนกลาง
+                  </h3>
+                  {property.amenities && property.amenities.length > 0 && (
+                    <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                      {property.amenities.length} รายการ
+                    </span>
+                  )}
+                </div>
+
+                {property.amenities && property.amenities.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {property.amenities.map((amenity, idx) => {
+                      const AmenityIcon = getAmenityIcon(amenity);
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50/60 border border-slate-200/60 hover:bg-blue-50/40 hover:border-blue-200/80 transition-all duration-200 group"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 group-hover:border-blue-300 flex items-center justify-center text-blue-600 shadow-2xs shrink-0 transition-colors">
+                            <AmenityIcon className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-700 group-hover:text-slate-900 line-clamp-1">
+                            {amenity}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic bg-slate-50/40 p-3.5 rounded-2xl border border-slate-200/40">
+                    นายหน้ายังไม่ได้ระบุสิ่งอำนวยความสะดวกสำหรับประกาศนี้
+                  </p>
+                )}
+              </div>
+
               {/* ข้อความรายละเอียดเพิ่มเติม */}
               <div className="space-y-3 pt-2 border-t border-slate-100">
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">รายละเอียดอสังหาริมทรัพย์</h3>
@@ -471,6 +616,63 @@ export default function PropertyDetailPage() {
                     height={256}
                   />
                 </div>
+              </div>
+
+              {/* สถานที่สำคัญใกล้เคียง (Nearby Places) */}
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+                    สถานที่สำคัญใกล้เคียง
+                  </h3>
+                  {property.nearbies && property.nearbies.length > 0 && (
+                    <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                      {property.nearbies.length} แห่ง
+                    </span>
+                  )}
+                </div>
+
+                {property.nearbies && property.nearbies.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {property.nearbies.map((place, idx) => {
+                      const meta = getNearbyMeta(place.type);
+                      const NearbyIcon = meta.icon;
+                      const formattedDistance = formatDistance(place.distance);
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/60 border border-slate-200/60 hover:bg-slate-50 hover:border-slate-300/80 transition-all duration-200 group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${meta.bgClass} ${meta.colorClass} shadow-2xs`}>
+                              <NearbyIcon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-extrabold text-slate-800 truncate group-hover:text-slate-900" title={place.name}>
+                                {place.name}
+                              </p>
+                              <p className="text-[10px] font-medium text-slate-400 mt-0.5">
+                                {meta.label}
+                              </p>
+                            </div>
+                          </div>
+                          {formattedDistance && (
+                            <div className="shrink-0 text-right">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-black text-slate-700 bg-white px-2.5 py-1 rounded-xl border border-slate-200/80 shadow-2xs">
+                                <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                                {formattedDistance}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic bg-slate-50/40 p-3.5 rounded-2xl border border-slate-200/40">
+                    ไม่มีข้อมูลสถานที่สำคัญใกล้เคียงที่ระบุสำหรับประกาศนี้
+                  </p>
+                )}
               </div>
 
               {/* กล่องเครื่องคำนวณสินเชื่อ (Mortgage Loan Calculator) */}
