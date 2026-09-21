@@ -132,7 +132,7 @@ export default function ProfilePage() {
     }
 
     loadUserProfile();
-  }, [session]);
+  }, [session, profile.email, profile.fullName, profile.phone]);
 
   // ----------------------------------------------------------------------------
   // 2. ฟังก์ชันจัดการความยินยอม PDPA (Consent Handlers)

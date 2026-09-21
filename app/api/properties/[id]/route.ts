@@ -50,7 +50,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     const { id } = await context.params;
     
     // ตรวจสอบสิทธิ์ความเป็นเจ้าของก่อนดึงข้อมูล
-    const { property, error } = await requireOwnerAgent(id);
+    const { error } = await requireOwnerAgent(id);
     if (error) return error;
 
     // ดึงข้อมูลเชิงลึกเพิ่มเติม รวมตารางรูปภาพ (property_images) และรอบเวลานัดหมาย (property_viewing_slots)
