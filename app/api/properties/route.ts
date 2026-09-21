@@ -96,6 +96,7 @@ export async function GET() {
           price: "฿" + Number(p.price).toLocaleString(), // จัดฟอร์แมตตัวเลขราคา (เช่น ฿2,500,000)
           listingType: p.listing_type === "rent" ? "rent" : "sale",
           type: p.property_types?.name || "อสังหาริมทรัพย์",
+          type_id: p.type_id,
           tag: isPremium ? "ทรัพย์พรีเมียม" : "ทรัพย์ทั่วไป",
           tagBg: isPremium ? "bg-amber-600" : "bg-blue-600",
           location: "📍 " + p.location,

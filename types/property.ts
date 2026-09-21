@@ -11,6 +11,7 @@ export interface Property {
   price: string;
   listingType: 'sale' | 'rent';
   type: string;
+  type_id?: number | null;
   tag: string;
   tagBg: string;
   location: string;
