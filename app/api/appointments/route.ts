@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
+import { autoCompleteOverdueAppointments, appointmentNeedsResult, isCustomerBlockedByNoShow } from "@/lib/services/noShowService"; // auto-complete + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อกจากประวัติเบี้ยวนัด
+import { NO_SHOW_LIMIT } from "@/lib/constants"; // ใช้แจ้งเตือนลูกค้าว่าเหลือโควตาก่อนถูกจำกัดการจองกี่ครั้ง
 
 /**
  * ==============================================================================
@@ -44,21 +46,13 @@ export async function GET(request: Request) {
     // 1.2 ตรวจสอบจาก URL Query Parameters ว่าผู้ใช้ต้องการดูในมุมมองนายหน้า (?view=agent) หรือไม่
     const isAgent = new URL(request.url).searchParams.get("view") === "agent" && user.role_id === "agent";
 
-    // 1.3 ปรับสถานะนัดหมายที่พ้นกำหนดวันแล้ว (Auto-complete past appointments)
-    // ถ้านัดหมายใดได้รับการอนุมัติแล้ว (approved) แต่วันที่นัดหมายผ่านพ้นไปแล้ว (ก่อนวันนี้)
-    // ให้ปรับสถานะเป็น 'completed' (เข้าชมแล้ว/เสร็จสิ้น) ในฐานข้อมูลโดยอัตโนมัติ
-    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
-    const todayDate = new Date(`${todayStr}T00:00:00.000Z`);
-
-    await db.appointments.updateMany({
-      where: {
-        appointment_date: { lt: todayDate },
-        status: "approved"
-      },
-      data: {
-        status: "completed"
-      }
-    });
+    // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+    // เดิมนัดที่ผ่านวันไปแล้วจะถูก auto-complete ทันที (ระบบเดาเองว่าสำเร็จเสมอ) ทำให้
+    // สถิติ "นัดสำเร็จ" ไม่ตรงความจริง และปุ่ม "ปิดงาน" ของนายหน้าแทบไม่มีโอกาสได้ใช้
+    // ตอนนี้เปลี่ยนเป็น: รอนายหน้ายืนยันผลจริงก่อน (ดูปุ่มยืนยันในหน้า agent/appointments)
+    // ถ้าเลยกำหนด VISIT_CONFIRM_GRACE_DAYS แล้วนายหน้ายังไม่ยืนยัน ค่อย auto-complete ให้เอง
+    // (กันนัดค้างสถานะ "รอผล" ตลอดไปถ้านายหน้าลืมกด — ดู lib/services/noShowService.ts)
+    await autoCompleteOverdueAppointments();
 
     // 1.4 ดึงข้อมูลนัดหมายจากฐานข้อมูล PostgreSQL ผ่าน Prisma ORM
     // - ถ้าเป็นนายหน้า: ค้นหาแถวที่ agent_id === user.id
@@ -114,6 +108,11 @@ export async function GET(request: Request) {
         status: apt.status,
         note: apt.note || "",
         cancelReason: apt.cancel_reason || "",
+        noShowNote: apt.no_show_note || "",
+        // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+        // true = นัดนี้ยืนยันแล้ว(approved) และวันนัดผ่านไปแล้ว แต่นายหน้ายังไม่กดยืนยันผล
+        // หน้า agent/appointments ใช้ธงนี้เพื่อแยกเป็นแท็บ "รอยืนยันผล" ต่างหาก
+        needsResult: appointmentNeedsResult({ status: apt.status, appointment_date: apt.appointment_date }),
         // ข้อมูลรีวิวที่ลูกค้าเคยให้คะแนนไว้ (ถ้ายังไม่เคยรีวิว จะเป็น null)
         review: apt.reviews ? {
           id: apt.reviews.id,
@@ -168,6 +167,16 @@ export async function POST(request: Request) {
     });
     if (existing) {
       return NextResponse.json({ error: "คุณมีนัดหมายค้างอยู่สำหรับบ้านหลังนี้แล้ว กรุณารอผลหรือยกเลิกนัดเดิมก่อนจองใหม่" }, { status: 400 });
+    }
+
+    // 🔑 KEYWORD: บล็อกลูกค้าเบี้ยวนัดซ้ำ (No-show)
+    // 2.4.1 ลูกค้าที่ไม่มาตามนัด (no_show) สะสมครบ NO_SHOW_LIMIT ครั้ง จองนัดใหม่ไม่ได้
+    // กันนายหน้าเสียเวลาเปิดวันว่างรอลูกค้าที่มีประวัติไม่มาซ้ำๆ
+    if (await isCustomerBlockedByNoShow(user.id)) {
+      return NextResponse.json(
+        { error: `บัญชีของคุณมีประวัติไม่มาตามนัดครบ ${NO_SHOW_LIMIT} ครั้ง จึงถูกจำกัดการจองนัดใหม่ชั่วคราว กรุณาติดต่อทีมงานหากต้องการความช่วยเหลือ` },
+        { status: 400 }
+      );
     }
 
     // 2.5 แปลงข้อความรอบเวลาให้อยู่ในคีย์มาตรฐาน DB ('morning' หรือ 'afternoon')
@@ -261,7 +270,7 @@ export async function PATCH(request: Request) {
     // --------------------------------------------------------------------------
     // (ก) กรณีฝั่งนายหน้าจัดการ: ยืนยัน (confirm), ปฏิเสธ (reject), หรือ ปิดงาน (complete)
     // --------------------------------------------------------------------------
-    if (["confirm", "reject", "complete"].includes(action)) {
+    if (["confirm", "reject", "complete", "no_show"].includes(action)) {
       // ตรวจสอบสิทธิ์: ต้องเป็นนายหน้าเจ้าของคิวงานนี้เท่านั้น
       if (user.role_id !== "agent" || appointment.agent_id !== user.id) {
         return NextResponse.json({ error: "คุณไม่มีสิทธิ์จัดการนัดหมายนี้" }, { status: 403 });
@@ -270,7 +279,14 @@ export async function PATCH(request: Request) {
       // นายหน้ากดปิดงานเมื่อพาลูกค้าชมสถานที่จริงเรียบร้อยแล้ว (status -> completed)
       if (action === "complete") {
         if (appointment.status !== "approved") return NextResponse.json({ error: "ปิดงานได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
-        const updated = await db.appointments.update({ where: { id }, data: { status: "completed" } });
+        // 🔑 KEYWORD: กันปิดงานก่อนถึงวันนัดจริง — เดิมไม่เคยเช็ควันที่เลย ปิดงานได้ทันที
+        // หลังยืนยันรับคิว ทั้งที่ลูกค้ายังไม่ได้ไปดูบ้านจริง ทำให้ระบบ No-show ไร้ความหมาย
+        if (!appointmentNeedsResult(appointment)) {
+          return NextResponse.json({ error: "ยังไม่ถึงวันนัด ยืนยันผลได้หลังจากถึงวันนัดแล้วเท่านั้น" }, { status: 400 });
+        }
+        // บันทึก visit_confirmed_at ด้วย เพื่อให้รู้ว่านายหน้ายืนยันผลจริง (ต่างจาก
+        // auto-complete ที่ไม่มีใครยืนยัน — ดู autoCompleteOverdueAppointments())
+        const updated = await db.appointments.update({ where: { id }, data: { status: "completed", visit_confirmed_at: new Date() } });
         if (appointment.customer_id) {
           const prop = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } }) : null;
           sendNotification(
@@ -278,6 +294,37 @@ export async function PATCH(request: Request) {
             "การนำชมโครงการเสร็จสิ้น",
             `การเข้าชมโครงการ "${prop?.title || "อสังหาริมทรัพย์"}" เสร็จสมบูรณ์แล้ว ขอเชิญท่านร่วมบันทึกประเมินความพึงพอใจในการให้บริการ`,
             "review",
+            "/appointments"
+          );
+        }
+        return NextResponse.json({ success: true, data: updated });
+      }
+
+      // 🔑 KEYWORD: นายหน้ายืนยันผลว่าลูกค้าไม่มาตามนัด (No-show)
+      // ต้องระบุเหตุผลเสมอเหมือนปฏิเสธนัด — เก็บลง no_show_note คนละคอลัมน์กับ cancel_reason
+      if (action === "no_show") {
+        if (appointment.status !== "approved") {
+          return NextResponse.json({ error: "ยืนยันผลได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
+        }
+        // 🔑 KEYWORD: กันยืนยัน "ไม่มาตามนัด" ก่อนถึงวันนัดจริง (เหตุผลเดียวกับ complete ด้านบน)
+        if (!appointmentNeedsResult(appointment)) {
+          return NextResponse.json({ error: "ยังไม่ถึงวันนัด ยืนยันผลได้หลังจากถึงวันนัดแล้วเท่านั้น" }, { status: 400 });
+        }
+        const noShowNote = typeof reason === "string" ? reason.trim() : "";
+        if (!noShowNote) {
+          return NextResponse.json({ error: "กรุณาระบุเหตุผลที่ลูกค้าไม่มาตามนัด" }, { status: 400 });
+        }
+        const updated = await db.appointments.update({
+          where: { id },
+          data: { status: "no_show", no_show_note: noShowNote, visit_confirmed_at: new Date() }
+        });
+        if (appointment.customer_id) {
+          const prop = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } }) : null;
+          sendNotification(
+            appointment.customer_id,
+            "นัดหมายถูกบันทึกว่าไม่มาตามนัด",
+            `นายหน้าบันทึกว่าคุณไม่ได้เข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" ตามนัดหมาย (เหตุผล: ${noShowNote}) หากมีนัดที่ไม่มาตามนัดสะสมครบ ${NO_SHOW_LIMIT} ครั้ง ระบบจะจำกัดการจองนัดใหม่ชั่วคราว`,
+            "appointment",
             "/appointments"
           );
         }

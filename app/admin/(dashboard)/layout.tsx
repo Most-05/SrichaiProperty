@@ -16,11 +16,10 @@ export default async function AdminLayout({
 }) {
   // ดึงข้อมูล session ปัจจุบันจากฝั่ง server (ไม่ต้องใช้ useSession ฝั่ง client)
   const session = await getServerSession(authOptions);
-  // ดึงข้อมูล role ของ user ออกมาจาก session (บอก type เอง เพราะ next-auth ไม่รู้จัก field นี้)
-  const user = session?.user as { role?: string } | undefined;
 
   // ถ้ายังไม่ได้ login หรือ role ไม่ใช่ admin ให้ redirect ไปหน้า login
-  if (!session || user?.role !== 'admin') {
+  // (type ของ session.user.role ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง)
+  if (!session || session.user?.role !== 'admin') {
     redirect('/admin/login');
   }
 

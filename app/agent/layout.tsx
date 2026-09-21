@@ -20,17 +20,16 @@ export default async function AgentLayout({
 }) {
   // ดึงข้อมูล session ปัจจุบันจากฝั่ง server (ไม่ต้องใช้ useSession ฝั่ง client)
   const session = await getServerSession(authOptions);
-  // ดึงข้อมูล role และ status ของ user ออกมาจาก session (บอก type เอง เพราะ next-auth ไม่รู้จัก field พวกนี้)
-  const user = session?.user as { role?: string; status?: string | null } | undefined;
+  // type ของ session.user.role/status ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
 
   // ถ้ายังไม่ login หรือ role ไม่ใช่ 'agent' -> เตะกลับไปหน้า login สำหรับ agent ทันที
-  if (!session || user?.role !== 'agent') {
+  if (!session || session.user?.role !== 'agent') {
     redirect('/login/agent');
   }
 
   // เช็คสถานะของ agent ว่ายัง 'pending' (รออนุมัติ) อยู่หรือไม่
   // ถ้าไม่มีค่า status มาเลย ให้ถือว่าเป็น 'pending' ไว้ก่อน (ปลอดภัยไว้ก่อน)
-  const isPending = (user?.status || 'pending') === 'pending';
+  const isPending = (session.user?.status || 'pending') === 'pending';
 
   return (
     // โครงหน้าหลัก: สูงอย่างน้อยเต็มจอ, จัดเรียงแนวตั้ง (navbar บน, เนื้อหากลาง, footer ล่างสุดของหน้า)

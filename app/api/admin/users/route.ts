@@ -44,15 +44,25 @@ export async function GET(req: Request) {
       }
     });
 
+    // 🔑 KEYWORD: สถิติเบี้ยวนัด (No-show) ให้แอดมินเห็นภาพรวม
+    // นับแยกทีเดียวด้วย groupBy แทนการ query ต่อ user (กันยิง query ซ้ำเป็นสิบ/ร้อยรอบ)
+    const noShowGroups = await db.appointments.groupBy({
+      by: ['customer_id'],
+      where: { status: 'no_show', customer_id: { not: null } },
+      _count: { _all: true }
+    });
+    const noShowCountMap = new Map(noShowGroups.map((g) => [g.customer_id as string, g._count._all]));
+    const usersWithNoShow = users.map((u) => ({ ...u, noShowCount: noShowCountMap.get(u.id) || 0 }));
+
     // Calculate stats
     const totalCount = await db.users.count();
     const agentCount = await db.users.count({ where: { role_id: 'agent' } });
     const customerCount = await db.users.count({ where: { role_id: 'customer' } });
     const pendingCount = await db.users.count({ where: { status: 'pending' } });
 
-    return NextResponse.json({ 
-      success: true, 
-      users,
+    return NextResponse.json({
+      success: true,
+      users: usersWithNoShow,
       stats: {
         total: totalCount,
         agents: agentCount,

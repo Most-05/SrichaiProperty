@@ -107,6 +107,12 @@ export const propertiesRawData = [
     bedrooms: 3,
     bathrooms: 3,
     area_sqm: 210,
+    // 🔑 KEYWORD: ฟิลด์สเปคเพิ่มเติมที่เคยหายเงียบๆ (ดู schema.prisma) — ใส่ไว้ในซีดข้อมูลด้วย
+    // กันไม่ให้ค่าหายอีกรอบถ้ามีใครรัน `prisma db seed` ใหม่
+    common_fee: 750,
+    parking_spaces: 2,
+    floors: 2,
+    ownership_type: "ขายขาด (Freehold)",
     status: "approved",
     agentEmail: "somchai.agent@srichaiproperty.com",
     images: [
@@ -130,6 +136,10 @@ export const propertiesRawData = [
     bedrooms: 1,
     bathrooms: 1,
     area_sqm: 35,
+    common_fee: 1400,
+    parking_spaces: 1,
+    floors: 18, // ตาม description ("ชั้น 18")
+    ownership_type: "ขายขาด (Freehold)",
     status: "approved",
     agentEmail: "wipha.agent@srichaiproperty.com",
     images: [
@@ -153,6 +163,10 @@ export const propertiesRawData = [
     bedrooms: 4,
     bathrooms: 5,
     area_sqm: 450,
+    common_fee: null, // ไม่มีนิติบุคคลหมู่บ้านดูแล (ไม่ใช่โครงการจัดสรร)
+    parking_spaces: 2,
+    floors: 2,
+    ownership_type: "ขายขาด (Freehold)",
     status: "approved",
     agentEmail: "meen1@gmail.com",
     images: [
@@ -176,6 +190,10 @@ export const propertiesRawData = [
     bedrooms: 4,
     bathrooms: 3,
     area_sqm: 180,
+    common_fee: null,
+    parking_spaces: 1,
+    floors: 3,
+    ownership_type: "ขายขาด (Freehold)",
     status: "approved",
     agentEmail: "wipha.agent@srichaiproperty.com",
     images: [
@@ -198,6 +216,10 @@ export const propertiesRawData = [
     bedrooms: 3,
     bathrooms: 2,
     area_sqm: 140,
+    common_fee: null,
+    parking_spaces: 1,
+    floors: 2,
+    ownership_type: "ขายขาด (Freehold)",
     status: "approved",
     agentEmail: "somchai.agent@srichaiproperty.com",
     images: [
@@ -220,6 +242,10 @@ export const propertiesRawData = [
     bedrooms: 4,
     bathrooms: 4,
     area_sqm: 240,
+    common_fee: 850,
+    parking_spaces: 3, // ตาม description ("จอดรถได้ 3 คัน")
+    floors: 2,
+    ownership_type: "ขายขาด (Freehold)",
     status: "pending",
     agentEmail: "theeradech.agent@srichaiproperty.com",
     images: [
