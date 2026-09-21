@@ -18,8 +18,10 @@
 
 ## 3. UI Component Reuse & Library
 - **Icon Set**: ใช้ไอคอนจาก `lucide-react` เท่านั้น
-  - ระบุขนาดให้สม่ำเสมอ เช่น `className="w-4 h-4"` หรือ `className="w-5 h-5"`
+  - **ห้ามใช้อิโมจิดิบ (Raw Emojis เช่น 🏠, 📍, 📞, 💰, 🔍, 🛏️) ใน UI เด็ดขาด** ให้ใช้ไอคอน Lucide แทนเสมอ
+  - ระบุขนาดให้สม่ำเสมอ เช่น `className="w-4 h-4"` หรือ `className="w-5 h-5"` พร้อม `shrink-0`
   - จัดการการจัดวางคู่กับตัวหนังสือให้มี `items-center gap-2` เสมอ
+  - อ้างอิงตารางไอคอนอสังหาฯ ได้ที่สกิล `.agents/skills/lucide-icons/SKILL.md`
 - **Component Primitives**:
   - Reuse ชิ้นส่วนใน `components/ui/` (เช่น Button, Input, Dialog, Badge, DropdownMenu)
   - หลีกเลี่ยงการเขียน HTML ปุ่มดิบๆ ให้ใช้ `<Button variant="..." size="...">` เพื่อความสม่ำเสมอทั้งเว็บ
