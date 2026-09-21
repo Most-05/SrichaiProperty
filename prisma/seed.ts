@@ -30,11 +30,22 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("🌱 เริ่มต้นนำเข้าข้อมูลทุกตารางในระบบ (Seeding Database)...");
 
-  // 4. Properties & Relations
+  // 1. ล้างข้อมูลธุรกรรมที่เชื่อมโยงกับประกาศก่อนเพื่อป้องกัน Foreign Key Error
   await prisma.property_amenities.deleteMany({});
   await prisma.property_nearbies.deleteMany({});
   await prisma.property_documents.deleteMany({});
   await prisma.property_images.deleteMany({});
+  await prisma.property_viewing_slots.deleteMany({});
+  await prisma.property_views.deleteMany({});
+  await prisma.saved_properties.deleteMany({});
+  await prisma.reviews.deleteMany({});
+  await prisma.appointments.deleteMany({});
+  await prisma.messages.deleteMany({});
+  await prisma.chat_sessions.deleteMany({});
+  await prisma.payment_transactions.deleteMany({});
+  await prisma.listing_package_orders.deleteMany({});
+  await prisma.reports.deleteMany({});
+  await prisma.sale_transactions.deleteMany({});
   await prisma.properties.deleteMany({});
   await prisma.property_types.deleteMany({ where: { id: { notIn: [1, 2, 3] } } });
   for (const r of rolesData) await prisma.roles.upsert({ where: { id: r.id }, update: { name: r.name }, create: r });
