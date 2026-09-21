@@ -18,6 +18,7 @@ import { useApp } from '@/context/AppContext';
 import BookingSidebar from '@/components/customer/BookingSidebar';
 import BookingCalendar from '@/components/customer/BookingCalendar';
 import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { toast } from '@/components/ui/toast';
 
 // รายชื่อเดือนภาษาไทยสำหรับแสดงผลวันที่แบบข้อความอ่านง่าย
 const MONTH_NAMES_TH = [
@@ -148,11 +149,11 @@ function BookAppointmentForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'ไม่สามารถทำนัดหมายได้');
 
-      alert(`ส่งขอจองนัดหมายสำหรับอสังหาฯ ${property.title} เรียบร้อยแล้ว!`);
+      toast.success(`ส่งขอจองนัดหมายสำหรับ "${property.title}" เรียบร้อยแล้ว!`);
       await refreshAppointments(); // ดึงนัดหมายล่าสุดเข้า Context
       router.push('/appointments'); // นำทางไปยังหน้ารายการนัดหมายของฉัน
     } catch (err) {
-      alert((err as Error).message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      toast.error((err as Error).message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setSubmitting(false);
     }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
+import { toast } from '@/components/ui/toast';
 
 export default function AgentProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -72,11 +73,13 @@ export default function AgentProfilePage() {
       const res = await fetch('/api/auth/delete-account', { method: 'DELETE' });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('ลบบัญชีถาวรเรียบร้อยแล้ว');
+        toast.success('ลบบัญชีถาวรเรียบร้อยแล้ว');
         signOut({ callbackUrl: '/login/agent' });
-      } else alert(data.error || 'ไม่สามารถลบบัญชีได้');
+      } else {
+        toast.error(data.error || 'ไม่สามารถลบบัญชีได้');
+      }
     } catch {
-      alert('เกิดข้อผิดพลาดในการลบบัญชี');
+      toast.error('เกิดข้อผิดพลาดในการลบบัญชี');
     } finally {
       setDeleting(false);
       setShowConfirm(false);

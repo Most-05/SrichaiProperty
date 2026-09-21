@@ -195,6 +195,9 @@ model properties {
   @@index([province_id], map: "idx_properties_province")
   @@index([amphure_id], map: "idx_properties_amphure")
   @@index([district_id], map: "idx_properties_district")
+  // ⚡ Composite Indexes สำหรับการค้นหาและกรองแบบผสมผสาน (ลด Full Table Scan)
+  @@index([status, listing_type, price], map: "idx_properties_status_type_price")
+  @@index([province_id, amphure_id, district_id], map: "idx_properties_location_hierarchy")
 }
 
 /// 🖼️ [1:N จาก properties] ตารางอัลบั้มรูปภาพประกอบอสังหาริมทรัพย์
@@ -367,6 +370,9 @@ model appointments {
 
   @@index([agent_id], map: "idx_appointments_agent")
   @@index([customer_id], map: "idx_appointments_customer")
+  // ⚡ Composite Indexes สำหรับตรวจสอบนัดหมายซ้อนและดึงคิวงานตามวันเวลา
+  @@index([customer_id, property_id, status], map: "idx_appointments_customer_prop_status")
+  @@index([agent_id, appointment_date], map: "idx_appointments_agent_date")
 }
 
 /// ⭐ [1:1 กับ appointments] ตารางรีวิวและให้คะแนนบริการของนายหน้าหลังชมบ้านเสร็จ
@@ -584,4 +590,6 @@ model property_viewing_slots {
 
   @@unique([property_id, available_date, time_slot]) // Composite Unique ห้ามสร้างช่วงเวลาซ้ำในบ้านหลังเดียวกัน
   @@index([property_id], map: "idx_property_viewing_slots_property")
+  // ⚡ Composite Index สำหรับตรวจสอบรอบว่างและป้องกัน Double Booking
+  @@index([property_id, available_date, is_booked], map: "idx_property_viewing_slots_lookup")
 }

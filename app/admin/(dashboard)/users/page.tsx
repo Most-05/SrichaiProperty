@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Badge from '@/components/ui/Badge';
 import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { toast } from '@/components/ui/toast';
 
 interface UserData {
   id: string;
@@ -64,12 +65,13 @@ export default function AdminUsersPage() {
           ...prev,
           pending: Math.max(0, prev.pending - (newStatus === 'approved' ? 1 : 0))
         }));
+        toast.success(`อัปเดตสถานะเป็น ${newStatus} เรียบร้อยแล้ว`);
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.error);
+        toast.error("เกิดข้อผิดพลาด: " + data.error);
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล");
+      toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล");
     }
   };
 

@@ -319,8 +319,8 @@ export default function AgentAppointmentsPage() {
           </div>
           <button
             type="button"
-            onClick={() => alert('ฟีเจอร์สร้างนัดหมายด้วยตนเองจะเปิดให้ใช้งานเร็วๆ นี้')}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shrink-0 transition"
+            onClick={() => setToast({ text: 'ฟีเจอร์สร้างนัดหมายด้วยตนเองจะเปิดให้ใช้งานเร็วๆ นี้', kind: 'success' })}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shrink-0 transition cursor-pointer"
           >
             + สร้างนัดหมายด้วยตนเอง
           </button>

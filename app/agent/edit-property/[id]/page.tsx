@@ -12,6 +12,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter, useParams } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
+import { toast } from '@/components/ui/toast';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
@@ -215,7 +216,7 @@ export default function AgentEditPropertyPage() {
     const target = viewingSlots.find(s => s.date === dateStr && s.timeSlot === timeSlot);
 
     if (target?.isBooked) {
-      alert('รอบนี้มีลูกค้าจองเข้าชมไว้แล้ว ไม่สามารถปิดรอบได้');
+      toast.warning('รอบนี้มีลูกค้าจองเข้าชมไว้แล้ว ไม่สามารถปิดรอบได้');
       return;
     }
 
@@ -229,11 +230,21 @@ export default function AgentEditPropertyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!f.title || !f.price || !f.location) {
-      return alert('กรุณากรอกข้อมูลสำคัญ (*) ให้ครบถ้วน');
+      toast.warning('กรุณากรอกข้อมูลสำคัญ (*) ให้ครบถ้วน');
+      return;
     }
-    if (Number(f.price) <= 0) return alert('กรุณากรอกราคาที่มากกว่า 0 บาท');
-    if (f.usableArea && Number(f.usableArea) < 0) return alert('พื้นที่ต้องไม่ติดลบ');
-    if (Number(f.bedrooms) < 0 || Number(f.bathrooms) < 0) return alert('จำนวนห้องต้องไม่ติดลบ');
+    if (Number(f.price) <= 0) {
+      toast.warning('กรุณากรอกราคาที่มากกว่า 0 บาท');
+      return;
+    }
+    if (f.usableArea && Number(f.usableArea) < 0) {
+      toast.warning('พื้นที่ต้องไม่ติดลบ');
+      return;
+    }
+    if (Number(f.bedrooms) < 0 || Number(f.bathrooms) < 0) {
+      toast.warning('จำนวนห้องต้องไม่ติดลบ');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -263,13 +274,13 @@ export default function AgentEditPropertyPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('บันทึกการแก้ไขประกาศเรียบร้อยแล้ว');
+        toast.success('บันทึกการแก้ไขประกาศเรียบร้อยแล้ว');
         router.push('/agent/dashboard');
       } else {
-        alert(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
+        toast.error(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
     } finally {
       setSaving(false);
     }

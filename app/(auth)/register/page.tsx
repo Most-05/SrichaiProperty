@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
+import { toast } from '@/components/ui/toast';
 
 export default function RegisterPage() {
   // หน้านี้สมัครได้เฉพาะ "ลูกค้า" เท่านั้น จึง fix role เป็น 'buyer' ตายตัว (ไม่มีตัวเลือกอื่น)
@@ -38,7 +39,7 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "การสมัครสมาชิกไม่สำเร็จ");
+        toast.error(data.error || "การสมัครสมาชิกไม่สำเร็จ");
         setShowOtpModal(false);
         return;
       }
@@ -52,14 +53,14 @@ export default function RegisterPage() {
       });
 
       if (loginRes?.error) {
-        alert("สมัครสมาชิกสำเร็จเรียบร้อย! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ");
-        window.location.href = '/login';
+        toast.success("สมัครสมาชิกสำเร็จเรียบร้อย! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ");
+        setTimeout(() => { window.location.href = '/login'; }, 1000);
       } else {
-        alert("สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!");
-        window.location.href = '/home'; // พาไปหน้าแรกของลูกค้า
+        toast.success("สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!");
+        setTimeout(() => { window.location.href = '/home'; }, 800); // พาไปหน้าแรกของลูกค้า
       }
     } catch {
-      alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านเพื่อสมัครสมาชิกได้");
+      toast.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านเพื่อสมัครสมาชิกได้");
     }
     setShowOtpModal(false);
   };
@@ -84,7 +85,7 @@ export default function RegisterPage() {
     event.preventDefault(); // กันหน้าเว็บโหลดใหม่ (ปกติ submit form จะรีเฟรชหน้า)
     // เช็คก่อนว่ากรอกรหัสผ่าน 2 ช่องตรงกันไหม ก่อนจะไปขั้นต่อไป
     if (password !== confirmPassword) {
-      alert("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
+      toast.warning("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
       return;
     }
     // ถ้าตรงกัน ให้เปิด Modal ป๊อปอัปให้กรอก OTP (แล้วพอกรอกเสร็จมันจะไปเรียก verifyOtp)

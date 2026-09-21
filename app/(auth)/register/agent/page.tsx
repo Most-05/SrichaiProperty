@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import AgentRegisterBanner from '@/components/auth/AgentRegisterBanner';
 import OtpVerificationModal from '@/components/auth/OtpVerificationModal';
+import { toast } from '@/components/ui/toast';
+import { compressImage } from '@/lib/utils/compressImage';
 
 export default function AgentRegisterPage() {
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -78,10 +80,12 @@ export default function AgentRegisterPage() {
       setIsUploadingKyc(true);
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
+      // ⚡ บีบอัดรูปภาพก่อนอัปโหลดเพื่อความรวดเร็วและประหยัดแบนด์วิดท์
+      const compressed = await compressImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
+      const formData = new FormData();
+      formData.append('file', compressed.file);
+
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData
@@ -96,11 +100,11 @@ export default function AgentRegisterPage() {
           setKycDoc(data.url);
         }
       } else {
-        alert(data.error || 'อัปโหลดไฟล์ล้มเหลว');
+        toast.error(data.error || 'อัปโหลดไฟล์ล้มเหลว');
       }
     } catch (err) {
       console.error(err);
-      alert('เกิดข้อผิดพลาดในการอัปโหลด');
+      toast.error('เกิดข้อผิดพลาดในการอัปโหลด');
     } finally {
       if (type === 'profile') {
         setIsUploadingProfile(false);
@@ -126,18 +130,18 @@ export default function AgentRegisterPage() {
 
 
       if (!response.ok) {
-        alert(data.error || "การสมัครสมาชิกไม่สำเร็จ");
+        toast.error(data.error || "การสมัครสมาชิกไม่สำเร็จ");
         setShowOtpModal(false);
         return;
       }
 
       // 3. ถ้าสำเร็จ Backend จะสร้างบัญชีให้ (แต่สถานะคือ pending เพราะ role เป็น agent)
-      alert("สมัครสมาชิกนายหน้าสำเร็จเรียบร้อย! บัญชีของคุณอยู่ระหว่างรอแอดมินตรวจสอบและอนุมัติก่อนเข้าใช้งาน");
+      toast.success("สมัครสมาชิกนายหน้าสำเร็จเรียบร้อย! บัญชีของคุณอยู่ระหว่างรอแอดมินตรวจสอบและอนุมัติ");
       setShowOtpModal(false);
       // 4. พาผู้ใช้กลับไปหน้า Login
-      window.location.href = '/login/agent';
+      setTimeout(() => { window.location.href = '/login/agent'; }, 1200);
     } catch {
-      alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านเพื่อสมัครสมาชิกได้");
+      toast.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านเพื่อสมัครสมาชิกได้");
     }
     setShowOtpModal(false);
   };
@@ -160,12 +164,12 @@ export default function AgentRegisterPage() {
     
     // ด่านตรวจที่ 1: รหัสผ่านตรงกันไหม?
     if (password !== confirmPassword) {
-      alert("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
+      toast.warning("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
       return;
     }
     // ด่านตรวจที่ 2: ติ๊กยอมรับข้อตกลงหรือยัง?
     if (!agreed) {
-      alert("กรุณากดยอมรับเงื่อนไขการเป็นนายหน้า");
+      toast.warning("กรุณากดยอมรับเงื่อนไขการเป็นนายหน้า");
       return;
     }
     

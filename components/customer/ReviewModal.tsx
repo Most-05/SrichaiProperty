@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from '@/components/ui/toast';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -44,15 +45,15 @@ export default function ReviewModal({
       });
       const data = await res.json();
       if (data.success) {
-        alert('ขอบคุณสำหรับความคิดเห็นและการให้คะแนนบริการ!');
+        toast.success('ขอบคุณสำหรับความคิดเห็นและการให้คะแนนบริการ!');
         onClose();
         if (onSuccess) onSuccess();
       } else {
-        alert('เกิดข้อผิดพลาด: ' + data.error);
+        toast.error('เกิดข้อผิดพลาด: ' + data.error);
       }
     } catch (err) {
       console.error(err);
-      alert('บันทึกรีวิวล้มเหลว');
+      toast.error('บันทึกรีวิวล้มเหลว');
     } finally {
       setSubmittingReview(false);
     }

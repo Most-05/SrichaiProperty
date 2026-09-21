@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminKycAgentCard, { AgentData } from '@/components/admin/AdminKycAgentCard';
+import { toast } from '@/components/ui/toast';
 
 export default function AdminKycPage() {
   const [agents, setAgents] = useState<AgentData[]>([]);
@@ -72,15 +73,15 @@ export default function AdminKycPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("อัปเดตสถานะสำเร็จ");
+        toast.success("อัปเดตสถานะสำเร็จ");
         fetchAgents(activeTab); // refresh list
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.error);
+        toast.error("เกิดข้อผิดพลาด: " + data.error);
         fetchAgents(activeTab);
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
       fetchAgents(activeTab);
     }
   };
@@ -97,15 +98,15 @@ export default function AdminKycPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("ลบบัญชีสำเร็จ");
+        toast.success("ลบบัญชีสำเร็จ");
         fetchAgents(activeTab);
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.error);
+        toast.error("เกิดข้อผิดพลาด: " + data.error);
         fetchAgents(activeTab);
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการลบบัญชี");
+      toast.error("เกิดข้อผิดพลาดในการลบบัญชี");
       fetchAgents(activeTab);
     }
   };

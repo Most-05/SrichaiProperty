@@ -21,6 +21,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import ReviewModal from '@/components/customer/ReviewModal';
 import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { toast } from '@/components/ui/toast';
 
 function CalendarIcon({ className }: { className?: string }) {
   return (
@@ -168,7 +169,7 @@ export default function AppointmentsPage() {
     if (!cancelingApt) return;
     const finalReason = cancelReasonOption === 'อื่นๆ' ? customReasonText.trim() : cancelReasonOption;
     if (cancelReasonOption === 'อื่นๆ' && !finalReason) {
-      alert('กรุณาระบุเหตุผลการยกเลิก');
+      toast.warning('กรุณาระบุเหตุผลการยกเลิก');
       return;
     }
 
@@ -185,9 +186,10 @@ export default function AppointmentsPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        toast.success('ยกเลิกนัดหมายเรียบร้อยแล้ว');
         await loadAppointments();
       } else {
-        alert(data.error || 'เกิดข้อผิดพลาดในการยกเลิกนัดหมาย');
+        toast.error(data.error || 'เกิดข้อผิดพลาดในการยกเลิกนัดหมาย');
         await loadAppointments();
       }
     } catch (err) {

@@ -22,6 +22,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
+import { toast } from '@/components/ui/toast';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 // ถ้าโดน server-render (ซึ่ง Next.js ทำแม้ในหน้า 'use client' รอบแรกด้วย) จะพังทันที
@@ -177,12 +178,30 @@ export default function AgentAddPropertyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // 8.1 ตรวจสอบข้อมูลบังคับและตัวเลขป้อนเข้า (Validation)
-    if (!f.title || !f.price || !f.provinceId || !f.amphureId || !f.districtId) return alert('กรุณากรอกข้อมูลสำคัญ (*) ให้ครบถ้วน');
-    if (Number(f.price) <= 0) return alert('กรุณากรอกราคาที่มากกว่า 0 บาท');
-    if (f.landArea && Number(f.landArea) < 0) return alert('ขนาดที่ดินต้องไม่ติดลบ');
-    if (f.usableArea && Number(f.usableArea) < 0) return alert('พื้นที่ใช้สอยต้องไม่ติดลบ');
-    if ([f.bedrooms, f.bathrooms, f.parking, f.floors].some(v => Number(v) < 0)) return alert('จำนวนห้อง/ที่จอดรถ/ชั้น ต้องไม่ติดลบ');
-    if (!agreed1 || !agreed2) return alert('กรุณากดยินยอมเงื่อนไขการลงประกาศ');
+    if (!f.title || !f.price || !f.provinceId || !f.amphureId || !f.districtId) {
+      toast.warning('กรุณากรอกข้อมูลสำคัญ (*) ให้ครบถ้วน');
+      return;
+    }
+    if (Number(f.price) <= 0) {
+      toast.warning('กรุณากรอกราคาที่มากกว่า 0 บาท');
+      return;
+    }
+    if (f.landArea && Number(f.landArea) < 0) {
+      toast.warning('ขนาดที่ดินต้องไม่ติดลบ');
+      return;
+    }
+    if (f.usableArea && Number(f.usableArea) < 0) {
+      toast.warning('พื้นที่ใช้สอยต้องไม่ติดลบ');
+      return;
+    }
+    if ([f.bedrooms, f.bathrooms, f.parking, f.floors].some(v => Number(v) < 0)) {
+      toast.warning('จำนวนห้อง/ที่จอดรถ/ชั้น ต้องไม่ติดลบ');
+      return;
+    }
+    if (!agreed1 || !agreed2) {
+      toast.warning('กรุณากดยินยอมเงื่อนไขการลงประกาศ');
+      return;
+    }
 
     setLoading(true);
     // ค้นหาชื่อจังหวัดและอำเภอเพื่อนำมาประกอบข้อความทำเลที่ตั้ง (Location String)
@@ -213,11 +232,16 @@ export default function AgentAddPropertyPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert('ส่งคำขอลงประกาศเรียบร้อยแล้ว! รอการอนุมัติจากแอดมิน');
+        toast.success('ส่งคำขอลงประกาศเรียบร้อยแล้ว! รอการอนุมัติจากแอดมิน');
         router.push('/agent/home');
-      } else alert(data.error || 'เกิดข้อผิดพลาด');
-    } catch { alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์'); }
-    finally { setLoading(false); }
+      } else {
+        toast.error(data.error || 'เกิดข้อผิดพลาดในการลงประกาศ');
+      }
+    } catch {
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -425,11 +449,11 @@ export default function AgentAddPropertyPage() {
                       setF(prev => ({ ...prev, doc: data.url }));
                       setDocFileName(file.name);
                     } else {
-                      alert(data.error || 'อัปโหลดเอกสารล้มเหลว');
+                      toast.error(data.error || 'อัปโหลดเอกสารล้มเหลว');
                     }
                   } catch (err) {
                     console.error(err);
-                    alert('เกิดข้อผิดพลาดในการอัปโหลดเอกสาร');
+                    toast.error('เกิดข้อผิดพลาดในการอัปโหลดเอกสาร');
                   } finally {
                     setDocUploading(false);
                     e.target.value = '';

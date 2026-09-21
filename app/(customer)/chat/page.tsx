@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useChatRealtime } from '@/hooks/useChatRealtime';
 import SharedChatView, { SharedChatSession, OutgoingChatPayload } from '@/components/common/SharedChatView';
+import { toast } from '@/components/ui/toast';
 
 // ==============================================================================
 // 1. TYPE DEFINITIONS (โครงสร้างข้อมูลข้อความและห้องแชทฝั่งลูกค้า)
@@ -133,8 +134,9 @@ function ChatContent() {
     const data = await res.json();
     if (res.ok && data.success) {
       setSessions(prev => prev.map(s => ({ ...s, messages: s.messages.filter(m => m.id !== messageId) })));
+      toast.success('ลบข้อความเรียบร้อยแล้ว');
     } else {
-      alert(data.error || 'ไม่สามารถลบข้อความได้');
+      toast.error(data.error || 'ไม่สามารถลบข้อความได้');
     }
   }, []);
 
@@ -147,8 +149,9 @@ function ChatContent() {
     if (res.ok && data.success) {
       setSessions(prev => prev.filter(s => s.id !== sessionId));
       setSelectedSessionId(prev => (prev === sessionId ? null : prev));
+      toast.success('ลบห้องแชทเรียบร้อยแล้ว');
     } else {
-      alert(data.error || 'ไม่สามารถลบห้องแชทได้');
+      toast.error(data.error || 'ไม่สามารถลบห้องแชทได้');
     }
   }, []);
 
@@ -177,10 +180,10 @@ function ChatContent() {
         // โหลดข้อมูลแชทเพื่อซิงก์ข้อความใหม่ทันที
         fetchChatData();
       } else {
-        alert(data.error || 'เกิดข้อผิดพลาดในการส่งข้อความ');
+        toast.error(data.error || 'เกิดข้อผิดพลาดในการส่งข้อความ');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดในการส่งข้อความ');
+      toast.error('เกิดข้อผิดพลาดในการส่งข้อความ');
     }
   };
 

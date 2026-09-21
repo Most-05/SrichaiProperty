@@ -66,6 +66,8 @@ function CrownIcon({ className }: { className?: string }) {
 }
 
 export default function PropertyCard({ prop, isFav, toggleFavorite }: PropertyCardProps) {
+  const [isImageLoaded, setIsImageLoaded] = React.useState(false);
+
   // ฟังก์ชันช่วยสร้างรูป Avatar สำรองจากชื่อนายหน้า (กรณีที่นายหน้าไม่มีรูปโปรไฟล์)
   const getInitialsAvatar = (name: string) =>
     `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1d4ed8&color=fff`;
@@ -111,14 +113,21 @@ export default function PropertyCard({ prop, isFav, toggleFavorite }: PropertyCa
 
       {/* ลิงก์ห่อหุ้มรูปภาพและรายละเอียดบ้าน */}
       <Link href={`/property/${prop.id}`} className="block flex-grow">
-        {/* รูปภาพหลักของอสังหาริมทรัพย์ */}
+        {/* รูปภาพหลักของอสังหาริมทรัพย์ พร้อม Blur Placeholder ป้องกัน Layout Shift (CLS = 0) */}
         <div className="relative h-40 overflow-hidden bg-slate-100">
+          {/* Skeleton Shimmer Background ขณะรอรูปดาวน์โหลด */}
+          {!isImageLoaded && (
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-pulse" />
+          )}
           <Image 
             src={prop.image} 
             alt={prop.title}
             width={320}
             height={160}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            onLoad={() => setIsImageLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-[1.03] ${
+              isImageLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-sm scale-105'
+            }`}
           />
         </div>
 

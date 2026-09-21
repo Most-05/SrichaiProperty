@@ -15,6 +15,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { toast } from '@/components/ui/toast';
 
 /** โครงสร้างข้อมูลประกาศอสังหาริมทรัพย์สำหรับแอดมินตรวจสอบ */
 interface PropertyData {
@@ -109,14 +110,14 @@ export default function AdminModerationPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("อัปเดตสถานะประกาศเรียบร้อยแล้ว");
+        toast.success("อัปเดตสถานะประกาศเรียบร้อยแล้ว");
         fetchProperties(activeTab, listingTypeFilter);
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.error);
+        toast.error("เกิดข้อผิดพลาด: " + data.error);
       }
     } catch (err) {
       console.error("เกิดข้อผิดพลาดในการอัปเดตสถานะ:", err);
-      alert("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
     }
   };
 
@@ -164,7 +165,7 @@ export default function AdminModerationPage() {
     if (!rejectingProperty) return;
     const finalReason = rejectReasonOption === 'อื่นๆ' ? customRejectReason.trim() : rejectReasonOption;
     if (rejectReasonOption === 'อื่นๆ' && !finalReason) {
-      alert('กรุณาระบุเหตุผลการปฏิเสธในช่องข้อความ');
+      toast.warning('กรุณาระบุเหตุผลการปฏิเสธในช่องข้อความ');
       return;
     }
 

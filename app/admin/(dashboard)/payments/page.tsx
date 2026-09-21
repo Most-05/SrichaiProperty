@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast } from '@/components/ui/toast';
 
 interface Payment {
   id: string;
@@ -78,13 +79,14 @@ export default function AdminPaymentsPage() {
       });
       const data = await res.json();
       if (data.success) {
+        toast.success(`ทำรายการ ${action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ'} สลิปสำเร็จ`);
         setLoading(true);
         setTick(t => t + 1);
       } else {
-        alert(data.error ?? 'เกิดข้อผิดพลาด');
+        toast.error(data.error ?? 'เกิดข้อผิดพลาด');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
       setProcessingId(null);
     }

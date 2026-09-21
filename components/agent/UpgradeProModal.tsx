@@ -13,6 +13,8 @@
  */
 
 import React, { useState } from 'react';
+import { toast } from '@/components/ui/toast';
+import { compressImage } from '@/lib/utils/compressImage';
 
 /** Props สำหรับ UpgradeProModal Component */
 interface UpgradeProModalProps {
@@ -28,12 +30,16 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
   if (!isOpen) return null;
 
   const handleCheckout = async () => {
-    if (!slipFile) return alert('กรุณาแนบไฟล์รูปภาพสลิปการโอนเงิน');
+    if (!slipFile) {
+      toast.warning('กรุณาแนบไฟล์รูปภาพสลิปการโอนเงิน');
+      return;
+    }
     setSubmittingPayment(true);
     try {
-      // ต้องส่งเป็น FormData เพราะ /api/packages/checkout รับไฟล์แนบจริง (formData.get("slip")) ไม่ใช่ JSON
+      // ⚡ บีบอัดสลิปโอนเงินก่อนส่งขึ้นเซิร์ฟเวอร์
+      const compressed = await compressImage(slipFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
       const formData = new FormData();
-      formData.append('slip', slipFile);
+      formData.append('slip', compressed.file);
       formData.append('packageId', '1');
       formData.append('amount', '599');
 
@@ -43,16 +49,16 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
       });
       const data = await res.json();
       if (data.success) {
-        alert('ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว! ทีมงานจะตรวจสอบและอนุมัติแพ็กเกจ PRO ภายใน 1-2 ชม.');
+        toast.success('ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว! ทีมงานจะตรวจสอบและอนุมัติแพ็กเกจ PRO ภายใน 1-2 ชม.');
         setSlipFile(null);
         onClose();
         if (onSuccess) onSuccess();
       } else {
-        alert('เกิดข้อผิดพลาด: ' + data.error);
+        toast.error('เกิดข้อผิดพลาด: ' + data.error);
       }
     } catch (err) {
       console.error(err);
-      alert('ส่งสลิปชำระเงินล้มเหลว');
+      toast.error('ส่งสลิปชำระเงินล้มเหลว กรุณาลองใหม่อีกครั้ง');
     } finally {
       setSubmittingPayment(false);
     }

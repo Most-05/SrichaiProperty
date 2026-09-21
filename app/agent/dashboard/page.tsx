@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FREE_LISTING_QUOTA } from '@/lib/constants';
+import { toast } from '@/components/ui/toast';
 
 // นำเข้า คอมโพเนนต์ย่อยสำหรับระบบ Agent Dashboard
 import PendingApprovalBanner from '@/components/agent/PendingApprovalBanner';
@@ -221,10 +222,13 @@ export default function AgentDashboardPage() {
       if (res.ok) {
         // หากอสังหาฯ ที่ลบอยู่กำลังเปิดดูสถิติใน Modal ให้ปิด Modal ด้วย
         if (selectedProperty?.id === propertyId) setSelectedProperty(null);
+        toast.success('ลบประกาศเรียบร้อยแล้ว');
         loadDashboard(); // รีโหลดข้อมูล Dashboard เพื่ออัปเดตตัวเลขล่าสุด
-      } else alert('ลบประกาศไม่สำเร็จ');
+      } else {
+        toast.error('ลบประกาศไม่สำเร็จ');
+      }
     } catch {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
       setDeletingId(null);
     }
@@ -235,6 +239,7 @@ export default function AgentDashboardPage() {
     const url = `${window.location.origin}/property/${propertyId}`;
     navigator.clipboard.writeText(url);
     setCopiedId(propertyId);
+    toast.success('คัดลอกลิงก์ประกาศแล้ว!');
     setTimeout(() => setCopiedId(null), 2000); // เคลียร์ข้อความแจ้งเตือนหลังผ่านไป 2 วินาที
   };
 

@@ -19,6 +19,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useApp } from '@/context/AppContext';
+import { toast } from '@/components/ui/toast';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
@@ -275,7 +276,7 @@ export default function PropertyDetailPage() {
   const handleShare = () => {
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
-      alert("คัดลอกลิงก์ไปยังคลิปบอร์ดเรียบร้อยแล้ว!");
+      toast.success("คัดลอกลิงก์ประกาศไปยังคลิปบอร์ดแล้ว!");
     }
   };
 
@@ -292,10 +293,10 @@ export default function PropertyDetailPage() {
       if (res.ok && data.success && data.sessionId) {
         window.location.href = `/chat?sessionId=${data.sessionId}`;
       } else {
-        alert(data.error || 'ไม่สามารถเปิดห้องแชทได้');
+        toast.error(data.error || 'ไม่สามารถเปิดห้องแชทได้');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดในการเปิดห้องแชท');
+      toast.error('เกิดข้อผิดพลาดในการเปิดห้องแชท');
     } finally {
       setStartingChat(false);
     }

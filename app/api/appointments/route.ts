@@ -182,48 +182,73 @@ export async function POST(request: Request) {
     // 2.5 แปลงข้อความรอบเวลาให้อยู่ในคีย์มาตรฐาน DB ('morning' หรือ 'afternoon')
     const dbTimeSlot = timeSlot.includes("13:") || timeSlot.includes("15:") || timeSlot.includes("บ่าย") || timeSlot.toLowerCase().includes("afternoon") ? "afternoon" : "morning";
 
-    // 🔑 KEYWORD: เช็ครอบว่างจริงก่อนจอง
-    // 2.6 ตรวจสอบว่ารอบเวลานี้เปิดว่างจริงในตาราง property_viewing_slots และยังไม่มีคนจองคิวไปก่อน
-    const targetSlot = await db.property_viewing_slots.findUnique({
-      where: {
-        property_id_available_date_time_slot: {
-          property_id: property.id,
-          available_date: new Date(date),
-          time_slot: dbTimeSlot
-        }
-      }
-    });
-    if (!targetSlot) return NextResponse.json({ error: "ไม่พบรอบเข้าชมนี้ กรุณาเลือกวันและช่วงเวลาที่นายหน้าเปิดไว้" }, { status: 400 });
-    if (targetSlot.is_booked) return NextResponse.json({ error: "ช่วงเวลานี้ถูกจองไปแล้ว" }, { status: 400 });
-
     // 🔑 KEYWORD: ล็อกวันว่างตอนลูกค้าจองจริง
-    // 2.6.1 เช็คว่านายหน้าคนนี้มีนัดจริงกับ "บ้านหลังอื่น" ชนวัน+เวลานี้อยู่แล้วหรือไม่
-    // (จุดล็อกจริงของระบบ — ไม่ล็อกตั้งแต่ตอนเปิดวันว่าง เพราะนายหน้าไปนำชมได้ทีละที่)
+    // 2.6 เช็คว่านายหน้าคนนี้มีนัดจริงกับ "บ้านหลังอื่น" ชนวัน+เวลานี้อยู่แล้วหรือไม่
     if (property.agent_id && await hasAgentBookingConflict(property.agent_id, property.id, new Date(date), dbTimeSlot)) {
       return NextResponse.json({ error: "นายหน้าติดนัดชมบ้านหลังอื่นในช่วงเวลานี้แล้ว กรุณาเลือกวันหรือเวลาอื่น" }, { status: 400 });
     }
 
-    // 2.7 สร้างคำขอนัดหมายใหม่ลงในตาราง appointments (สถานะเริ่มต้นเป็น 'pending')
-    const newAppointment = await db.appointments.create({
-      data: {
-        customer_id: user.id,
-        agent_id: property.agent_id,
-        property_id: property.id,
-        appointment_date: new Date(date),
-        time_slot: dbTimeSlot,
-        status: "pending",
-        note: note || ""
+    // ⚡ 2.7 ดำเนินการตรวจสอบและจองคิวแบบ Database Transaction (ACID)
+    // ป้องกันการเกิด Race Condition / Double Booking ในเสี้ยววินาทีเดียวกัน 100%
+    const newAppointment = await db.$transaction(async (tx) => {
+      // (1) ค้นหารอบเข้าชมในฐานข้อมูลและตรวจสอบว่ายังว่างอยู่หรือไม่
+      const targetSlot = await tx.property_viewing_slots.findUnique({
+        where: {
+          property_id_available_date_time_slot: {
+            property_id: property.id,
+            available_date: new Date(date),
+            time_slot: dbTimeSlot
+          }
+        }
+      });
+      if (!targetSlot) {
+        throw new Error("NOT_FOUND_SLOT");
       }
+      if (targetSlot.is_booked) {
+        throw new Error("SLOT_ALREADY_BOOKED");
+      }
+
+      // (2) ตรวจสอบนัดหมายค้างของลูกค้าอีกครั้งภายใน Transaction
+      const doubleCheckExisting = await tx.appointments.findFirst({
+        where: { customer_id: user.id, property_id: property.id, status: { in: ["pending", "approved"] } }
+      });
+      if (doubleCheckExisting) {
+        throw new Error("ALREADY_HAVE_PENDING_APPOINTMENT");
+      }
+
+      // (3) ล็อกรอบเวลานี้ในตาราง property_viewing_slots ด้วย Atomic Condition (where is_booked: false)
+      const slotLock = await tx.property_viewing_slots.updateMany({
+        where: {
+          property_id: property.id,
+          available_date: new Date(date),
+          time_slot: dbTimeSlot,
+          is_booked: false // ล็อกเฉพาะเมื่อรอบเวลานี้ยังเป็น false จริง ณ เสี้ยววินาทีนั้น
+        },
+        data: { is_booked: true }
+      });
+
+      // หากมีผู้ใช้อื่นจองตัดหน้าในเสี้ยววินาทีเดียวกัน slotLock.count จะเป็น 0 ทันที
+      if (slotLock.count === 0) {
+        throw new Error("SLOT_ALREADY_BOOKED");
+      }
+
+      // (4) สร้างคำขอนัดหมายใหม่ลงในตาราง appointments
+      const created = await tx.appointments.create({
+        data: {
+          customer_id: user.id,
+          agent_id: property.agent_id,
+          property_id: property.id,
+          appointment_date: new Date(date),
+          time_slot: dbTimeSlot,
+          status: "pending",
+          note: note || ""
+        }
+      });
+
+      return created;
     });
 
-    // 🔑 KEYWORD: ล็อกรอบเวลาหลังจองสำเร็จ
-    // 2.8 ล็อกรอบเวลานี้ในตาราง property_viewing_slots ทันทีเพื่อป้องกันไม่ให้ผู้อื่นจองซ้ำ (is_booked = true)
-    await db.property_viewing_slots.updateMany({
-      where: { property_id: property.id, available_date: new Date(date), time_slot: dbTimeSlot },
-      data: { is_booked: true }
-    });
-
-    // 2.9 ส่งการแจ้งเตือนไปยังนายหน้าผู้ดูแลและลูกค้าที่ทำรายการ
+    // 2.8 ส่งการแจ้งเตือนไปยังนายหน้าผู้ดูแลและลูกค้าที่ทำรายการ
     const customerName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "ลูกค้า";
     const timeLabel = dbTimeSlot === "morning" ? "ช่วงเช้า (10:00 - 12:00 น.)" : "ช่วงบ่าย (14:00 - 16:00 น.)";
 
@@ -246,7 +271,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: newAppointment });
   } catch (error) {
-    return NextResponse.json({ error: "สร้างคำขอนัดหมายล้มเหลว: " + (error as Error).message }, { status: 500 });
+    const msg = (error as Error).message;
+    if (msg === "SLOT_ALREADY_BOOKED") {
+      return NextResponse.json({ error: "ช่วงเวลานี้ถูกจองไปแล้ว กรุณาเลือกรอบเวลาอื่น" }, { status: 409 });
+    }
+    if (msg === "NOT_FOUND_SLOT") {
+      return NextResponse.json({ error: "ไม่พบรอบเข้าชมนี้ กรุณาเลือกวันและช่วงเวลาที่นายหน้าเปิดไว้" }, { status: 400 });
+    }
+    if (msg === "ALREADY_HAVE_PENDING_APPOINTMENT") {
+      return NextResponse.json({ error: "คุณมีนัดหมายค้างอยู่สำหรับบ้านหลังนี้แล้ว กรุณารอผลหรือยกเลิกนัดเดิมก่อนจองใหม่" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "สร้างคำขอนัดหมายล้มเหลว: " + msg }, { status: 500 });
   }
 }
 
@@ -399,41 +434,58 @@ export async function PATCH(request: Request) {
         }
       }
 
-      // 🔑 KEYWORD: เก็บวันนัดเดิมไว้โชว์ขีดฆ่า
-      // เก็บวัน+รอบ "ครั้งแรกสุด" ที่ลูกค้าจองไว้ เพื่อให้นายหน้าเห็นว่าเดิมนัดวันไหน แล้วถูกเลื่อนมาเป็นวันใหม่
-      // เขียนเฉพาะตอนที่ยังว่าง (null) เท่านั้น — ถ้าลูกค้าเลื่อนนัดครั้งที่ 2, 3 ต้องไม่ทับของเดิม
-      // ไม่งั้นจะกลายเป็น "วันก่อนหน้า" แทนที่จะเป็น "วันที่จองไว้ตั้งแต่แรก"
+      // ⚡ สลับการล็อกรอบเวลาแบบ Transaction ป้องกันการแย่งจองรอบใหม่ในเสี้ยววินาทีเดียวกัน
       const shouldKeepOriginal = !isSameSlot && appointment.original_date === null;
 
-      const updated = await db.appointments.update({
-        where: { id },
-        data: {
-          appointment_date: new Date(date),
-          time_slot: timeSlot,
-          ...(shouldKeepOriginal
-            ? { original_date: appointment.appointment_date, original_time_slot: appointment.time_slot }
-            : {})
-        }
-      });
+      const updated = await db.$transaction(async (tx) => {
+        if (!isSameSlot) {
+          // ล็อกรอบใหม่ด้วย Atomic Condition
+          const lockNew = await tx.property_viewing_slots.updateMany({
+            where: {
+              property_id: appointment.property_id!,
+              available_date: new Date(date),
+              time_slot: timeSlot,
+              is_booked: false
+            },
+            data: { is_booked: true }
+          });
+          if (lockNew.count === 0) {
+            throw new Error("SLOT_ALREADY_BOOKED");
+          }
 
-      // สลับการล็อกรอบเวลา: ปลดล็อกรอบเดิมคืนระบบ และ ไปล็อกรอบใหม่
-      if (!isSameSlot) {
-        await db.property_viewing_slots.updateMany({
-          where: { property_id: appointment.property_id, available_date: appointment.appointment_date, time_slot: appointment.time_slot ?? undefined },
-          data: { is_booked: false }
+          // ปลดล็อกรอบเดิมคืนระบบ
+          await tx.property_viewing_slots.updateMany({
+            where: {
+              property_id: appointment.property_id!,
+              available_date: appointment.appointment_date,
+              time_slot: appointment.time_slot ?? undefined
+            },
+            data: { is_booked: false }
+          });
+        }
+
+        return tx.appointments.update({
+          where: { id },
+          data: {
+            appointment_date: new Date(date),
+            time_slot: timeSlot,
+            ...(shouldKeepOriginal
+              ? { original_date: appointment.appointment_date, original_time_slot: appointment.time_slot }
+              : {})
+          }
         });
-        await db.property_viewing_slots.updateMany({
-          where: { property_id: appointment.property_id, available_date: new Date(date), time_slot: timeSlot },
-          data: { is_booked: true }
-        });
-      }
+      });
 
       return NextResponse.json({ success: true, data: updated });
     }
 
     return NextResponse.json({ error: "คำขอไม่ถูกต้อง" }, { status: 400 });
   } catch (error) {
-    return NextResponse.json({ error: "อัปเดตนัดหมายล้มเหลว: " + (error as Error).message }, { status: 500 });
+    const msg = (error as Error).message;
+    if (msg === "SLOT_ALREADY_BOOKED") {
+      return NextResponse.json({ error: "ช่วงเวลานี้ถูกจองไปแล้ว กรุณาเลือกรอบเวลาอื่น" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "อัปเดตนัดหมายล้มเหลว: " + msg }, { status: 500 });
   }
 }
 

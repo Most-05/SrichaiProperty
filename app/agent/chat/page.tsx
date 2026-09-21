@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { useChatRealtime } from '@/hooks/useChatRealtime';
 import SharedChatView, { SharedChatSession, OutgoingChatPayload } from '@/components/common/SharedChatView';
+import { toast } from '@/components/ui/toast';
 
 // ==============================================================================
 // 1. โครงสร้างประเภทข้อมูล (TypeScript Interfaces)
@@ -163,8 +164,9 @@ function AgentChatContent() {
     const data = await res.json();
     if (res.ok && data.success) {
       setSessions(prev => prev.map(s => ({ ...s, messages: s.messages.filter(m => m.id !== messageId) })));
+      toast.success('ลบข้อความเรียบร้อยแล้ว');
     } else {
-      alert(data.error || 'ไม่สามารถลบข้อความได้');
+      toast.error(data.error || 'ไม่สามารถลบข้อความได้');
     }
   }, []);
 
@@ -175,8 +177,9 @@ function AgentChatContent() {
     if (res.ok && data.success) {
       setSessions(prev => prev.filter(s => s.id !== sessionId));
       setSelectedSessionId(prev => (prev === sessionId ? null : prev));
+      toast.success('ลบห้องแชทเรียบร้อยแล้ว');
     } else {
-      alert(data.error || 'ไม่สามารถลบห้องแชทได้');
+      toast.error(data.error || 'ไม่สามารถลบห้องแชทได้');
     }
   }, []);
 
@@ -231,11 +234,12 @@ function AgentChatContent() {
       const data = await res.json();
       if (res.ok && data.success) {
         fetchTemplates();
+        toast.success('เพิ่มเทมเพลตข้อความสำเร็จ');
       } else {
-        alert(data.error || 'เพิ่มเทมเพลตไม่สำเร็จ');
+        toast.error(data.error || 'เพิ่มเทมเพลตไม่สำเร็จ');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดขณะเพิ่มเทมเพลต');
+      toast.error('เกิดข้อผิดพลาดขณะเพิ่มเทมเพลต');
     }
   };
 
@@ -252,11 +256,12 @@ function AgentChatContent() {
       const data = await res.json();
       if (res.ok && data.success) {
         fetchTemplates();
+        toast.success('ลบเทมเพลตเรียบร้อยแล้ว');
       } else {
-        alert(data.error || 'ลบเทมเพลตไม่สำเร็จ');
+        toast.error(data.error || 'ลบเทมเพลตไม่สำเร็จ');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดขณะลบเทมเพลต');
+      toast.error('เกิดข้อผิดพลาดขณะลบเทมเพลต');
     }
   };
 

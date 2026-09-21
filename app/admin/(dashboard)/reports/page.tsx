@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Badge from '@/components/ui/Badge';
+import { toast } from '@/components/ui/toast';
 
 interface ReportData {
   id: string;
@@ -64,14 +65,14 @@ export default function AdminReportsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("ดำเนินการเรียบร้อยแล้ว");
+        toast.success("ดำเนินการเรียบร้อยแล้ว");
         fetchReports(activeTab);
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.error);
+        toast.error("เกิดข้อผิดพลาด: " + data.error);
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการทำรายการ");
+      toast.error("เกิดข้อผิดพลาดในการทำรายการ");
     }
   };
 
