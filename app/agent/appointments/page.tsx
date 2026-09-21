@@ -1042,9 +1042,14 @@ export default function AgentAppointmentsPage() {
               </div>
 
               {newDate && (
-                <p className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                  เลือกไว้: {formatDateTH(newDate)}
-                </p>
+                <div className="text-[10px] font-bold bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 space-y-1">
+                  <p className="text-amber-700">เลือกไว้: {formatDateTH(newDate)}</p>
+                  {busyDatesForReschedule.has(newDate) && (
+                    <p className="text-amber-900 leading-relaxed">
+                      วันนี้คุณมีนัดกับบ้านหลังอื่นอยู่แล้ว — ถ้ารอบเวลาตรงกันระบบจะไม่ให้เลื่อนมาวันนี้
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
