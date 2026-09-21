@@ -411,6 +411,15 @@ export default function AgentAppointmentsPage() {
 
   const getAppointmentsForDate = (dateStr: string) => appointments.filter(a => a.date === dateStr);
 
+  // วันที่นายหน้ามีนัดที่ยัง "จองอยู่จริง" อยู่แล้ว — ใช้โชว์จุดเตือนบนปฏิทินในโมดัลขอเลื่อนวัน
+  // API มี hasAgentBookingConflict คอยกันชนอยู่แล้ว แต่เดิมนายหน้าจะรู้ว่าชนก็ต่อเมื่อกดส่งแล้วโดนตีกลับ
+  // ไม่นับใบที่กำลังเลื่อนเอง เพราะย้ายรอบเวลาภายในวันเดิมเป็นเรื่องปกติ
+  const busyDatesForReschedule = useMemo(() => new Set(
+    appointments
+      .filter(a => a.id !== reschedulingApt?.id && ['pending', 'approved', 'awaiting_customer'].includes(a.status))
+      .map(a => a.date)
+  ), [appointments, reschedulingApt]);
+
   return (
     <div className="font-sans text-slate-800 text-xs antialiased flex flex-col min-h-screen bg-[#f8fafc]">
 
@@ -1001,6 +1010,7 @@ export default function AgentAppointmentsPage() {
                     const isSelected = newDate === dateStr;
                     const isToday = dateStr === todayKey;
                     const isPast = dateStr < todayKey;      // วันที่ผ่านไปแล้ว เลื่อนนัดไปหาไม่ได้
+                    const isBusy = !isPast && busyDatesForReschedule.has(dateStr); // มีนัดอื่นอยู่แล้ว
 
                     let dayClass = 'relative w-7 h-7 flex items-center justify-center mx-auto rounded-full transition-all ';
                     if (isSelected) dayClass += 'bg-amber-500 text-white shadow-md cursor-pointer';
@@ -1017,6 +1027,9 @@ export default function AgentAppointmentsPage() {
                         className={dayClass}
                       >
                         {dayNum}
+                        {isBusy && (
+                          <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-amber-500'}`} />
+                        )}
                       </button>
                     );
                   })}
@@ -1024,7 +1037,7 @@ export default function AgentAppointmentsPage() {
 
                 <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-2.5 pt-2 border-t border-slate-100 text-[9px] font-bold text-slate-400">
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full border-2 border-blue-500 inline-block" /> วันนี้</span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> วันที่เลือก</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> มีนัดอยู่แล้ว</span>
                 </div>
               </div>
 
