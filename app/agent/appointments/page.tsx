@@ -45,6 +45,13 @@ function formatDateTH(dateStr: string): string {
   return `วัน${days[d.getDay()]}ที่ ${d.getDate()} ${MONTH_NAMES_TH[d.getMonth()]} ${d.getFullYear() + 543}`;
 }
 
+// แปลง Date เป็นคีย์ "YYYY-MM-DD" ตามวันที่ของเครื่องผู้ใช้
+// ห้ามใช้ toISOString() เพราะมันคืนวันตามโซน UTC ทำให้ช่วงเที่ยงคืน-7 โมงเช้าของไทย
+// ได้วันที่ย้อนหลังไป 1 วัน (ปฏิทินจะไฮไลต์ "วันนี้" ผิดวัน และกรองนัดผิดช่วง)
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function timeSlotLabel(slot: string): string {
   return slot === 'afternoon' ? 'ช่วงบ่าย (13:00 น.)' : 'ช่วงเช้า (10:00 น.)';
 }
@@ -71,7 +78,7 @@ export default function AgentAppointmentsPage() {
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null);
 
-  const todayKey = today.toISOString().split('T')[0];
+  const todayKey = toDateKey(today);
 
   const loadAppointments = useCallback(async () => {
     setLoading(true);
@@ -380,7 +387,7 @@ export default function AgentAppointmentsPage() {
   const upcomingWithin7Days = useMemo(() => {
     const in7 = new Date();
     in7.setDate(in7.getDate() + 7);
-    const in7Key = in7.toISOString().split('T')[0];
+    const in7Key = toDateKey(in7);
     return upcoming.filter(a => a.date >= todayKey && a.date <= in7Key).length;
   }, [upcoming, todayKey]);
 
