@@ -189,7 +189,7 @@ function ScheduleContent() {
   }, [properties, selectedPropId]);
 
   return (
-    <div className="pt-20 min-h-screen bg-slate-50 text-slate-800 text-xs sm:text-sm font-sans pb-16">
+    <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50 text-slate-800 text-xs sm:text-sm font-sans pb-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
 
         {/* 1. ส่วนหัวหน้าเว็บ */}
@@ -381,13 +381,15 @@ function ScheduleContent() {
                     {/* สถานะรอบในช่องวัน */}
                     <div className="space-y-0.5">
                       {booked > 0 && (
-                        <div className="text-[9px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-1 py-0.2 rounded truncate">
-                          นัด {booked} คิว
+                        <div className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1 py-0.5 rounded text-center sm:text-left truncate" title={`นัด ${booked} คิว`}>
+                          <span className="sm:hidden">📅 {booked}</span>
+                          <span className="hidden sm:inline">นัด {booked} คิว</span>
                         </div>
                       )}
                       {available > 0 && (
-                        <div className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1 py-0.2 rounded truncate">
-                          ว่าง {available} รอบ
+                        <div className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded text-center sm:text-left truncate" title={`ว่าง ${available} รอบ`}>
+                          <span className="sm:hidden">ว่าง {available}</span>
+                          <span className="hidden sm:inline">ว่าง {available} รอบ</span>
                         </div>
                       )}
                     </div>
@@ -569,10 +571,10 @@ function ScheduleContent() {
 
       {/* 5. Modal: เปิดวันว่างล่วงหน้า (Batch) */}
       {showBatchModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <form
             onSubmit={handleBatchSubmit}
-            className="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-xl border border-slate-200"
+            className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full space-y-4 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>

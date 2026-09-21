@@ -77,17 +77,17 @@ export default function AdminReportsPage() {
 
   return (
     <>
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative z-0">
+        <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
           <h2 className="text-lg font-extrabold text-slate-800">ตรวจสอบรายงานปัญหา (Reports & Complaints)</h2>
-          <div className="relative w-72">
+          <div className="relative w-full sm:w-72">
             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 text-sm">🔍</span>
-            <input type="text" placeholder="ค้นหา Ticket ID, ชื่อผู้ใช้..." className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-700" />
+            <input type="text" placeholder="ค้นหา Ticket ID, ชื่อผู้ใช้..." className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-700 text-xs" />
           </div>
         </header>
 
-        <div className="p-8 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto">
           {/* Tabs */}
-          <div className="flex items-center gap-2 mb-6 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200">
+          <div className="flex items-center gap-2 mb-6 bg-slate-100 p-1 rounded-xl max-w-full overflow-x-auto no-scrollbar w-fit border border-slate-200">
             <button 
               onClick={() => { setActiveTab('pending'); setLoading(true); }}
               className={`px-5 py-2 rounded-lg font-bold transition-all text-xs flex items-center gap-2 ${activeTab === 'pending' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
@@ -125,10 +125,10 @@ export default function AdminReportsPage() {
                 const isScam = report.reason.toLowerCase().includes('scam') || report.reason.includes('ฉ้อโกง');
                 return (
                   <div key={report.id} className="bg-white rounded-2xl border-l-4 border-red-500 shadow-sm overflow-hidden flex flex-col border border-slate-200/60">
-                    <div className="p-6 flex flex-col xl:flex-row gap-6">
+                    <div className="p-4 sm:p-6 flex flex-col xl:flex-row gap-6">
                       
                       {/* Left Block: Users and Severity */}
-                      <div className="xl:w-2/5 flex flex-col gap-4 border-r border-slate-100 pr-6">
+                      <div className="xl:w-2/5 flex flex-col gap-4 border-b xl:border-b-0 xl:border-r border-slate-100 pb-6 xl:pb-0 xl:pr-6">
                         <div className="flex items-center justify-between">
                           <Badge status={report.reason} />
                           <span className="text-[10px] text-slate-400 font-bold">Ticket: RP-00{idx + 1}</span>

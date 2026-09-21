@@ -143,7 +143,7 @@ export default function AgentHomePage() {
   const lowSlotProperties = dbData?.lowSlotProperties || [];
 
   return (
-    <div className="pt-16 min-h-screen bg-slate-50/50 text-slate-800 text-xs md:text-sm font-sans antialiased">
+    <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50/50 text-slate-800 text-xs md:text-sm font-sans antialiased">
       <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-6 text-left">
 
         {/* Banner แจ้งเตือนรออนุมัติ */}
@@ -197,7 +197,7 @@ export default function AgentHomePage() {
         </section>
 
         {/* 4 Cards สถิติตัวเลขหลัก */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Link href="/agent/dashboard" className="bg-white hover:bg-slate-50 rounded-2xl p-4 border border-slate-100 hover:border-slate-300 shadow-2xs hover:shadow-md transition block">
             <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">ประกาศทั้งหมด</span>
             <strong className="text-xl font-black text-slate-900 block mt-1">{dbData?.propertiesCount || 0} รายการ</strong>

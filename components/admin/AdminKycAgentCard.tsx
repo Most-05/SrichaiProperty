@@ -38,9 +38,9 @@ export default function AdminKycAgentCard({ agent, activeTab, onUpdateStatus, on
   return (
     <div className="bg-white rounded-2xl border-2 border-amber-500/20 shadow-sm overflow-hidden flex flex-col">
       {/* Card Main Content */}
-      <div className="flex flex-col xl:flex-row p-6 gap-6">
+      <div className="flex flex-col xl:flex-row p-4 sm:p-6 gap-6">
         {/* Left: Info */}
-        <div className="xl:w-1/3 flex flex-col gap-6 border-r border-slate-100 pr-6">
+        <div className="xl:w-1/3 flex flex-col gap-6 border-b xl:border-b-0 xl:border-r border-slate-100 pb-6 xl:pb-0 xl:pr-6">
           
           <div className="flex items-center gap-2">
              <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded-md border border-blue-100 tracking-wider">ขออัปเกรดเป็น AGENT (R2)</span>
@@ -101,9 +101,9 @@ export default function AdminKycAgentCard({ agent, activeTab, onUpdateStatus, on
         </div>
 
         {/* Right: Images */}
-        <div className="xl:w-2/3 flex gap-4 overflow-x-auto pb-2">
+        <div className="xl:w-2/3 flex flex-col sm:flex-row gap-4 overflow-x-auto pb-2">
            {/* KYC Doc Image */}
-           <div className="relative min-w-[320px] max-w-[400px] h-[240px] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden group">
+           <div className="relative w-full sm:min-w-[280px] sm:max-w-[360px] h-[220px] sm:h-[240px] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden group shrink-0">
              <div className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md z-10">ภาพถ่ายบัตรประชาชน</div>
               {agent.kyc_doc ? (
                 agent.kyc_doc.toLowerCase().endsWith('.pdf') ? (
@@ -137,7 +137,7 @@ export default function AdminKycAgentCard({ agent, activeTab, onUpdateStatus, on
            </div>
 
            {/* Profile Image */}
-           <div className="relative min-w-[200px] max-w-[280px] h-[240px] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden group">
+           <div className="relative w-full sm:min-w-[180px] sm:max-w-[240px] h-[220px] sm:h-[240px] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden group shrink-0">
              <div className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md z-10">ภาพถ่ายหน้าตัวเอง</div>
              {agent.profile_image ? (
                <Image 
@@ -159,31 +159,31 @@ export default function AdminKycAgentCard({ agent, activeTab, onUpdateStatus, on
 
       {/* Card Footer Actions */}
       {activeTab === 'pending' && (
-        <div className="bg-slate-50 border-t border-slate-100 p-4 flex items-center justify-between">
+        <div className="bg-slate-50 border-t border-slate-100 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
             <span className="text-xs font-bold text-amber-600">รอตรวจสอบเอกสาร (Status: Pending)</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {onDeleteAgent && (
               <button 
                 onClick={() => onDeleteAgent(agent.id)}
-                className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold rounded-xl transition-all text-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold rounded-xl transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer flex-1 sm:flex-initial"
               >
                 <span>🗑️</span> ลบบัญชีนี้
               </button>
             )}
             <button 
               onClick={() => onUpdateStatus(agent.id, 'rejected')}
-              className="px-5 py-2.5 bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-100 text-slate-600 font-bold rounded-xl transition-all text-xs flex items-center gap-2"
+              className="px-4 py-2.5 bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-100 text-slate-600 font-bold rounded-xl transition-all text-xs flex items-center justify-center gap-2 flex-1 sm:flex-initial cursor-pointer"
             >
-              <span>✕</span> ไม่อนุมัติ (ตีกลับ)
+              <span>✕</span> ไม่อนุมัติ
             </button>
             <button 
               onClick={() => onUpdateStatus(agent.id, 'approved')}
-              className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl transition-all shadow-lg shadow-amber-500/30 active:scale-95 text-xs flex items-center gap-2"
+              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl transition-all shadow-lg shadow-amber-500/30 active:scale-95 text-xs flex items-center justify-center gap-2 flex-1 sm:flex-initial cursor-pointer"
             >
-              <span>✓</span> อนุมัติบัญชีนายหน้า
+              <span>✓</span> อนุมัติทันที
             </button>
           </div>
         </div>

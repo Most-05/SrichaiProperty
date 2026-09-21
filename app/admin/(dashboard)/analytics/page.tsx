@@ -96,12 +96,32 @@ export default function AdminAnalyticsPage() {
   }, []);
 
   useEffect(() => {
-    loadAnalytics(range);
-  }, [range, loadAnalytics]);
+    let ignore = false;
+    fetch(`/api/admin/analytics?range=${range}`)
+      .then(res => res.json())
+      .then(json => {
+        if (!ignore) {
+          if (json.error) {
+            setFetchError(json.error);
+          } else {
+            setData(json);
+            setFetchError(null);
+          }
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setFetchError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+          setLoading(false);
+        }
+      });
+    return () => { ignore = true; };
+  }, [range]);
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative z-0">
+      <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
         <div>
           <h2 className="text-lg font-extrabold text-slate-800">สถิติและรายงาน (Analytics)</h2>
           <p className="text-[10px] text-slate-400 font-bold mt-0.5">ภาพรวมนัดหมาย ยอดเข้าชมบ้าน และผู้ใช้งานในระบบ</p>
@@ -123,7 +143,7 @@ export default function AdminAnalyticsPage() {
         </div>
       </header>
 
-      <div className="p-8 flex-1 overflow-y-auto space-y-6">
+      <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto space-y-6">
         {fetchError && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-between">
             <span>⚠️ {fetchError}</span>
@@ -136,7 +156,7 @@ export default function AdminAnalyticsPage() {
         ) : (
           <>
             {/* 4 การ์ดสรุปตัวเลขรวม */}
-            <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-2xl p-4 border-l-4 border-blue-500 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">นัดหมายทั้งหมด</span>
                 <strong className="text-2xl font-black text-slate-900 block">{(data?.summary.totalAppointments ?? 0).toLocaleString()}</strong>

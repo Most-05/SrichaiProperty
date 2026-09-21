@@ -202,9 +202,9 @@ const [filters, setFilters] = useState<FilterState>(() => ({
   const paginatedProperties = sortedProperties.slice((validCurrentPage - 1) * itemsPerPage, validCurrentPage * itemsPerPage);
 
   return (
-    <div className="font-sans bg-slate-50 min-h-screen text-slate-800 antialiased text-sm pb-16 pt-16">
+    <div className="font-sans bg-slate-50 min-h-screen text-slate-800 antialiased text-sm pb-16">
       {/* -------------------- Hero Header: ส่วนค้นหาหลักด้านบน -------------------- */}
-      <header className="bg-slate-900 pt-16 pb-12 relative overflow-hidden">
+      <header className="bg-slate-900 pt-10 sm:pt-16 pb-10 sm:pb-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay" />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-slate-900/50" />
         

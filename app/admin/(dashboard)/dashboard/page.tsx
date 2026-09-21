@@ -179,9 +179,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Top Header */}
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm">
+        <header className="min-h-14 py-2.5 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 shrink-0 shadow-sm">
           {/* Search Box */}
-          <div className="relative w-80">
+          <div className="relative w-full sm:w-80">
             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
             <input
               type="text"
@@ -189,12 +189,12 @@ export default function AdminDashboardPage() {
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="ค้นหาประกาศ (ชื่อ, PRJ-XXX), รหัส/ชื่อนายหน้า..."
               aria-label="ค้นหาประกาศหรือนายหน้า"
-              className="w-full pl-8 pr-4 py-1.5 bg-slate-100 border border-slate-200 rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
+              className="w-full pl-8 pr-4 py-1.5 bg-slate-100 border border-slate-200 rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold text-xs"
             />
           </div>
 
           {/* Admin Stats Status */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 justify-between sm:justify-end w-full sm:w-auto">
             <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[9px] font-black tracking-wide border border-slate-200">
               IP: {adminIp}
             </span>
@@ -203,7 +203,7 @@ export default function AdminDashboardPage() {
         </header>
 
         {/* Dashboard Content Workspace */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
 
           {/* Error banner */}
           {fetchError && (

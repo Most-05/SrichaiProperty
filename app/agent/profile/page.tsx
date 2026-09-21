@@ -127,7 +127,7 @@ export default function AgentProfilePage() {
         <form onSubmit={handleSave} className="md:col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4">
           <h3 className="font-black text-slate-900 text-xs border-b pb-2 uppercase text-slate-400">ข้อมูลส่วนตัวและช่องทางติดต่อ</h3>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">ชื่อ</label>
               <input type="text" required value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-amber-500 outline-none" />
@@ -138,7 +138,7 @@ export default function AgentProfilePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">เบอร์โทรศัพท์</label>
               <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-amber-500 outline-none" />
@@ -150,14 +150,14 @@ export default function AgentProfilePage() {
           </div>
 
           <h3 className="font-black text-slate-900 text-xs border-b pb-2 pt-2 uppercase text-slate-400">เปลี่ยนรหัสผ่าน (ถ้าต้องการ)</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input type="password" placeholder="รหัสผ่านใหม่" value={form.newPassword} onChange={e => setForm({ ...form, newPassword: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-amber-500 outline-none" />
             <input type="password" placeholder="ยืนยันรหัสผ่านใหม่" value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-amber-500 outline-none" />
           </div>
 
-          <div className="flex justify-between items-center pt-3 border-t">
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-3 pt-3 border-t">
             <button type="button" onClick={() => setShowConfirm(true)} className="text-xs font-bold text-red-500 hover:text-red-700">🗑️ ลบบัญชีถาวร</button>
-            <button type="submit" disabled={saving} className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs disabled:opacity-50 transition shadow">
+            <button type="submit" disabled={saving} className="w-full sm:w-auto px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs disabled:opacity-50 transition shadow">
               {saving ? 'กำลังบันทึก...' : '💾 บันทึกการเปลี่ยนแปลง'}
             </button>
           </div>

@@ -35,14 +35,40 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Floating Button */}
-      <button 
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed bottom-5 left-5 z-[100] w-12 h-12 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl border border-slate-700 active:scale-95 cursor-pointer"
-        aria-label="สลับเมนูแอดมิน"
-      >
-        {isMobileOpen ? '✕' : '⚡'}
-      </button>
+      {/* Mobile Top Header Bar (< lg) */}
+      <div className="lg:hidden fixed top-0 inset-x-0 h-14 bg-[#0f172a] text-white border-b border-slate-800 px-4 flex items-center justify-between z-40 shadow-md">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-base shadow-md shadow-blue-500/30">
+            S
+          </div>
+          <div>
+            <h1 className="text-white font-extrabold text-sm tracking-tight leading-none">
+              SrichaiAdmin
+            </h1>
+            <span className="text-[8px] text-emerald-400 font-bold flex items-center gap-1 uppercase tracking-wider mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              System Online
+            </span>
+          </div>
+        </div>
+
+        <button 
+          type="button"
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="p-2 rounded-xl bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+          aria-label="สลับเมนูแอดมิน"
+        >
+          {isMobileOpen ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
+      </div>
 
       {/* Mobile Backdrop */}
       {isMobileOpen && (
@@ -57,20 +83,31 @@ export default function AdminSidebar() {
         isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         <div className="p-5 space-y-6 overflow-y-auto flex-1 min-h-0">
-          {/* Logo Header */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-blue-500/20">
-              S
+          {/* Logo Header & Mobile Close */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-blue-500/20">
+                S
+              </div>
+              <div>
+                <h1 className="text-white font-extrabold text-sm tracking-tight flex items-center gap-1.5">
+                  SrichaiAdmin
+                </h1>
+                <span className="text-[8px] text-emerald-400 font-bold flex items-center gap-1 uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  System Online
+                </span>
+              </div>
             </div>
-            <div>
-              <h1 className="text-white font-extrabold text-sm tracking-tight flex items-center gap-1.5">
-                SrichaiAdmin
-              </h1>
-              <span className="text-[8px] text-emerald-400 font-bold flex items-center gap-1 uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                System Online
-              </span>
-            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileOpen(false)}
+              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              aria-label="ปิดเมนู"
+            >
+              ✕
+            </button>
           </div>
 
           <Link 

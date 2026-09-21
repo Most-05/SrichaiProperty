@@ -180,45 +180,45 @@ export default function AdminModerationPage() {
   return (
     <>
         {/* Header แถบด้านบนแสดงชื่อหน้าและช่องค้นหาด่วน */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative z-0">
+        <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
           <h2 className="text-lg font-extrabold text-slate-800">คิวตรวจสอบประกาศ (Listing Moderation)</h2>
-          <div className="relative w-72">
+          <div className="relative w-full sm:w-72">
             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 text-sm">🔍</span>
-            <input type="text" placeholder="ค้นหารหัส PRJ-XXX, ชื่อประกาศ..." className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-700" />
+            <input type="text" placeholder="ค้นหารหัส PRJ-XXX, ชื่อประกาศ..." className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-700 text-xs" />
           </div>
         </header>
 
-        <div className="p-8 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto">
           {/* ส่วนที่ 1: แถบเลือกสถานะ (Tabs) และตัวกรองประเภทการขาย/เช่า */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
             {/* แท็บสลับสถานะ: รอตรวจสอบ / อนุมัติแล้ว / ถูกระงับหรือปฏิเสธ */}
-            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200">
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl max-w-full overflow-x-auto no-scrollbar w-fit border border-slate-200">
               <button 
                 onClick={() => { setActiveTab('pending'); setLoading(true); }} 
-                className={`px-5 py-2 rounded-lg font-bold transition-all text-xs flex items-center gap-2 ${activeTab === 'pending' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                className={`px-5 py-2 rounded-lg font-bold transition-all text-xs flex items-center gap-2 whitespace-nowrap ${activeTab === 'pending' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 รอตรวจสอบ {activeTab === 'pending' && <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-md text-[10px]">ใหม่</span>}
               </button>
               <button 
                 onClick={() => { setActiveTab('approved'); setLoading(true); }} 
-                className={`px-5 py-2 rounded-lg font-bold transition-all text-xs ${activeTab === 'approved' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                className={`px-5 py-2 rounded-lg font-bold transition-all text-xs whitespace-nowrap ${activeTab === 'approved' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 อนุมัติแล้ว
               </button>
               <button 
                 onClick={() => { setActiveTab('rejected'); setLoading(true); }} 
-                className={`px-5 py-2 rounded-lg font-bold transition-all text-xs ${activeTab === 'rejected' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                className={`px-5 py-2 rounded-lg font-bold transition-all text-xs whitespace-nowrap ${activeTab === 'rejected' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 ถูกระงับ/ปฏิเสธ
               </button>
             </div>
             
             {/* ตัวเลือกกรองเฉพาะขาย/เช่า และปุ่มจัดเรียง SLA */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <select
                 value={listingTypeFilter}
                 onChange={(e) => { setListingTypeFilter(e.target.value as 'all' | 'sale' | 'rent'); setLoading(true); }}
-                className="bg-white border border-slate-200 text-slate-600 font-bold py-2 px-4 rounded-lg text-xs hover:bg-slate-50 transition shadow-sm cursor-pointer outline-none"
+                className="bg-white border border-slate-200 text-slate-600 font-bold py-2 px-3 sm:px-4 rounded-lg text-xs hover:bg-slate-50 transition shadow-sm cursor-pointer outline-none"
               >
                 <option value="all">ขาย/เช่าทั้งหมด</option>
                 <option value="sale">เฉพาะขาย</option>
@@ -226,7 +226,7 @@ export default function AdminModerationPage() {
               </select>
               <button
                 onClick={() => setSortBySla((prev) => !prev)}
-                className={`border font-bold py-2 px-4 rounded-lg text-xs transition shadow-sm ${sortBySla ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                className={`border font-bold py-2 px-3 sm:px-4 rounded-lg text-xs transition shadow-sm ${sortBySla ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
               >
                 เรียงตาม SLA (ด่วนสุด)
               </button>

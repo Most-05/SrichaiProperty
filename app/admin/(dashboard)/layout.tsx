@@ -30,7 +30,7 @@ export default async function AdminLayout({
       <AdminSidebar />
 
       {/* Main Panel Content Area ยืดเต็มพื้นที่ที่เหลือ, ตัดการ scroll แนวนอน */}
-      <main className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
+      <main className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden pt-14 lg:pt-0">
         {/* เนื้อหาของหน้านั้นๆ (children) */}
         {children}
       </main>

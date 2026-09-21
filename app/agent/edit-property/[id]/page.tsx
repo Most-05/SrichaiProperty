@@ -278,7 +278,7 @@ export default function AgentEditPropertyPage() {
   // --- หน้าจอกำลังโหลด ---
   if (loadingPage) {
     return (
-      <div className="pt-20 min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="pt-6 sm:pt-8 min-h-screen flex items-center justify-center bg-slate-50">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -287,7 +287,7 @@ export default function AgentEditPropertyPage() {
   // --- หน้าจอโหลดไม่สำเร็จ / ไม่มีสิทธิ์ ---
   if (loadError) {
     return (
-      <div className="pt-20 min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4 px-4 text-center">
+      <div className="pt-6 sm:pt-8 min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4 px-4 text-center">
         <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-2xl">!</div>
         <p className="font-extrabold text-slate-800 text-sm">{loadError}</p>
         <Link href="/agent/dashboard" className="px-5 py-2.5 bg-slate-900 text-white font-extrabold rounded-xl text-xs">
@@ -303,7 +303,7 @@ export default function AgentEditPropertyPage() {
     <div className="font-sans text-slate-800 text-xs antialiased flex flex-col">
 
       {/* Hero Banner Header */}
-      <div className="pt-20 bg-[#090D16] text-white py-10 px-4 text-center">
+      <div className="bg-[#090D16] text-white py-8 sm:py-10 px-4 text-center">
         <h1 className="text-xl sm:text-2xl font-black">แก้ไขประกาศอสังหาริมทรัพย์</h1>
         <p className="text-slate-400 text-[10px] mt-1">
           แก้ไขรายละเอียดบ้าน รูปภาพ และวันเวลาที่เปิดให้ลูกค้าเข้าชมได้ทันที โดยไม่ต้องรอแอดมินอนุมัติใหม่
@@ -344,7 +344,7 @@ export default function AgentEditPropertyPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* Card 1: ข้อมูลทั่วไป */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">1</span>
               <h2 className="font-extrabold text-slate-900 text-xs">ข้อมูลทั่วไปของประกาศ</h2>
@@ -355,7 +355,7 @@ export default function AgentEditPropertyPage() {
               <input type="text" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:border-blue-500 font-medium text-xs" required />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1 text-slate-700">ประเภทอสังหาฯ <span className="text-red-500">*</span></label>
                 <select value={f.typeId} onChange={e => setF({ ...f, typeId: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs">
@@ -380,13 +380,13 @@ export default function AgentEditPropertyPage() {
           </div>
 
           {/* Card 2: ราคา & สเปค */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">2</span>
               <h2 className="font-extrabold text-slate-900 text-xs">ราคาและรายละเอียดเชิงลึก</h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1 text-slate-700">ราคา (บาท) <span className="text-red-500">*</span></label>
                 <input type="number" min="1" step="1" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" required />
@@ -398,7 +398,7 @@ export default function AgentEditPropertyPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-5 gap-2 bg-slate-50 p-3 rounded-xl border text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 bg-slate-50 p-3 rounded-xl border text-center">
               <div>
                 <label className="block text-[9px] font-bold text-slate-500 mb-1">🛏️ ห้องนอน</label>
                 <input type="number" min="0" value={f.bedrooms} onChange={e => setF({ ...f, bedrooms: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
@@ -415,7 +415,7 @@ export default function AgentEditPropertyPage() {
                 <label className="block text-[9px] font-bold text-slate-500 mb-1">🏢 จำนวนชั้น</label>
                 <input type="number" min="0" value={f.floors} onChange={e => setF({ ...f, floors: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
-              <div>
+              <div className="col-span-2 sm:col-span-1">
                 <label className="block text-[9px] font-bold text-slate-500 mb-1">📐 พื้นที่ (ตร.ม.)</label>
                 <input type="number" min="0" value={f.usableArea} onChange={e => setF({ ...f, usableArea: e.target.value })} className="w-full bg-white border rounded-lg p-1.5 text-center font-bold text-xs" />
               </div>
@@ -431,13 +431,13 @@ export default function AgentEditPropertyPage() {
           </div>
 
           {/* Card 3: ทำเลที่ตั้ง */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">3</span>
               <h2 className="font-extrabold text-slate-900 text-xs">ทำเลที่ตั้ง</h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1 text-slate-700">จังหวัด</label>
                 <select value={f.provinceId} onChange={e => handleProvince(e.target.value)} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs">
@@ -486,7 +486,7 @@ export default function AgentEditPropertyPage() {
           </div>
 
           {/* Card 4: รูปภาพประกาศ */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">4</span>
               <h2 className="font-extrabold text-slate-900 text-xs">รูปภาพประกอบประกาศ</h2>
@@ -501,7 +501,7 @@ export default function AgentEditPropertyPage() {
           </div>
 
           {/* Card 5: จัดการวันว่างเข้าชม */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">5</span>
               <h2 className="font-extrabold text-slate-900 text-xs">📅 จัดการวันเวลาที่เปิดให้เข้าชมบ้านหลังนี้</h2>
@@ -510,7 +510,7 @@ export default function AgentEditPropertyPage() {
               กดวันบนปฏิทินเพื่อเปิด/ปิดรอบเช้า-รอบบ่าย รอบที่ลูกค้าจองไปแล้วจะถูกล็อกไว้ ปิดไม่ได้
             </p>
 
-            <div className="border border-slate-200 rounded-2xl p-4">
+            <div className="border border-slate-200 rounded-2xl p-3 sm:p-4">
               <div className="flex items-center justify-between mb-3 px-1">
                 <button type="button" onClick={handleCalPrevMonth} className="text-slate-400 hover:text-slate-600 font-bold text-xs p-1 cursor-pointer">&lt;</button>
                 <span className="text-xs font-black text-slate-800">{MONTH_NAMES_TH[calMonth]} {calYear + 543}</span>
@@ -579,7 +579,7 @@ export default function AgentEditPropertyPage() {
               {selectedCalDate && (
                 <div className="mt-4 pt-4 border-t border-slate-100">
                   <p className="text-[10px] font-black text-slate-700 mb-2">ช่วงเวลาสำหรับวันที่ {selectedCalDate}</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(['morning', 'afternoon'] as const).map(slot => {
                       const found = getSlotsForDate(selectedCalDate).find(s => s.timeSlot === slot);
                       const active = Boolean(found);

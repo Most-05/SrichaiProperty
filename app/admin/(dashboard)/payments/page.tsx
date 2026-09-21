@@ -111,7 +111,7 @@ export default function AdminPaymentsPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -123,7 +123,7 @@ export default function AdminPaymentsPage() {
             ตรวจสอบสลิปโอนเงินและอนุมัติสิทธิ์ Verified PRO ให้แก่นายหน้า
           </p>
         </div>
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl max-w-full overflow-x-auto no-scrollbar">
           {(['pending', 'approved', 'rejected', 'all'] as Filter[]).map(f => (
             <button
               key={f}
@@ -152,7 +152,7 @@ export default function AdminPaymentsPage() {
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
+            <table className="w-full text-xs text-left min-w-[650px]">
               <thead className="border-b border-slate-100 bg-slate-50 text-slate-400 font-bold uppercase">
                 <tr>
                   <th className="p-4">นายหน้าผู้โอน</th>

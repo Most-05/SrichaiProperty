@@ -75,17 +75,17 @@ export default function AdminUsersPage() {
 
   return (
     <>
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative z-0">
+        <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
           <h2 className="text-lg font-extrabold text-slate-800">จัดการผู้ใช้งาน (Users & Agents)</h2>
-          <div className="flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
+          <div className="flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200 w-fit">
             <span>IP: 192.168.1.1 (Secure)</span>
             <span className="text-slate-400">🔔</span>
           </div>
         </header>
 
-        <div className="p-8 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto">
           {/* STATS */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition">
               <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl">👥</div>
               <div><p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">บัญชีทั้งหมด</p><h3 className="text-2xl font-black text-slate-800 mt-1">{stats.total.toLocaleString()}</h3></div>
@@ -107,8 +107,8 @@ export default function AdminUsersPage() {
           {/* TABLE CONTAINER */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
             {/* Toolbar */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <div className="relative w-80">
+            <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative w-full sm:w-80">
                 <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
                 <input type="text" placeholder="ค้นหาชื่อ, รหัส User ID, อีเมล..." className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium text-slate-700" />
               </div>
@@ -128,7 +128,7 @@ export default function AdminUsersPage() {
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[720px]">
                 <thead className="bg-slate-50/50">
                   <tr>
                     <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">ข้อมูลผู้ใช้งาน (USER INFO)</th>

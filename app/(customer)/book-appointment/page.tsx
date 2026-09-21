@@ -184,7 +184,7 @@ function BookAppointmentForm() {
   // 7. RENDERING SECTION
   // ----------------------------------------------------------------------------
   return (
-    <div className="font-sans bg-slate-50/50 min-h-screen text-slate-800 antialiased text-sm pb-24 pt-12">
+    <div className="font-sans bg-slate-50/50 min-h-screen text-slate-800 antialiased text-sm pb-24 pt-6 sm:pt-8">
       <div className="max-w-5xl mx-auto px-4">
         
         {/* หัวข้อหน้าและปุ่มย้อนกลับ */}

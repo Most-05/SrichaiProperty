@@ -224,9 +224,9 @@ export default function AgentAddPropertyPage() {
     <div className="font-sans text-slate-800 text-xs antialiased flex flex-col">
 
       {/* Hero Banner Header */}
-      <div className="pt-20 bg-[#090D16] text-white py-10 px-4 text-center">
+      <div className="bg-[#090D16] text-white py-8 sm:py-10 px-4 text-center">
         <h1 className="text-xl sm:text-2xl font-black">ลงประกาศอสังหาริมทรัพย์</h1>
-        <p className="text-slate-400 text-[10px] mt-1">เพิ่มข้อมูลอสังหาริมทรัพย์ของคุณเพื่อเปิดรับผู้ซื้อ และลงประกาศในระบบ ตรวจสอบความถูกต้องเพื่อความปลอดภัยของลูกค้าคุณ</p>
+        <p className="text-slate-400 text-[10px] mt-1 max-w-lg mx-auto">เพิ่มข้อมูลอสังหาริมทรัพย์ของคุณเพื่อเปิดรับผู้ซื้อ และลงประกาศในระบบ ตรวจสอบความถูกต้องเพื่อความปลอดภัยของลูกค้าคุณ</p>
       </div>
 
       <main className="max-w-2xl mx-auto px-4 mt-6 space-y-6 flex-grow w-full mb-16">
@@ -241,7 +241,7 @@ export default function AgentAddPropertyPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Card 1: ข้อมูลทั่วไป */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">1</span>
               <h2 className="font-extrabold text-slate-900 text-xs">ข้อมูลทั่วไปของประกาศ</h2>
@@ -253,7 +253,7 @@ export default function AgentAddPropertyPage() {
               <p className="text-[9px] text-slate-400 mt-1">แนะนำ 30-80 ตัวอักษร ชัดเจนและดึงดูดสายตาผู้ซื้อ</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1 text-slate-700">ประเภทอสังหาฯ <span className="text-red-500">*</span></label>
                 <select value={f.typeId} onChange={e => setF({ ...f, typeId: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs">
@@ -279,13 +279,13 @@ export default function AgentAddPropertyPage() {
           </div>
 
           {/* Card 2: ราคา & สเปค */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">2</span>
               <h2 className="font-extrabold text-slate-900 text-xs">ราคาและรายละเอียดเชิงลึก</h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1 text-slate-700">ราคา (บาท) <span className="text-red-500">*</span></label>
                 <input type="number" min="1" step="1" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} placeholder="฿ 0" className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" required />
@@ -315,7 +315,7 @@ export default function AgentAddPropertyPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block font-bold mb-1 text-slate-700">ขนาดที่ดิน (ตร.ว.)</label>
                 <input type="number" min="0" value={f.landArea} onChange={e => setF({ ...f, landArea: e.target.value })} placeholder="ระบุตัวเลข" className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium text-xs" />
@@ -335,13 +335,13 @@ export default function AgentAddPropertyPage() {
           </div>
 
           {/* Card 3: ทำเลที่ตั้ง */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">3</span>
               <h2 className="font-extrabold text-slate-900 text-xs">ทำเลที่ตั้ง</h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1 text-slate-700">จังหวัด <span className="text-red-500">*</span></label>
                 <select value={f.provinceId} onChange={e => handleProvince(e.target.value)} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs" required>
@@ -391,7 +391,7 @@ export default function AgentAddPropertyPage() {
           </div>
 
           {/* Card 4: สื่อประกอบ & เอกสารสิทธิ์ */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">4</span>
               <h2 className="font-extrabold text-slate-900 text-xs">สื่อประกอบและเอกสารสิทธิ์</h2>
@@ -471,7 +471,7 @@ export default function AgentAddPropertyPage() {
           </div>
 
           {/* Card 5: วันเวลาที่เปิดให้ลูกค้าเข้าชมบ้านหลังนี้ */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">5</span>
               <h2 className="font-extrabold text-slate-900 text-xs">📅 วันเวลาที่เปิดให้เข้าชมบ้านหลังนี้</h2>

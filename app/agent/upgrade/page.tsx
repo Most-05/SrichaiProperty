@@ -153,7 +153,7 @@ export default function UpgradePage() {
   // ===== SUCCESS SCREEN =====
   if (step === 'success') {
     return (
-      <div className="pt-16 min-h-screen flex items-center justify-center p-4 bg-slate-50">
+      <div className="pt-6 sm:pt-8 min-h-screen flex items-center justify-center p-4 bg-slate-50">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 text-center space-y-5 border border-slate-100">
           <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto border-4 border-amber-200">
             <span className="text-4xl">🎉</span>
@@ -198,7 +198,7 @@ export default function UpgradePage() {
   // ===== PAYMENT STEP =====
   if (step === 'payment') {
     return (
-      <div className="pt-16 min-h-screen bg-slate-50 p-4">
+      <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50 p-4">
         <div className="max-w-lg mx-auto space-y-5">
 
           {/* Header */}
@@ -351,7 +351,7 @@ export default function UpgradePage() {
 
   // ===== DETAILS STEP (default) =====
   return (
-    <div className="pt-16 min-h-screen bg-slate-50 p-4">
+    <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50 p-4">
       <div className="max-w-lg mx-auto space-y-5">
 
         {/* Header */}

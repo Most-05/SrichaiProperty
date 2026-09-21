@@ -290,7 +290,7 @@ export default function AgentDashboardPage() {
   // [ส่วนที่ 6: การเรนเดอร์ส่วนประกอบ UI (JSX Rendering)]
   // --------------------------------------------------------------------------
   return (
-    <div className="pt-16 min-h-screen bg-slate-50/50 text-slate-800 text-xs md:text-sm font-sans antialiased">
+    <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50/50 text-slate-800 text-xs md:text-sm font-sans antialiased">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         
         {/* Banner แจ้งเตือนเมื่อมีประกาศที่รอ Admin ตรวจสอบอนุมัติ */}
@@ -343,7 +343,7 @@ export default function AgentDashboardPage() {
         )}
 
         {/* การ์ดสรุปสถิติ 4 ใบ (Summary Cards Grid) */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* การ์ดที่ 1: โควตาประกาศ */}
           <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs space-y-2 transition-all hover:border-slate-300">
             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">โควตาประกาศ</span>

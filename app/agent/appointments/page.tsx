@@ -306,8 +306,8 @@ export default function AgentAppointmentsPage() {
       )}
 
       {/* Header */}
-      <div className="pt-20 pb-5 px-4 md:px-8 bg-white border-b border-slate-100">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <div className="pt-6 sm:pt-8 pb-5 px-4 sm:px-6 md:px-8 bg-white border-b border-slate-100">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link href="/agent/dashboard" className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-900 transition">
               ←
@@ -327,7 +327,7 @@ export default function AgentAppointmentsPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl w-full mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 flex-1">
+      <main className="max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 flex-1">
 
         {/* ===== Left Column: ปฏิทิน + สรุปคิวงาน ===== */}
         <div className="space-y-5">

@@ -423,7 +423,7 @@ export default function PropertyDetailPage() {
               {/* ตารางข้อมูลจำเพาะ */}
               <div className="pt-2">
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-1.5"><ListIcon className="w-3.5 h-3.5" /> ข้อมูลจำเพาะ</h3>
-                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50/40 p-4 rounded-2xl border border-slate-200/50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs bg-slate-50/40 p-4 rounded-2xl border border-slate-200/50">
                   <div className="flex justify-between border-b border-slate-100 pb-2">
                     <span className="text-slate-400 font-medium">ประเภทอสังหาฯ</span>
                     <span className="font-bold text-slate-700">{property.type}</span>
@@ -736,6 +736,46 @@ export default function PropertyDetailPage() {
 
         </div>
       </main>
+
+      {/* ========================================================================
+          ส่วนพิเศษ: แถบ Action Bar ด้านล่างสำหรับหน้าจอมือถือ (MOBILE FIXED BOTTOM ACTION BAR)
+          ======================================================================== */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] text-slate-400 font-bold uppercase">ราคา</p>
+          <p className="text-base font-black text-blue-700 truncate">{property.price}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={phoneUrl}
+            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition border border-slate-200"
+            title="โทรหานายหน้า"
+            aria-label="โทรหานายหน้า"
+          >
+            <PhoneIcon className="w-4 h-4" />
+          </a>
+          <button
+            onClick={handleStartChat}
+            disabled={startingChat}
+            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition border border-slate-200 disabled:opacity-50"
+            title="แชทกับนายหน้า"
+            aria-label="แชทกับนายหน้า"
+          >
+            {startingChat ? (
+              <div className="w-3.5 h-3.5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <ChatIcon className="w-4 h-4" />
+            )}
+          </button>
+          <Link
+            href={`/book-appointment?propertyId=${property.id}`}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-3.5 sm:px-4 py-2.5 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+          >
+            <CalendarIcon className="w-3.5 h-3.5" />
+            <span>นัดหมายเข้าชม</span>
+          </Link>
+        </div>
+      </div>
 
       {/* ========================================================================
           ส่วนที่ 5: MODAL ซูมดูรูปภาพใหญ่เต็มจอ (FULL-SCREEN LIGHTBOX MODAL)
