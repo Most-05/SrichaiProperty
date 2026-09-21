@@ -13,8 +13,13 @@ export default function PremiumListings({ properties }: PremiumListingsProps) {
     <section className="py-10 bg-slate-50 border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
-          <h2 className="text-lg sm:text-2xl font-extrabold text-slate-900 mb-1">⭐ อสังหาริมทรัพย์พรีเมียมแนะนำ</h2>
-          <p className="text-slate-500 text-xs font-medium">คัดสรรเฉพาะบ้านและคอนโดหรูทำเลทองจากนายหน้าที่สมัครแพ็กเกจโฆษณา</p>
+          <h2 className="text-lg sm:text-2xl font-extrabold text-slate-900 mb-1 flex items-center gap-2">
+            <svg className="w-5 h-5 text-amber-500 fill-amber-500" viewBox="0 0 24 24">
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+            </svg>
+            <span>อสังหาริมทรัพย์พรีเมียม</span>
+          </h2>
+          <p className="text-slate-500 text-xs font-medium">คัดสรรเฉพาะโครงการคุณภาพ บ้านเดี่ยวและคอนโดมิเนียมทำเลศักยภาพสูง</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5 lg:gap-6">

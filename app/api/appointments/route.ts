@@ -46,7 +46,6 @@ export async function GET(request: Request) {
     // 1.2 ตรวจสอบจาก URL Query Parameters ว่าผู้ใช้ต้องการดูในมุมมองนายหน้า (?view=agent) หรือไม่
     const isAgent = new URL(request.url).searchParams.get("view") === "agent" && user.role_id === "agent";
 
-    // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
     // เดิมนัดที่ผ่านวันไปแล้วจะถูก auto-complete ทันที (ระบบเดาเองว่าสำเร็จเสมอ) ทำให้
     // สถิติ "นัดสำเร็จ" ไม่ตรงความจริง และปุ่ม "ปิดงาน" ของนายหน้าแทบไม่มีโอกาสได้ใช้
     // ตอนนี้เปลี่ยนเป็น: รอนายหน้ายืนยันผลจริงก่อน (ดูปุ่มยืนยันในหน้า agent/appointments)
@@ -109,7 +108,7 @@ export async function GET(request: Request) {
         note: apt.note || "",
         cancelReason: apt.cancel_reason || "",
         noShowNote: apt.no_show_note || "",
-        // 🔑 KEYWORD: ระบบติดตามผลการนัดหมาย (No-show)
+        
         // true = นัดนี้ยืนยันแล้ว(approved) และวันนัดผ่านไปแล้ว แต่นายหน้ายังไม่กดยืนยันผล
         // หน้า agent/appointments ใช้ธงนี้เพื่อแยกเป็นแท็บ "รอยืนยันผล" ต่างหาก
         needsResult: appointmentNeedsResult({ status: apt.status, appointment_date: apt.appointment_date }),
@@ -119,7 +118,7 @@ export async function GET(request: Request) {
           rating: apt.reviews.rating,
           comment: apt.reviews.comment || ""
         } : null,
-        // 🔑 KEYWORD: ส่งวันนัดเดิมให้หน้าเว็บโชว์ขีดฆ่า
+        
         // หน้าคิวนัดหมายฝั่งนายหน้ามีโค้ดโชว์ "วันเดิมขีดฆ่า + ป้าย (แก้ไขใหม่)" รออยู่แล้ว
         // แต่เดิม API ไม่เคยส่ง 3 ฟิลด์นี้กลับไป ส่วนนั้นเลยไม่เคยทำงาน
         originalDate: apt.original_date ? toDateKey(apt.original_date) : null,
@@ -160,7 +159,6 @@ export async function POST(request: Request) {
     const property = await db.properties.findUnique({ where: { id: propertyId } });
     if (!property) return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์นี้" }, { status: 404 });
 
-    // 🔑 KEYWORD: กฎ 1 ลูกค้า 1 บ้าน จองซ้อนไม่ได้
     // 2.4 ตรวจสอบกฎธุรกิจ: ลูกค้า 1 คน จองค้างไว้ได้ทีละ 1 นัดต่อบ้าน 1 หลัง ( status: pending หรือ approved )
     const existing = await db.appointments.findFirst({
       where: { customer_id: user.id, property_id: property.id, status: { in: ["pending", "approved"] } }
@@ -169,7 +167,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "คุณมีนัดหมายค้างอยู่สำหรับบ้านหลังนี้แล้ว กรุณารอผลหรือยกเลิกนัดเดิมก่อนจองใหม่" }, { status: 400 });
     }
 
-    // 🔑 KEYWORD: บล็อกลูกค้าเบี้ยวนัดซ้ำ (No-show)
     // 2.4.1 ลูกค้าที่ไม่มาตามนัด (no_show) สะสมครบ NO_SHOW_LIMIT ครั้ง จองนัดใหม่ไม่ได้
     // กันนายหน้าเสียเวลาเปิดวันว่างรอลูกค้าที่มีประวัติไม่มาซ้ำๆ
     if (await isCustomerBlockedByNoShow(user.id)) {
@@ -182,7 +179,6 @@ export async function POST(request: Request) {
     // 2.5 แปลงข้อความรอบเวลาให้อยู่ในคีย์มาตรฐาน DB ('morning' หรือ 'afternoon')
     const dbTimeSlot = timeSlot.includes("13:") || timeSlot.includes("15:") || timeSlot.includes("บ่าย") || timeSlot.toLowerCase().includes("afternoon") ? "afternoon" : "morning";
 
-    // 🔑 KEYWORD: ล็อกวันว่างตอนลูกค้าจองจริง
     // 2.6 เช็คว่านายหน้าคนนี้มีนัดจริงกับ "บ้านหลังอื่น" ชนวัน+เวลานี้อยู่แล้วหรือไม่
     if (property.agent_id && await hasAgentBookingConflict(property.agent_id, property.id, new Date(date), dbTimeSlot)) {
       return NextResponse.json({ error: "นายหน้าติดนัดชมบ้านหลังอื่นในช่วงเวลานี้แล้ว กรุณาเลือกวันหรือเวลาอื่น" }, { status: 400 });
@@ -301,7 +297,6 @@ export async function PATCH(request: Request) {
     const appointment = await db.appointments.findUnique({ where: { id } });
     if (!appointment) return NextResponse.json({ error: "ไม่พบนัดหมายนี้ในระบบ" }, { status: 404 });
 
-    // 🔑 KEYWORD: นายหน้ารับปฏิเสธปิดงานนัดหมาย
     // --------------------------------------------------------------------------
     // (ก) กรณีฝั่งนายหน้าจัดการ: ยืนยัน (confirm), ปฏิเสธ (reject), หรือ ปิดงาน (complete)
     // --------------------------------------------------------------------------
@@ -314,7 +309,7 @@ export async function PATCH(request: Request) {
       // นายหน้ากดปิดงานเมื่อพาลูกค้าชมสถานที่จริงเรียบร้อยแล้ว (status -> completed)
       if (action === "complete") {
         if (appointment.status !== "approved") return NextResponse.json({ error: "ปิดงานได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
-        // 🔑 KEYWORD: กันปิดงานก่อนถึงวันนัดจริง — เดิมไม่เคยเช็ควันที่เลย ปิดงานได้ทันที
+        
         // หลังยืนยันรับคิว ทั้งที่ลูกค้ายังไม่ได้ไปดูบ้านจริง ทำให้ระบบ No-show ไร้ความหมาย
         if (!appointmentNeedsResult(appointment)) {
           return NextResponse.json({ error: "ยังไม่ถึงวันนัด ยืนยันผลได้หลังจากถึงวันนัดแล้วเท่านั้น" }, { status: 400 });
@@ -335,13 +330,12 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ success: true, data: updated });
       }
 
-      // 🔑 KEYWORD: นายหน้ายืนยันผลว่าลูกค้าไม่มาตามนัด (No-show)
       // ต้องระบุเหตุผลเสมอเหมือนปฏิเสธนัด — เก็บลง no_show_note คนละคอลัมน์กับ cancel_reason
       if (action === "no_show") {
         if (appointment.status !== "approved") {
           return NextResponse.json({ error: "ยืนยันผลได้เฉพาะนัดหมายที่ยืนยันแล้วเท่านั้น" }, { status: 400 });
         }
-        // 🔑 KEYWORD: กันยืนยัน "ไม่มาตามนัด" ก่อนถึงวันนัดจริง (เหตุผลเดียวกับ complete ด้านบน)
+        
         if (!appointmentNeedsResult(appointment)) {
           return NextResponse.json({ error: "ยังไม่ถึงวันนัด ยืนยันผลได้หลังจากถึงวันนัดแล้วเท่านั้น" }, { status: 400 });
         }
@@ -368,7 +362,6 @@ export async function PATCH(request: Request) {
 
       if (appointment.status !== "pending") return NextResponse.json({ error: "นัดหมายนี้ถูกดำเนินการไปแล้ว" }, { status: 400 });
 
-      // 🔑 KEYWORD: เหตุผลที่นายหน้าปฏิเสธนัด
       // ปฏิเสธต้องระบุเหตุผลเสมอ เพื่อให้ลูกค้ารู้ว่าทำไมถึงไม่ได้ และตัดสินใจจองรอบใหม่ได้ถูก
       const rejectReason = typeof reason === "string" ? reason.trim() : "";
       if (action === "reject" && !rejectReason) {
@@ -410,7 +403,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true, data: updated });
     }
 
-    // 🔑 KEYWORD: ลูกค้าขอเปลี่ยนวันนัด
     // --------------------------------------------------------------------------
     // (ข) กรณีฝั่งลูกค้าจัดการ: ขอเปลี่ยนวันและเวลานัดหมายใหม่
     // --------------------------------------------------------------------------
@@ -516,7 +508,6 @@ export async function DELETE(request: Request) {
     const isAgent = appointment.agent_id === user.id;
     if (!isCustomer && !isAgent) return NextResponse.json({ error: "คุณไม่มีสิทธิ์ยกเลิกนัดหมายนี้" }, { status: 403 });
 
-    // 🔑 KEYWORD: กันยกเลิกนัดซ้ำ
     // 4.5 ป้องกันการยกเลิกซ้ำในนัดที่ปิดงานไปแล้ว (completed, cancelled, rejected)
     if (["completed", "cancelled", "rejected"].includes(appointment.status || "")) {
       return NextResponse.json({ error: "นัดหมายนี้ถูกปิดไปแล้ว ไม่สามารถยกเลิกซ้ำได้" }, { status: 400 });

@@ -169,7 +169,7 @@ export default function NotificationBell() {
   // ==============================================================================
   return (
     <div className="relative font-sans" ref={ref}>
-      {/* 🔔 ปุ่มกระดิ่งการแจ้งเตือน พร้อมตัวเลขแจ้งเตือนสีส้มแบบ Pulse Animation */}
+      {/* ปุ่มกระดิ่งการแจ้งเตือน พร้อมตัวเลขแจ้งเตือนแบบ Pulse Animation */}
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2.5 rounded-xl text-slate-600 hover:text-blue-700 hover:bg-slate-100/80 active:scale-95 transition cursor-pointer flex items-center justify-center focus:outline-none"
@@ -187,7 +187,7 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* 📦 กล่องแสดงผลศูนย์การแจ้งเตือน Popover */}
+      {/* กล่องแสดงผลศูนย์การแจ้งเตือน Popover */}
       {open && (
         <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200/80 z-50 overflow-hidden text-left">
           {/* Header แสดงชื่อระบบและปุ่ม "อ่านทั้งหมด" */}
@@ -280,5 +280,4 @@ export default function NotificationBell() {
     </div>
   );
 }
-
 

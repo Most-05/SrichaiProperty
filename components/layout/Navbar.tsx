@@ -162,7 +162,10 @@ export default function Navbar() {
           <div className="flex items-center lg:hidden">
             {session && isUserAdmin && (
               <Link href="/admin/dashboard" className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-2.5 py-1.5 rounded-lg text-[10px] shadow-sm mr-2 flex items-center gap-1 cursor-pointer whitespace-nowrap">
-                ⚡ แอดมิน
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>แอดมิน</span>
               </Link>
             )}
             
@@ -200,8 +203,11 @@ export default function Navbar() {
             )}
 
             {isUserAdmin && (
-              <Link href="/admin/dashboard" onClick={() => setIsOpen(false)} className="block px-4 py-3 text-amber-950 bg-amber-400 font-black rounded-xl text-xs shadow-sm flex items-center gap-2 mb-2">
-                ⚡ หน้าควบคุมแอดมิน (Admin Dashboard)
+              <Link href="/admin/dashboard" onClick={() => setIsOpen(false)} className="px-4 py-3 text-amber-950 bg-amber-400 font-black rounded-xl text-xs shadow-sm flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>หน้าควบคุมแอดมิน (Admin Dashboard)</span>
               </Link>
             )}
 
@@ -224,11 +230,14 @@ export default function Navbar() {
               <Link
                 href="/chat"
                 onClick={() => setIsOpen(false)}
-                className={`block px-4 py-3 rounded-xl text-xs font-extrabold transition ${
+                className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-extrabold transition ${
                   pathname === '/chat' ? "text-blue-700 bg-blue-50" : "text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                💬 กล่องข้อความ / แชท
+                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span>กล่องข้อความ / แชท</span>
               </Link>
             )}
 
@@ -240,9 +249,12 @@ export default function Navbar() {
                   setIsOpen(false);
                   signOut({ callbackUrl: '/login' });
                 }}
-                className="block w-full text-left px-4 py-3 text-red-600 bg-red-50/50 hover:bg-red-50 font-extrabold text-xs rounded-xl transition cursor-pointer"
+                className="flex items-center gap-2 w-full text-left px-4 py-3 text-red-600 bg-red-50/50 hover:bg-red-50 font-extrabold text-xs rounded-xl transition cursor-pointer"
               >
-                🚪 ออกจากระบบ
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>ออกจากระบบ</span>
               </button>
             ) : (
               <div className="grid grid-cols-2 gap-2 pt-1">

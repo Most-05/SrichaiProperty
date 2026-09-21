@@ -18,7 +18,6 @@ import { useApp } from '@/context/AppContext';
 import SearchSidebar, { FilterState } from '@/components/customer/SearchSidebar';
 import PropertyCard from '@/components/customer/PropertyCard';
 
-
 // ค่าเริ่มต้นสำหรับรีเซ็ตตัวกรองทั้งหมด
 const DEFAULT_FILTERS: FilterState = {
   province: '',
@@ -218,8 +217,11 @@ const [filters, setFilters] = useState<FilterState>(() => ({
 
           {/* กล่องกรอกคำค้นหา + ซื้อ/เช่า + เลือกประเภท */}
           <div className="bg-white p-3 rounded-2xl md:rounded-full shadow-2xl border border-slate-200/20 max-w-4xl mx-auto flex flex-col md:flex-row items-stretch md:items-center gap-2">
-            <div className="flex-1 flex bg-slate-50 rounded-xl md:rounded-full px-4 py-1.5 border border-slate-100 focus-within:border-blue-500 transition-colors items-center">
-              <span className="text-base text-slate-400 mr-2">📍</span>
+            <div className="flex-1 flex bg-slate-50 rounded-xl md:rounded-full px-4 py-2 border border-slate-100 focus-within:border-blue-500 transition-colors items-center">
+              <svg className="w-4 h-4 text-slate-400 shrink-0 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
               <input
                 type="text"
                 value={searchTerm}

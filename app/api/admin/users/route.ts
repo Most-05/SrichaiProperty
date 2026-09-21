@@ -44,7 +44,6 @@ export async function GET(req: Request) {
       }
     });
 
-    // 🔑 KEYWORD: สถิติเบี้ยวนัด (No-show) ให้แอดมินเห็นภาพรวม
     // นับแยกทีเดียวด้วย groupBy แทนการ query ต่อ user (กันยิง query ซ้ำเป็นสิบ/ร้อยรอบ)
     const noShowGroups = await db.appointments.groupBy({
       by: ['customer_id'],

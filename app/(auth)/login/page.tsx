@@ -1,9 +1,7 @@
-// บอก Next.js ว่าไฟล์นี้เป็น "Client Component" คือทำงานฝั่งเบราว์เซอร์
-// (จำเป็นเพราะไฟล์นี้มีการใช้ useState, onClick, onChange ซึ่งเป็นโค้ดที่ต้องรันบนฝั่งผู้ใช้ ไม่ใช่บนเซิร์ฟเวอร์)
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link'; // ใช้แทน <a> เพื่อเปลี่ยนหน้าแบบไม่รีเฟรชทั้งหน้า (เร็วกว่า)
+import Link from 'next/link'; 
 import { signIn } from 'next-auth/react'; // ฟังก์ชันจากไลบรารี NextAuth ใช้สำหรับส่งข้อมูลไปตรวจสอบว่า login ผ่านหรือไม่
 import SocialLoginButtons from '@/components/auth/SocialLoginButtons'; // ปุ่ม login ผ่าน Google/Facebook ฯลฯ (แยกเป็นคอมโพเนนต์ย่อย)
 import AgentPortalBanner from '@/components/auth/AgentPortalBanner'; // แบนเนอร์แนะนำ/ลิงก์สำหรับ "นายหน้า" (agent)
@@ -13,8 +11,7 @@ import CookieBanner from '@/components/auth/CookieBanner'; // แถบแจ้
 // คอมโพเนนต์หลักของหน้า "เข้าสู่ระบบ" — React จะ render ฟังก์ชันนี้เป็นหน้าเว็บ
 export default function LoginPage() {
   // ===== ตัวแปรสถานะ (State) ของหน้านี้ =====
-  // useState คืนค่าเป็น [ค่าปัจจุบัน, ฟังก์ชันสำหรับเปลี่ยนค่า] และเมื่อค่าเปลี่ยน React จะ render หน้าใหม่ให้อัตโนมัติ
-
+  
   const [passwordVisible, setPasswordVisible] = useState(false); // true = แสดงรหัสผ่านเป็นตัวอักษร, false = ซ่อนเป็นจุด (•••)
   const [isLoading, setIsLoading] = useState(false); // true ระหว่างที่กำลังส่งข้อมูลไปตรวจสอบ login (ใช้ปิดปุ่ม/แสดง spinner กันคนกดซ้ำ)
   const [email, setEmail] = useState(''); // เก็บค่าที่ผู้ใช้พิมพ์ในช่องอีเมล
@@ -23,8 +20,7 @@ export default function LoginPage() {
   const [policyType, setPolicyType] = useState<'privacy' | 'terms' | null>(null); // ระบุว่าจะเปิด popup นโยบายแบบไหน (privacy/terms) หรือไม่เปิดเลย (null)
   const [showCookies, setShowCookies] = useState(true); // true = ยังโชว์แถบแจ้งเตือนคุกกี้อยู่ (เริ่มต้นให้โชว์ก่อนเสมอ)
 
-  // [ติวสอบ]: ฟังก์ชันเมื่อกดปุ่ม "เข้าสู่ระบบ"
-  const handleLogin = async (event: React.FormEvent) => {
+    const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault(); // ป้องกันหน้าเว็บรีเฟรช
     setIsLoading(true);
     setErrorMsg('');
@@ -84,8 +80,8 @@ export default function LoginPage() {
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl shadow-lg shadow-blue-600/30">S</div>
             <span className="text-3xl font-extrabold tracking-tight">Srichai<span className="text-blue-400">Property</span></span>
           </Link>
-          <h1 className="text-5xl font-extrabold mb-6 leading-[1.2]">ยินดีต้อนรับกลับมา<br />สู่พื้นที่แห่งความสุข</h1>
-          <p className="text-slate-300 text-lg font-light leading-relaxed">เข้าสู่ระบบเพื่อจัดการอสังหาริมทรัพย์ของคุณ นัดหมายเข้าชมบ้าน หรือพูดคุยกับนายหน้ามืออาชีพของเรา</p>
+          <h1 className="text-5xl font-extrabold mb-6 leading-[1.2]">ยินดีต้อนรับสู่<br />Srichai Property</h1>
+          <p className="text-slate-300 text-lg font-light leading-relaxed">เข้าถึงบ้านเดี่ยว คอนโด และที่ดินคุณภาพ พร้อมบริการที่ปรึกษาอสังหาริมทรัพย์ระดับมืออาชีพในหาดใหญ่และสงขลา</p>
         </div>
       </div>
 
@@ -120,8 +116,11 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-4.5">
             {/* กล่องแสดง error — โชว์ก็ต่อเมื่อ errorMsg ไม่ใช่ค่าว่าง */}
             {errorMsg && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium">
-                ⚠️ {errorMsg}
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium flex items-center gap-2">
+                <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{errorMsg}</span>
               </div>
             )}
 

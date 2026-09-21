@@ -43,8 +43,10 @@ export default function AgentsPage() {
       {/* Search Bar */}
       <div className="max-w-4xl mx-auto px-4 relative z-20 -mt-6 mb-8 w-full">
         <div className="bg-white p-2.5 rounded-2xl shadow-md flex flex-col md:flex-row gap-2 border border-slate-200">
-          <div className="flex-1 flex bg-slate-50 rounded-xl p-2 border border-slate-100 focus-within:border-blue-500 transition-colors">
-            <span className="flex items-center pl-2 pr-1.5 text-slate-400">🔍</span>
+          <div className="flex-1 flex items-center bg-slate-50 rounded-xl px-3 py-2 border border-slate-100 focus-within:border-blue-500 transition-colors">
+            <svg className="w-4 h-4 text-slate-400 shrink-0 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input 
               type="text" 
               value={searchTerm}

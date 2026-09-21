@@ -149,12 +149,15 @@ export default function AgentHomePage() {
         {/* Banner แจ้งเตือนรออนุมัติ */}
         <PendingApprovalBanner pendingCount={pendingApprovalCount} />
 
-        {/* 🔑 KEYWORD: แถบเตือนวันว่างใกล้หมดหน้าแรก */}
-        {/* เตือนซ้ำอีกชั้นนอกกระดิ่ง เพราะถ้ารอให้นายหน้ากดกระดิ่งเองอาจไม่ทันเสียลูกค้าไปแล้ว */}
+        {/* แถบเตือนวันว่างใกล้หมดหน้าแรก */}
         {lowSlotProperties.length > 0 && (
           <section className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-base">📅</span>
+              <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
               <h3 className="font-black text-amber-800 text-xs">
                 วันว่างเข้าชมใกล้หมดแล้ว {lowSlotProperties.length} ประกาศ
               </h3>
@@ -213,11 +216,23 @@ export default function AgentHomePage() {
           <Link href="/agent/upgrade" className="bg-white hover:bg-amber-50/50 rounded-2xl p-4 border border-slate-100 hover:border-amber-400 shadow-2xs hover:shadow-md transition block group">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">โควต้าลงประกาศ</span>
-              <span className="text-[10px] font-black text-amber-600 group-hover:underline">อัปเกรด PRO →</span>
+              <span className="text-[10px] font-black text-amber-600 group-hover:underline flex items-center gap-1">
+                อัปเกรด PRO
+                <svg className="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </span>
             </div>
-            <strong className="text-xl font-black text-amber-600 block mt-1">
-              {dbData?.isPro ? 'ไม่จำกัด 👑' : `${Math.max(0, FREE_LISTING_QUOTA - (dbData?.propertiesCount || 0))} / ${FREE_LISTING_QUOTA}`}
-            </strong>
+            <div className="text-xl font-black text-amber-600 block mt-1">
+              {dbData?.isPro ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span>ไม่จำกัด</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-extrabold uppercase">PRO</span>
+                </span>
+              ) : (
+                `${Math.max(0, FREE_LISTING_QUOTA - (dbData?.propertiesCount || 0))} / ${FREE_LISTING_QUOTA}`
+              )}
+            </div>
           </Link>
         </section>
 
