@@ -167,6 +167,10 @@ export default function AgentAddPropertyPage() {
     agentBusySlots.filter(s => s.date === dateStr).length +
     otherOpenSlots.filter(s => s.date === dateStr).length;
 
+  // วันนี้มี "นัดที่ลูกค้าจองจริง" กับบ้านหลังอื่นไหม — ใช้แยกสีเหลือง (สำคัญ) ออกจากสีเทา (แค่เปิดทับ)
+  const hasRealBookingOnDate = (dateStr: string) =>
+    agentBusySlots.some(s => s.date === dateStr);
+
   // สลับการเลือก / ยกเลิกช่วงเวลา (รอบเช้า/รอบบ่าย) ของวันที่เลือก
   // ไม่บล็อกรอบที่ชนกับบ้านหลังอื่น — นายหน้าเปิดวันเดียวกันได้หลายบ้าน (ดู e07d2ba)
   // ระบบล็อกจริงทำงานตอนลูกค้ากดจองเท่านั้น (hasAgentBookingConflict ใน api/appointments)
@@ -570,6 +574,7 @@ export default function AgentAddPropertyPage() {
                   if (isPast) dayClass += "text-slate-200 cursor-not-allowed";
                   else if (isSelected) dayClass += "bg-blue-600 text-white shadow-md active:scale-95 cursor-pointer";
                   else if (hasSlots) dayClass += "border border-emerald-400 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer";
+                  else if (isBusy && hasRealBookingOnDate(dateStr)) dayClass += "border border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer";
                   else if (isBusy) dayClass += "border border-dashed border-slate-400 text-slate-500 bg-slate-50 hover:bg-slate-100 cursor-pointer";
                   else dayClass += "text-slate-500 hover:bg-slate-50 cursor-pointer";
 
@@ -578,7 +583,9 @@ export default function AgentAddPropertyPage() {
                       key={dayNum}
                       type="button"
                       disabled={isPast}
-                      title={isBusy ? 'คุณมีนัดชมบ้านหลังอื่นในวันนี้แล้ว เลือกได้ตามปกติ' : undefined}
+                      title={!isBusy ? undefined : hasRealBookingOnDate(dateStr)
+                        ? 'วันนี้คุณมีนัดชมบ้านหลังอื่นที่ลูกค้าจองไว้แล้ว เลือกได้ตามปกติ'
+                        : 'วันนี้คุณเปิดวันว่างให้บ้านหลังอื่นไว้ด้วย เลือกได้ตามปกติ'}
                       onClick={() => setSelectedCalDate(dateStr)}
                       className={dayClass}
                     >
@@ -607,9 +614,11 @@ export default function AgentAddPropertyPage() {
                           className={`p-3 rounded-xl border text-left transition cursor-pointer ${
                             active
                               ? 'border-emerald-400 bg-emerald-50'
-                              : (busy || otherOpen)
-                                ? 'border-dashed border-slate-300 bg-slate-50 hover:border-blue-400'
-                                : 'border-slate-200 hover:border-blue-400'
+                              : busy
+                                ? 'border-dashed border-amber-300 bg-amber-50/60 hover:border-amber-500'
+                                : otherOpen
+                                  ? 'border-dashed border-slate-300 bg-slate-50 hover:border-blue-400'
+                                  : 'border-slate-200 hover:border-blue-400'
                           }`}
                         >
                           <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
@@ -651,7 +660,8 @@ export default function AgentAddPropertyPage() {
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 mt-4 pt-3 border-t border-slate-100 text-[9px] font-bold text-slate-400">
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-emerald-400" /> เปิดว่างไว้</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> เลือกอยู่</span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-dashed border-slate-400" /> ทับกับบ้านหลังอื่น (เลือกซ้อนได้ปกติ)</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-dashed border-amber-400 bg-amber-50" /> ติดนัดบ้านหลังอื่นแล้ว</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-dashed border-slate-400" /> เปิดวันว่างทับกันไว้</span>
               </div>
             </div>
 

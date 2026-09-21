@@ -219,6 +219,10 @@ export default function AgentEditPropertyPage() {
     agentBusySlots.filter(s => s.date === dateStr).length +
     otherOpenSlots.filter(s => s.date === dateStr).length;
 
+  // วันนี้มี "นัดที่ลูกค้าจองจริง" กับบ้านหลังอื่นไหม — ใช้แยกสีเหลือง (สำคัญ) ออกจากสีเทา (แค่เปิดทับ)
+  const hasRealBookingOnDate = (dateStr: string) =>
+    agentBusySlots.some(s => s.date === dateStr);
+
   const toggleViewingSlot = (dateStr: string, timeSlot: 'morning' | 'afternoon') => {
     const target = viewingSlots.find(s => s.date === dateStr && s.timeSlot === timeSlot);
 
@@ -591,6 +595,7 @@ export default function AgentEditPropertyPage() {
                   else if (isSelected) dayClass += "bg-blue-600 text-white shadow-md active:scale-95 cursor-pointer";
                   else if (hasBooked) dayClass += "border border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer";
                   else if (hasSlots) dayClass += "border border-emerald-400 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer";
+                  else if (isBusy && hasRealBookingOnDate(dateStr)) dayClass += "border border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer";
                   else if (isBusy) dayClass += "border border-dashed border-slate-400 text-slate-500 bg-slate-50 hover:bg-slate-100 cursor-pointer";
                   else dayClass += "text-slate-500 hover:bg-slate-50 cursor-pointer";
 
@@ -633,9 +638,11 @@ export default function AgentEditPropertyPage() {
                               ? 'border-amber-400 bg-amber-50'
                               : active
                                 ? 'border-emerald-400 bg-emerald-50'
-                                : (busy || otherOpen)
-                                  ? 'border-dashed border-slate-300 bg-slate-50 hover:border-blue-400'
-                                  : 'border-slate-200 hover:border-blue-400'
+                                : busy
+                                  ? 'border-dashed border-amber-300 bg-amber-50/60 hover:border-amber-500'
+                                  : otherOpen
+                                    ? 'border-dashed border-slate-300 bg-slate-50 hover:border-blue-400'
+                                    : 'border-slate-200 hover:border-blue-400'
                           }`}
                         >
                           <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
@@ -675,7 +682,8 @@ export default function AgentEditPropertyPage() {
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-emerald-400 bg-emerald-100" /> เปิดรับจองอยู่</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-amber-400 bg-amber-100" /> มีลูกค้าจองแล้ว</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> เลือกอยู่</span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-dashed border-slate-400" /> ทับกับบ้านหลังอื่น (เลือกซ้อนได้ปกติ)</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-dashed border-amber-400 bg-amber-50" /> ติดนัดบ้านหลังอื่นแล้ว</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-dashed border-slate-400" /> เปิดวันว่างทับกันไว้</span>
               </div>
             </div>
 
