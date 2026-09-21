@@ -5,7 +5,7 @@ import { SessionProvider } from 'next-auth/react';
 import { AppProvider } from '@/context/AppContext';
 
 import FloatingChatWidget from '@/components/common/FloatingChatWidget';
-import AdminTopBar from '@/components/common/AdminTopBar';
+import AdminTopBar from '@/components/layout/AdminTopBar';
 import ToastContainer from '@/components/common/ToastContainer';
 import NetworkStatusBanner from '@/components/common/NetworkStatusBanner';
 

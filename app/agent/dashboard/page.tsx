@@ -26,7 +26,7 @@ import { toast } from '@/components/ui/toast';
 // นำเข้า คอมโพเนนต์ย่อยสำหรับระบบ Agent Dashboard
 import PendingApprovalBanner from '@/components/agent/PendingApprovalBanner';
 import UpgradeProModal from '@/components/agent/UpgradeProModal';
-import PropertyStatsModal, { PropertyData } from '@/components/agent/dashboard/PropertyStatsModal';
+import PropertyStatsModal, { PropertyData } from '@/components/agent/PropertyStatsModal';
 
 function ClockIcon({ className }: { className?: string }) {
   return (

@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import {
   rolesData, typesData, amenitiesData, nearbyData,
   configsData, packagesData, bannerData, promotionData, propertiesRawData
-} from './seed_data';
+} from './seeds/data';
 
 // โหลด Environment Variables
 const envPath = path.join(process.cwd(), '.env');
