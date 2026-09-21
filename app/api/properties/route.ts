@@ -55,6 +55,9 @@ export async function GET() {
         property_images: { 
           orderBy: { order_index: "asc" } // ดึงรูปภาพเรียงตามลำดับที่ตั้งไว้
         },
+        property_amenities: {
+          include: { amenities: true }
+        },
         provinces: true, // ข้อมูลจังหวัด
         amphures: true,  // ข้อมูลอำเภอ
         districts: true  // ข้อมูลตำบล
@@ -110,6 +113,7 @@ export async function GET() {
           parking: p.parking_spaces ?? null,
           floors: p.floors ?? null,
           ownership: p.ownership_type || null,
+          amenities: p.property_amenities?.map((pa) => pa.amenities?.name).filter(Boolean) || [],
           province_id: p.province_id,
           amphure_id: p.amphure_id,
           district_id: p.district_id,

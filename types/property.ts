@@ -32,4 +32,5 @@ export interface Property {
   parking?: number | null;
   floors?: number | null;
   ownership?: string | null;
+  amenities?: string[];
 }
