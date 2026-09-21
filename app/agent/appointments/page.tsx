@@ -266,11 +266,19 @@ export default function AgentAppointmentsPage() {
   const [reschedulingApt, setReschedulingApt] = useState<AgentAppointment | null>(null);
   const [newDate, setNewDate] = useState('');
   const [newTimeSlot, setNewTimeSlot] = useState<'morning' | 'afternoon'>('morning');
+  // เดือน/ปีที่ปฏิทินในโมดัลกำลังเปิดดูอยู่ (แยกจากปฏิทินหน้าหลักฝั่งซ้าย)
+  const [rsYear, setRsYear] = useState(today.getFullYear());
+  const [rsMonth, setRsMonth] = useState(today.getMonth());
 
   const openRescheduleModal = (apt: AgentAppointment) => {
     setReschedulingApt(apt);
     setNewDate('');
     setNewTimeSlot(apt.timeSlot);
+    // เปิดปฏิทินค้างไว้ที่เดือนของวันนัดเดิม เพื่อให้นายหน้าเลือกวันใกล้เคียงได้ทันที
+    // แต่ถ้าวันนัดเดิมผ่านไปแล้วให้เด้งกลับมาเดือนปัจจุบัน (เลือกวันในอดีตไม่ได้อยู่แล้ว)
+    const base = apt.date >= todayKey ? new Date(apt.date + 'T00:00:00') : today;
+    setRsYear(base.getFullYear());
+    setRsMonth(base.getMonth());
   };
 
   const closeRescheduleModal = () => {
@@ -950,13 +958,81 @@ export default function AgentAppointmentsPage() {
 
             <div className="space-y-2">
               <label className="block text-xs font-extrabold text-slate-700">เลือกวันใหม่ที่คุณสะดวก:</label>
-              <input
-                type="date"
-                value={newDate}
-                min={todayKey}
-                onChange={(e) => setNewDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500"
-              />
+
+              {/* ปฏิทินไทยแบบย่อ — ยกแบบมาจากปฏิทินฝั่งซ้ายของหน้านี้ ให้ทั้งเว็บใช้ปฏิทินหน้าตาเดียวกัน
+                  (ของเดิมเป็น <input type="date"> ซึ่งเด้งปฏิทินของเบราว์เซอร์ขึ้นมาเป็น ค.ศ.) */}
+              <div className="border border-slate-200 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <button
+                    type="button"
+                    onClick={() => { const d = new Date(rsYear, rsMonth - 1, 1); setRsYear(d.getFullYear()); setRsMonth(d.getMonth()); }}
+                    className="text-slate-400 hover:text-slate-600 font-bold text-xs px-1 cursor-pointer"
+                  >
+                    &lt;
+                  </button>
+                  <span className="text-[11px] font-black text-slate-800">{MONTH_NAMES_TH[rsMonth]} {rsYear + 543}</span>
+                  <button
+                    type="button"
+                    onClick={() => { const d = new Date(rsYear, rsMonth + 1, 1); setRsYear(d.getFullYear()); setRsMonth(d.getMonth()); }}
+                    className="text-slate-400 hover:text-slate-600 font-bold text-xs px-1 cursor-pointer"
+                  >
+                    &gt;
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black pb-1.5 mb-1.5 border-b border-slate-100">
+                  <span className="text-red-500">อา</span>
+                  <span className="text-slate-400">จ</span>
+                  <span className="text-slate-400">อ</span>
+                  <span className="text-slate-400">พ</span>
+                  <span className="text-slate-400">พฤ</span>
+                  <span className="text-slate-400">ศ</span>
+                  <span className="text-blue-500">ส</span>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold">
+                  {Array.from({ length: new Date(rsYear, rsMonth, 1).getDay() }).map((_, idx) => (
+                    <div key={`rs-empty-${idx}`} className="w-7 h-7" />
+                  ))}
+
+                  {Array.from({ length: new Date(rsYear, rsMonth + 1, 0).getDate() }).map((_, i) => {
+                    const dayNum = i + 1;
+                    const dateStr = `${rsYear}-${String(rsMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                    const isSelected = newDate === dateStr;
+                    const isToday = dateStr === todayKey;
+                    const isPast = dateStr < todayKey;      // วันที่ผ่านไปแล้ว เลื่อนนัดไปหาไม่ได้
+
+                    let dayClass = 'relative w-7 h-7 flex items-center justify-center mx-auto rounded-full transition-all ';
+                    if (isSelected) dayClass += 'bg-amber-500 text-white shadow-md cursor-pointer';
+                    else if (isPast) dayClass += 'text-slate-200 cursor-not-allowed';
+                    else if (isToday) dayClass += 'border-2 border-blue-500 text-blue-700 font-black cursor-pointer hover:bg-blue-50';
+                    else dayClass += 'text-slate-600 hover:bg-amber-50 cursor-pointer';
+
+                    return (
+                      <button
+                        key={dayNum}
+                        type="button"
+                        disabled={isPast}
+                        onClick={() => setNewDate(dateStr)}
+                        className={dayClass}
+                      >
+                        {dayNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-2.5 pt-2 border-t border-slate-100 text-[9px] font-bold text-slate-400">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full border-2 border-blue-500 inline-block" /> วันนี้</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> วันที่เลือก</span>
+                </div>
+              </div>
+
+              {newDate && (
+                <p className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                  เลือกไว้: {formatDateTH(newDate)}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
