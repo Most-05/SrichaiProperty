@@ -158,10 +158,9 @@ export default function AgentAddPropertyPage() {
     agentBusySlots.filter(s => s.date === dateStr).length;
 
   // สลับการเลือก / ยกเลิกช่วงเวลา (รอบเช้า/รอบบ่าย) ของวันที่เลือก
+  // ไม่บล็อกรอบที่ชนกับบ้านหลังอื่น — นายหน้าเปิดวันเดียวกันได้หลายบ้าน (ดู e07d2ba)
+  // ระบบล็อกจริงทำงานตอนลูกค้ากดจองเท่านั้น (hasAgentBookingConflict ใน api/appointments)
   const toggleViewingSlot = (dateStr: string, timeSlot: 'morning' | 'afternoon') => {
-    // กันไว้อีกชั้น: ถ้ารอบนี้ชนกับบ้านหลังอื่น ห้ามเลือก (ปุ่มถูก disabled อยู่แล้ว แต่กันพลาด)
-    if (getBusySlot(dateStr, timeSlot)) return;
-
     setViewingSlots(prev => {
       const exists = prev.some(s => s.date === dateStr && s.timeSlot === timeSlot);
       if (exists) return prev.filter(s => !(s.date === dateStr && s.timeSlot === timeSlot));
