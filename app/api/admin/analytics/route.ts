@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next'; // ดึงเซสชันปัจจุบันเพื่อตรวจสิทธิ์ admin
 import { authOptions } from '@/lib/authOptions'; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับดึงข้อมูลวิเคราะห์ (analytics)
+import { summarizeReviewSla } from '@/lib/services/slaService'; // สรุปผล SLA การตรวจประกาศย้อนหลัง
 
 interface AdminSession {
   user?: {
@@ -137,6 +138,15 @@ export async function GET(request: Request) {
       views: p.views_count,
     }));
 
+    // 🔑 KEYWORD: สรุปผล SLA การตรวจประกาศ
+    // ตอบว่าทีมแอดมินตรวจทันกำหนดจริงไหม ด้วยตัวเลขจากข้อมูลจริง
+    // นับเฉพาะใบที่มี reviewed_at (ประกาศเก่าก่อนเริ่มเก็บข้อมูลจะถูกข้าม)
+    const reviewedRows = await db.properties.findMany({
+      where: { reviewed_at: { not: null } },
+      select: { created_at: true, reviewed_at: true }
+    });
+    const moderationSla = summarizeReviewSla(reviewedRows);
+
     return NextResponse.json({
       range,
       appointmentsChart,
@@ -149,6 +159,7 @@ export async function GET(request: Request) {
         proAgentsCount,
         totalViews: viewsAgg._sum.views_count || 0,
       },
+      moderationSla,
     });
   } catch (error) {
     const err = error as Error;

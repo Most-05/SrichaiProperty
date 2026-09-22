@@ -45,6 +45,13 @@ interface AnalyticsData {
     proAgentsCount: number;
     totalViews: number;
   };
+  /** สรุปผล SLA การตรวจประกาศย้อนหลัง (นับเฉพาะใบที่มีบันทึกเวลาตรวจ) */
+  moderationSla?: {
+    reviewedCount: number;
+    averageLabel: string;
+    withinSlaCount: number;
+    withinSlaPercent: number;
+  };
 }
 
 // สีและป้ายกำกับกราฟนัดหมาย แยกตามสถานะจริงในระบบ (pending/approved/completed/rejected/cancelled)
@@ -162,6 +169,36 @@ export default function AdminAnalyticsPage() {
           </div>
         ) : (
           <>
+            {/* 🔑 KEYWORD: แถบสรุปผล SLA การตรวจประกาศ
+                ตอบคำถาม "ทีมตรวจทันกำหนดจริงไหม" ด้วยตัวเลขจากข้อมูลจริง
+                ซ่อนไว้ถ้ายังไม่มีประกาศที่บันทึกเวลาตรวจ จะได้ไม่โชว์ 0% ให้เข้าใจผิด */}
+            {data?.moderationSla && data.moderationSla.reviewedCount > 0 && (
+              <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 flex flex-wrap items-center gap-x-10 gap-y-3">
+                <div>
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">คุณภาพการตรวจประกาศ</span>
+                  <strong className="text-sm font-black text-slate-700 block mt-1">กรอบเวลาที่ตั้งไว้ 24 ชม.</strong>
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">ตรวจแล้วทั้งหมด</span>
+                  <strong className="text-2xl font-black text-slate-900 block">{data.moderationSla.reviewedCount} ประกาศ</strong>
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">เวลาเฉลี่ยที่ใช้ตรวจ</span>
+                  <strong className="text-2xl font-black text-blue-600 block">{data.moderationSla.averageLabel}</strong>
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">ตรวจทันกำหนด</span>
+                  <strong className={`text-2xl font-black block ${
+                    data.moderationSla.withinSlaPercent >= 90 ? 'text-emerald-600'
+                      : data.moderationSla.withinSlaPercent >= 70 ? 'text-amber-600' : 'text-red-600'
+                  }`}>
+                    {data.moderationSla.withinSlaPercent}%
+                    <span className="text-xs font-bold text-slate-400 ml-1.5">({data.moderationSla.withinSlaCount}/{data.moderationSla.reviewedCount})</span>
+                  </strong>
+                </div>
+              </section>
+            )}
+
             {/* 4 การ์ดสรุปตัวเลขรวม */}
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-2xl p-4 border-l-4 border-blue-500 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
