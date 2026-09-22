@@ -18,8 +18,18 @@ export interface LowSlotProperty {
   title: string;
   /** จำนวนรอบที่ยังว่างให้ลูกค้าจองได้ในช่วงที่มองไปข้างหน้า */
   remainingSlots: number;
-  /** วันสุดท้ายที่ยังเปิดว่างอยู่ (YYYY-MM-DD) — null คือไม่เหลือเลย */
+  /** วันสุดท้ายที่ยังเปิดว่างอยู่ "ในช่วงที่มองไปข้างหน้า" (YYYY-MM-DD) — null คือในช่วงนั้นไม่มีเลย */
   lastAvailableDate: string | null;
+  /**
+   * วันว่างถัดไปที่ใกล้ที่สุด "โดยไม่จำกัดว่าต้องอยู่ใน SLOT_LOOKAHEAD_DAYS" (YYYY-MM-DD)
+   * null = ไม่มีรอบว่างในอนาคตเลยจริงๆ
+   *
+   * จำเป็นเพราะ lastAvailableDate เป็น null ได้ 2 กรณีซึ่งความหมายต่างกันคนละเรื่อง:
+   * (1) ไม่เคยเปิดวันว่าง / รอบถูกจองหมด -> ไม่มีจริงๆ
+   * (2) เปิดไว้แต่ไกลกว่า 30 วัน -> มีรอบอยู่ แค่ลูกค้ายังจองในเดือนนี้ไม่ได้
+   * ถ้าไม่แยกสองกรณีนี้ หน้าเว็บจะขึ้นว่า "ไม่เหลือรอบว่างแล้ว" ทั้งที่นายหน้าเพิ่งเปิดไป
+   */
+  nextAvailableDate: string | null;
 }
 
 /** แปลง Date เป็น "YYYY-MM-DD" อ่านแบบ UTC เพราะ available_date เป็นชนิด Date ล้วน ไม่มีเวลา */
@@ -51,10 +61,12 @@ export async function findPropertiesWithLowSlots(
     select: {
       id: true,
       title: true,
+      // ดึงรอบว่างในอนาคต "ทั้งหมด" ไม่ตัดที่ horizon แล้วมาแบ่งช่วงเองด้านล่าง
+      // (ตัดที่ query ตั้งแต่แรกทำให้แยกไม่ออกว่า "ไม่มีรอบ" หรือ "มีแต่อยู่ไกล")
       property_viewing_slots: {
         where: {
           is_booked: false,
-          available_date: { gte: today, lte: horizon }
+          available_date: { gte: today }
         },
         select: { available_date: true },
         orderBy: { available_date: 'asc' }
@@ -64,13 +76,16 @@ export async function findPropertiesWithLowSlots(
 
   return properties
     .map((p) => {
-      const slots = p.property_viewing_slots;
-      const lastSlot = slots[slots.length - 1];
+      const futureSlots = p.property_viewing_slots;                              // เรียงจากใกล้ไปไกลแล้ว
+      const inWindow = futureSlots.filter((s) => s.available_date <= horizon);   // เฉพาะที่ลูกค้าจองได้เร็วๆ นี้
+      const lastInWindow = inWindow[inWindow.length - 1];
+      const nextAnywhere = futureSlots[0];
       return {
         propertyId: p.id,
         title: p.title,
-        remainingSlots: slots.length,
-        lastAvailableDate: lastSlot ? toDateKey(lastSlot.available_date) : null
+        remainingSlots: inWindow.length,
+        lastAvailableDate: lastInWindow ? toDateKey(lastInWindow.available_date) : null,
+        nextAvailableDate: nextAnywhere ? toDateKey(nextAnywhere.available_date) : null
       };
     })
     .filter((p) => p.remainingSlots < LOW_SLOT_THRESHOLD);
