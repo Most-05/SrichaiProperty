@@ -6,6 +6,7 @@ import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเ�
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
 import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก
 import { NO_SHOW_LIMIT, APPOINTMENT_STATUS } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
+import { findUpcomingAppointments, findRecentlyRemindedAppointmentIds, buildReminderMessage, REMINDER_TYPE } from "@/lib/services/appointmentReminderService"; // เตือนล่วงหน้าก่อนถึงวันนัด
 
 /**
  * ==============================================================================
@@ -54,6 +55,23 @@ export async function GET(request: Request) {
     await autoCompleteOverdueAppointments();
     // ยกเลิกนัดที่นายหน้าขอเลื่อนไว้แต่ลูกค้าไม่เคยกดรับ จนวันที่เสนอผ่านไปแล้ว (คืนรอบว่างให้ด้วย)
     await autoCancelExpiredRescheduleOffers();
+
+    // 🔑 KEYWORD: เตือนล่วงหน้าก่อนถึงวันนัด (ลดการไม่มาตามนัด)
+    // เช็คตอนเปิดหน้ารายการนัด เพราะโปรเจกต์นี้ไม่มี cron (เหมือน auto-complete ด้านบน
+    // และเหมือนการเตือนวันว่างใกล้หมดในหน้าแรกนายหน้า) ทั้งสองฝั่งใช้ API ตัวนี้อยู่แล้ว
+    // จุดเดียวจึงครอบคลุมทั้งลูกค้าและนายหน้า
+    const [upcoming, alreadyReminded] = await Promise.all([
+      findUpcomingAppointments(user.id, isAgent),
+      findRecentlyRemindedAppointmentIds(user.id)
+    ]);
+
+    for (const apt of upcoming) {
+      if (alreadyReminded.has(apt.appointmentId)) continue;
+      const msg = buildReminderMessage(apt, isAgent);
+      // ไม่ await เพื่อไม่ให้การส่งแจ้งเตือนถ่วงการโหลดรายการนัด (ยิงแล้วปล่อย เหมือนจุดอื่นในไฟล์นี้)
+      notifyUser({ userId: user.id, title: msg.title, content: msg.content, type: REMINDER_TYPE, linkUrl: msg.linkUrl })
+        .catch((e) => console.error("ส่งการเตือนก่อนถึงวันนัดไม่สำเร็จ:", e));
+    }
 
     // 1.4 ดึงข้อมูลนัดหมายจากฐานข้อมูล PostgreSQL ผ่าน Prisma ORM
     // - ถ้าเป็นนายหน้า: ค้นหาแถวที่ agent_id === user.id
