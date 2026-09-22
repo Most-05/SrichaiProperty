@@ -45,6 +45,13 @@ function formatDateTH(dateStr: string): string {
   return `วัน${days[d.getDay()]}ที่ ${d.getDate()} ${MONTH_NAMES_TH[d.getMonth()]} ${d.getFullYear() + 543}`;
 }
 
+// แปลง Date เป็นคีย์ "YYYY-MM-DD" ตามวันที่ของเครื่องผู้ใช้
+// ห้ามใช้ toISOString() เพราะมันคืนวันตามโซน UTC ทำให้ช่วงเที่ยงคืน-7 โมงเช้าของไทย
+// ได้วันที่ย้อนหลังไป 1 วัน (ปฏิทินจะไฮไลต์ "วันนี้" ผิดวัน และกรองนัดผิดช่วง)
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function timeSlotLabel(slot: string): string {
   return slot === 'afternoon' ? 'ช่วงบ่าย (13:00 น.)' : 'ช่วงเช้า (10:00 น.)';
 }
@@ -71,7 +78,7 @@ export default function AgentAppointmentsPage() {
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null);
 
-  const todayKey = today.toISOString().split('T')[0];
+  const todayKey = toDateKey(today);
 
   const loadAppointments = useCallback(async () => {
     setLoading(true);
@@ -259,11 +266,19 @@ export default function AgentAppointmentsPage() {
   const [reschedulingApt, setReschedulingApt] = useState<AgentAppointment | null>(null);
   const [newDate, setNewDate] = useState('');
   const [newTimeSlot, setNewTimeSlot] = useState<'morning' | 'afternoon'>('morning');
+  // เดือน/ปีที่ปฏิทินในโมดัลกำลังเปิดดูอยู่ (แยกจากปฏิทินหน้าหลักฝั่งซ้าย)
+  const [rsYear, setRsYear] = useState(today.getFullYear());
+  const [rsMonth, setRsMonth] = useState(today.getMonth());
 
   const openRescheduleModal = (apt: AgentAppointment) => {
     setReschedulingApt(apt);
     setNewDate('');
     setNewTimeSlot(apt.timeSlot);
+    // เปิดปฏิทินค้างไว้ที่เดือนของวันนัดเดิม เพื่อให้นายหน้าเลือกวันใกล้เคียงได้ทันที
+    // แต่ถ้าวันนัดเดิมผ่านไปแล้วให้เด้งกลับมาเดือนปัจจุบัน (เลือกวันในอดีตไม่ได้อยู่แล้ว)
+    const base = apt.date >= todayKey ? new Date(apt.date + 'T00:00:00') : today;
+    setRsYear(base.getFullYear());
+    setRsMonth(base.getMonth());
   };
 
   const closeRescheduleModal = () => {
@@ -380,7 +395,7 @@ export default function AgentAppointmentsPage() {
   const upcomingWithin7Days = useMemo(() => {
     const in7 = new Date();
     in7.setDate(in7.getDate() + 7);
-    const in7Key = in7.toISOString().split('T')[0];
+    const in7Key = toDateKey(in7);
     return upcoming.filter(a => a.date >= todayKey && a.date <= in7Key).length;
   }, [upcoming, todayKey]);
 
@@ -395,6 +410,19 @@ export default function AgentAppointmentsPage() {
   const datesWithAppointments = useMemo(() => new Set(appointments.map(a => a.date)), [appointments]);
 
   const getAppointmentsForDate = (dateStr: string) => appointments.filter(a => a.date === dateStr);
+
+  // รอบที่นายหน้ามีนัดที่ยัง "จองอยู่จริง" อยู่แล้ว — ใช้โชว์จุดเตือนบนปฏิทินในโมดัลขอเลื่อนวัน
+  // API มี hasAgentBookingConflict คอยกันชนอยู่แล้ว แต่เดิมนายหน้าจะรู้ว่าชนก็ต่อเมื่อกดส่งแล้วโดนตีกลับ
+  // ไม่นับใบที่กำลังเลื่อนเอง เพราะย้ายรอบเวลาภายในวันเดิมเป็นเรื่องปกติ
+  //
+  // เก็บเป็นคีย์ "วันที่|รอบเวลา" ไม่ใช่แค่วันที่ เพราะการกันชนจริงของระบบดูถึงระดับรอบ
+  // (ติดนัดรอบเช้า ยังเลื่อนมารอบบ่ายวันเดียวกันได้ตามปกติ) ถ้าเตือนเหมาทั้งวันจะเข้มเกินจริง
+  // และผิดหลักที่ตกลงไว้ว่าล็อกเฉพาะรอบที่ชนกันจริง
+  const busySlotKeysForReschedule = useMemo(() => new Set(
+    appointments
+      .filter(a => a.id !== reschedulingApt?.id && ['pending', 'approved', 'awaiting_customer'].includes(a.status))
+      .map(a => `${a.date}|${a.timeSlot}`)
+  ), [appointments, reschedulingApt]);
 
   return (
     <div className="font-sans text-slate-800 text-xs antialiased flex flex-col min-h-screen bg-[#f8fafc]">
@@ -920,7 +948,7 @@ export default function AgentAppointmentsPage() {
       {/* 🔑 KEYWORD: โมดัลขอเลื่อนวันนัด */}
       {reschedulingApt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-extrabold text-amber-600 text-base flex items-center gap-1.5">
                 <span>📅</span> ขอเลื่อนวันนัดหมาย
@@ -943,13 +971,91 @@ export default function AgentAppointmentsPage() {
 
             <div className="space-y-2">
               <label className="block text-xs font-extrabold text-slate-700">เลือกวันใหม่ที่คุณสะดวก:</label>
-              <input
-                type="date"
-                value={newDate}
-                min={todayKey}
-                onChange={(e) => setNewDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500"
-              />
+
+              {/* ปฏิทินไทยแบบย่อ — ยกแบบมาจากปฏิทินฝั่งซ้ายของหน้านี้ ให้ทั้งเว็บใช้ปฏิทินหน้าตาเดียวกัน
+                  (ของเดิมเป็น <input type="date"> ซึ่งเด้งปฏิทินของเบราว์เซอร์ขึ้นมาเป็น ค.ศ.) */}
+              <div className="border border-slate-200 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <button
+                    type="button"
+                    onClick={() => { const d = new Date(rsYear, rsMonth - 1, 1); setRsYear(d.getFullYear()); setRsMonth(d.getMonth()); }}
+                    className="text-slate-400 hover:text-slate-600 font-bold text-xs px-1 cursor-pointer"
+                  >
+                    &lt;
+                  </button>
+                  <span className="text-[11px] font-black text-slate-800">{MONTH_NAMES_TH[rsMonth]} {rsYear + 543}</span>
+                  <button
+                    type="button"
+                    onClick={() => { const d = new Date(rsYear, rsMonth + 1, 1); setRsYear(d.getFullYear()); setRsMonth(d.getMonth()); }}
+                    className="text-slate-400 hover:text-slate-600 font-bold text-xs px-1 cursor-pointer"
+                  >
+                    &gt;
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black pb-1.5 mb-1.5 border-b border-slate-100">
+                  <span className="text-red-500">อา</span>
+                  <span className="text-slate-400">จ</span>
+                  <span className="text-slate-400">อ</span>
+                  <span className="text-slate-400">พ</span>
+                  <span className="text-slate-400">พฤ</span>
+                  <span className="text-slate-400">ศ</span>
+                  <span className="text-blue-500">ส</span>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold">
+                  {Array.from({ length: new Date(rsYear, rsMonth, 1).getDay() }).map((_, idx) => (
+                    <div key={`rs-empty-${idx}`} className="w-7 h-7" />
+                  ))}
+
+                  {Array.from({ length: new Date(rsYear, rsMonth + 1, 0).getDate() }).map((_, i) => {
+                    const dayNum = i + 1;
+                    const dateStr = `${rsYear}-${String(rsMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                    const isSelected = newDate === dateStr;
+                    const isToday = dateStr === todayKey;
+                    const isPast = dateStr < todayKey;      // วันที่ผ่านไปแล้ว เลื่อนนัดไปหาไม่ได้
+                    // เตือนเฉพาะรอบเวลาที่นายหน้าเลือกอยู่ตอนนี้ — สลับเช้า/บ่ายแล้วจุดเตือนขยับตาม
+                    const isBusy = !isPast && busySlotKeysForReschedule.has(`${dateStr}|${newTimeSlot}`);
+
+                    let dayClass = 'relative w-7 h-7 flex items-center justify-center mx-auto rounded-full transition-all ';
+                    if (isSelected) dayClass += 'bg-amber-500 text-white shadow-md cursor-pointer';
+                    else if (isPast) dayClass += 'text-slate-200 cursor-not-allowed';
+                    else if (isToday) dayClass += 'border-2 border-blue-500 text-blue-700 font-black cursor-pointer hover:bg-blue-50';
+                    else dayClass += 'text-slate-600 hover:bg-amber-50 cursor-pointer';
+
+                    return (
+                      <button
+                        key={dayNum}
+                        type="button"
+                        disabled={isPast}
+                        onClick={() => setNewDate(dateStr)}
+                        className={dayClass}
+                      >
+                        {dayNum}
+                        {isBusy && (
+                          <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-amber-500'}`} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-2.5 pt-2 border-t border-slate-100 text-[9px] font-bold text-slate-400">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full border-2 border-blue-500 inline-block" /> วันนี้</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> รอบนี้มีนัดแล้ว</span>
+                </div>
+              </div>
+
+              {newDate && (
+                <div className="text-[10px] font-bold bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 space-y-1">
+                  <p className="text-amber-700">เลือกไว้: {formatDateTH(newDate)}</p>
+                  {busySlotKeysForReschedule.has(`${newDate}|${newTimeSlot}`) && (
+                    <p className="text-amber-900 leading-relaxed">
+                      คุณมีนัดอื่นในวันและรอบเวลานี้อยู่แล้ว — เลื่อนมารอบนี้ไม่ได้ ลองสลับเป็นอีกรอบหรือเลือกวันอื่น
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
