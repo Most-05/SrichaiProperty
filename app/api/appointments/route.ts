@@ -154,7 +154,10 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ success: true, appointments: formatted });
+    // ส่งรายการนัดที่ใกล้ถึงกลับไปด้วย ให้หน้าเว็บเอาไปทำแถบเตือนบนจอได้เลย
+    // (กระดิ่งอย่างเดียวไม่พอ ผู้ใช้หลายคนไม่กดดู) ใช้ชุดเดียวกับที่ส่งแจ้งเตือนไป
+    // จึงไม่ต้อง query ซ้ำ และข้อมูลสองที่ไม่มีทางขัดกันเอง
+    return NextResponse.json({ success: true, appointments: formatted, upcomingReminders: upcoming });
   } catch (error) {
     return NextResponse.json({ error: "ดึงข้อมูลนัดหมายล้มเหลว: " + (error as Error).message }, { status: 500 });
   }
