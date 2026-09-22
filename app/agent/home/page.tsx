@@ -73,7 +73,7 @@ export default function AgentHomePage() {
     totalViews: number;
     pendingChatCount: number;
     appointments: AppointmentData[];
-    lowSlotProperties?: { propertyId: string; title: string; remainingSlots: number; lastAvailableDate: string | null }[];
+    lowSlotProperties?: { propertyId: string; title: string; remainingSlots: number; lastAvailableDate: string | null; nextAvailableDate?: string | null }[];
   } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -142,6 +142,23 @@ export default function AgentHomePage() {
   const pendingChatCount = dbData?.pendingChatCount || 0;
   const lowSlotProperties = dbData?.lowSlotProperties || [];
 
+  // "2026-11-01" -> "1 พ.ย. 2569" (หน้านี้ยังไม่มีตัวจัดรูปแบบวันที่ จึงเขียนไว้ตรงนี้)
+  const MONTH_ABBR_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const formatDateTH = (key: string) => {
+    const [y, m, d] = key.split('-').map(Number);
+    if (!y || !m || !d) return key;
+    return `${d} ${MONTH_ABBR_TH[m - 1]} ${y + 543}`;
+  };
+
+  // อีกกี่วันจะถึงวันนั้น อ่านวันที่จากเวลาเครื่อง ไม่ใช้ toISOString() (จะได้วันตามโซน UTC)
+  const daysFromToday = (key: string) => {
+    const [y, m, d] = key.split('-').map(Number);
+    const target = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.round((target.getTime() - today.getTime()) / 86400000);
+  };
+
   return (
     <div className="pt-6 sm:pt-8 min-h-screen bg-slate-50/50 text-slate-800 text-xs md:text-sm font-sans antialiased">
       <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-6 text-left">
@@ -171,9 +188,12 @@ export default function AgentHomePage() {
                   <div className="min-w-0">
                     <p className="text-[11px] font-extrabold text-slate-800 line-clamp-1">{p.title}</p>
                     <p className="text-[10px] font-bold text-amber-600">
-                      {p.remainingSlots === 0
-                        ? 'ไม่เหลือรอบว่างให้จองแล้ว'
-                        : `เหลือ ${p.remainingSlots} รอบ (ถึง ${p.lastAvailableDate})`}
+                      {p.remainingSlots > 0
+                        ? `เหลือ ${p.remainingSlots} รอบ (ถึง ${formatDateTH(p.lastAvailableDate!)})`
+                        : p.nextAvailableDate
+                          // มีรอบว่างอยู่ แต่ไกลเกินช่วงที่ลูกค้าจองกันจริง — ต้องบอกให้ชัด ไม่ใช่เหมาว่า "ไม่เหลือแล้ว"
+                          ? `เดือนนี้ลูกค้าจองไม่ได้ — รอบถัดไป ${formatDateTH(p.nextAvailableDate)} (อีก ${daysFromToday(p.nextAvailableDate)} วัน)`
+                          : 'ยังไม่มีรอบว่างให้จองเลย'}
                     </p>
                   </div>
                   <Link
