@@ -158,7 +158,7 @@ export default function AdminAnalyticsPage() {
     return (
       <span className={`text-[10px] font-black ${flat ? 'text-slate-400' : up ? 'text-emerald-600' : 'text-red-500'}`}>
         {flat ? 'เท่าเดิม' : `${up ? '▲' : '▼'} ${Math.abs(percent)}%`}
-        <span className="text-slate-400 font-bold ml-1">เทียบช่วงก่อน</span>
+        <span className="text-slate-400 font-bold ml-1.5">เทียบช่วงก่อนหน้า</span>
       </span>
     );
   };
@@ -291,7 +291,7 @@ export default function AdminAnalyticsPage() {
                     ผลลัพธ์ของนัดหมาย
                   </h3>
                   <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-                    จากนัดหมายทั้งหมด {data.appointmentHealth.total} รายการใน{rangeText}
+                    จากนัดหมายทั้งหมด {data.appointmentHealth.total} รายการใน {rangeText}
                   </p>
                 </div>
 
@@ -384,7 +384,7 @@ export default function AdminAnalyticsPage() {
                     <Trophy className="w-4 h-4 text-amber-500" />
                     <span>Top 5 บ้านที่มีคนเข้าชมมากที่สุด</span>
                   </h3>
-                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">อันดับยอดเข้าชมสะสมตลอดกาลของแต่ละประกาศ</p>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">ประกาศที่มีคนเปิดดูมากที่สุดใน {rangeText}</p>
                 </div>
 
                 {!data || data.topPropertiesChart.length === 0 ? (

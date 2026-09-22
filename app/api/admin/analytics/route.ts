@@ -142,6 +142,16 @@ export async function GET(request: Request) {
       };
     });
 
+    // ตัดช่วงเวลาหัวแถวที่ไม่มีข้อมูลเลยทิ้ง (เช่น เม.ย./พ.ค./มิ.ย. ที่ระบบยังไม่เปิดใช้)
+    // กราฟสองอันต้องตัดที่ตำแหน่งเดียวกัน ไม่งั้นแกนเวลาจะไม่ตรงกันและเทียบกันไม่ได้
+    const hasAnyData = (i: number) =>
+      APPOINTMENT_STATUSES.some(st => Number(appointmentsChart[i][st]) > 0) ||
+      usersChart[i].customer > 0 || usersChart[i].agent > 0;
+    let firstWithData = 0;
+    while (firstWithData < buckets.length - 1 && !hasAnyData(firstWithData)) firstWithData++;
+    const appointmentsChartTrimmed = appointmentsChart.slice(firstWithData);
+    const usersChartTrimmed = usersChart.slice(firstWithData);
+
     // Top 5 ประกาศที่มีคนเข้าชมมากที่สุด "ในช่วงที่เลือก"
     // เดิมเรียงจาก views_count ซึ่งเป็นยอดสะสมตลอดกาล ทำให้อันดับไม่ขยับตามตัวกรองเลย
     // กลายเป็นว่าบนจอเดียวกันมีข้อมูลสองมาตรฐานปนกัน คนอ่านตีความผิดได้ง่าย
@@ -195,8 +205,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       range,
-      appointmentsChart,
-      usersChart,
+      appointmentsChart: appointmentsChartTrimmed,
+      usersChart: usersChartTrimmed,
       topPropertiesChart,
       summary: {
         // ตัวเลขของ "ช่วงที่เลือก" พร้อมค่าเทียบช่วงก่อนหน้า
