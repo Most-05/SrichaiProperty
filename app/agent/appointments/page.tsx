@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { NO_SHOW_LIMIT } from '@/lib/constants';
 
 interface AgentAppointment {
   id: string;
@@ -19,6 +20,8 @@ interface AgentAppointment {
   note: string;
   customerName: string;
   customerPhone: string | null;
+  /** ประวัติการมาตามนัดของลูกค้ารายนี้ (API ส่งมาเฉพาะมุมมองนายหน้า) */
+  customerReliability: { noShow: number; completed: number } | null;
   propertyId: string;
   propertyTitle: string;
   propertyImage: string;
@@ -659,6 +662,23 @@ export default function AgentAppointmentsPage() {
                         <p className="text-[9px] text-slate-400 font-bold">
                           เบอร์โทร: {apt.customerPhone || 'ไม่ระบุ'}
                         </p>
+                        {/* 🔑 KEYWORD: ประวัติการมาตามนัดของลูกค้า — ให้ตัดสินใจก่อนกดยืนยัน ไม่ใช่รู้ตอนสาย */}
+                        {apt.customerReliability && (() => {
+                          const { noShow, completed } = apt.customerReliability;
+                          const finished = noShow + completed;
+                          if (finished === 0) {
+                            return <p className="text-[9px] font-black text-slate-400 mt-0.5">ลูกค้าใหม่ ยังไม่มีประวัติเข้าชม</p>;
+                          }
+                          if (noShow === 0) {
+                            return <p className="text-[9px] font-black text-emerald-600 mt-0.5">มาตามนัดครบทั้ง {completed} ครั้ง</p>;
+                          }
+                          return (
+                            <p className={`text-[9px] font-black mt-0.5 ${noShow >= NO_SHOW_LIMIT ? 'text-red-600' : 'text-amber-600'}`}>
+                              เคยไม่มาตามนัด {noShow} จาก {finished} ครั้ง
+                              {noShow >= NO_SHOW_LIMIT && ' (ถูกจำกัดการจองแล้ว)'}
+                            </p>
+                          );
+                        })()}
                       </div>
                       <span className={`ml-auto text-[9px] font-black px-2 py-1 rounded-full border ${
                         apt.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
