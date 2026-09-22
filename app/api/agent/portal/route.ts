@@ -297,6 +297,7 @@ export async function GET(request: Request) {
           type: p.property_types?.name || 'บ้านเดี่ยว',
           status: p.status, // สถานะอนุมัติ: approved, pending, rejected
           rejectReason: p.reject_reason || null, // เหตุผลที่โดนปฏิเสธ (ถ้ามี)
+          reviewedAt: p.reviewed_at || null, // เวลาที่แอดมินตรวจเสร็จ (null = ยังไม่ตรวจ หรือประกาศเก่า)
           location: p.location,
           bedrooms: p.bedrooms || 0,
           bathrooms: p.bathrooms || 0,
