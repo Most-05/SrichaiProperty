@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
-import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก
+import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow, getCustomerReliability } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก
 import { NO_SHOW_LIMIT, APPOINTMENT_STATUS } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
 import { findUpcomingAppointments, findRecentlyRemindedAppointmentIds, buildReminderMessage, REMINDER_TYPE } from "@/lib/services/appointmentReminderService"; // เตือนล่วงหน้าก่อนถึงวันนัด
 
@@ -97,6 +97,13 @@ export async function GET(request: Request) {
     });
 
     // 1.4 จัดฟอร์แมตออบเจกต์ข้อมูล (Response Mapping) เพื่อส่งให้ React Component หน้าบ้านนำไปใช้ได้ทันที
+    // ฝั่งนายหน้าเท่านั้น: ดึงประวัติการมาตามนัดของลูกค้าทุกคนในหน้านี้ด้วย groupBy ครั้งเดียว
+    // เพื่อให้นายหน้าเห็นก่อนกดยืนยันว่าลูกค้าคนนี้เคยเบี้ยวนัดหรือไม่ (ฝั่งลูกค้าไม่ต้องเห็นของตัวเอง
+    // เพราะมีแถบเตือนโควตาเบี้ยวนัดอยู่แล้ว และไม่ควรเห็นประวัติคนอื่น)
+    const reliabilityByCustomer = isAgent
+      ? await getCustomerReliability(appointments.map((a) => a.customer_id).filter((id): id is string => Boolean(id)))
+      : null;
+
     const formatted = appointments.map((apt) => {
       const p = apt.properties;
       const cust = apt.users_appointments_customer_idTousers;
@@ -150,6 +157,10 @@ export async function GET(request: Request) {
         customerAvatar: cust?.profile_image,
         agentName,
         agentPhone: agentUser?.phone || "-",
+        // ประวัติการมาตามนัดของลูกค้ารายนี้ (null เมื่อเป็นมุมมองลูกค้า)
+        customerReliability: reliabilityByCustomer && apt.customer_id
+          ? reliabilityByCustomer.get(apt.customer_id) ?? { noShow: 0, completed: 0 }
+          : null,
         createdAt: apt.created_at
       };
     });
