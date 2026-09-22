@@ -411,13 +411,17 @@ export default function AgentAppointmentsPage() {
 
   const getAppointmentsForDate = (dateStr: string) => appointments.filter(a => a.date === dateStr);
 
-  // วันที่นายหน้ามีนัดที่ยัง "จองอยู่จริง" อยู่แล้ว — ใช้โชว์จุดเตือนบนปฏิทินในโมดัลขอเลื่อนวัน
+  // รอบที่นายหน้ามีนัดที่ยัง "จองอยู่จริง" อยู่แล้ว — ใช้โชว์จุดเตือนบนปฏิทินในโมดัลขอเลื่อนวัน
   // API มี hasAgentBookingConflict คอยกันชนอยู่แล้ว แต่เดิมนายหน้าจะรู้ว่าชนก็ต่อเมื่อกดส่งแล้วโดนตีกลับ
   // ไม่นับใบที่กำลังเลื่อนเอง เพราะย้ายรอบเวลาภายในวันเดิมเป็นเรื่องปกติ
-  const busyDatesForReschedule = useMemo(() => new Set(
+  //
+  // เก็บเป็นคีย์ "วันที่|รอบเวลา" ไม่ใช่แค่วันที่ เพราะการกันชนจริงของระบบดูถึงระดับรอบ
+  // (ติดนัดรอบเช้า ยังเลื่อนมารอบบ่ายวันเดียวกันได้ตามปกติ) ถ้าเตือนเหมาทั้งวันจะเข้มเกินจริง
+  // และผิดหลักที่ตกลงไว้ว่าล็อกเฉพาะรอบที่ชนกันจริง
+  const busySlotKeysForReschedule = useMemo(() => new Set(
     appointments
       .filter(a => a.id !== reschedulingApt?.id && ['pending', 'approved', 'awaiting_customer'].includes(a.status))
-      .map(a => a.date)
+      .map(a => `${a.date}|${a.timeSlot}`)
   ), [appointments, reschedulingApt]);
 
   return (
@@ -1010,7 +1014,8 @@ export default function AgentAppointmentsPage() {
                     const isSelected = newDate === dateStr;
                     const isToday = dateStr === todayKey;
                     const isPast = dateStr < todayKey;      // วันที่ผ่านไปแล้ว เลื่อนนัดไปหาไม่ได้
-                    const isBusy = !isPast && busyDatesForReschedule.has(dateStr); // มีนัดอื่นอยู่แล้ว
+                    // เตือนเฉพาะรอบเวลาที่นายหน้าเลือกอยู่ตอนนี้ — สลับเช้า/บ่ายแล้วจุดเตือนขยับตาม
+                    const isBusy = !isPast && busySlotKeysForReschedule.has(`${dateStr}|${newTimeSlot}`);
 
                     let dayClass = 'relative w-7 h-7 flex items-center justify-center mx-auto rounded-full transition-all ';
                     if (isSelected) dayClass += 'bg-amber-500 text-white shadow-md cursor-pointer';
@@ -1037,16 +1042,16 @@ export default function AgentAppointmentsPage() {
 
                 <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-2.5 pt-2 border-t border-slate-100 text-[9px] font-bold text-slate-400">
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full border-2 border-blue-500 inline-block" /> วันนี้</span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> มีนัดอยู่แล้ว</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> รอบนี้มีนัดแล้ว</span>
                 </div>
               </div>
 
               {newDate && (
                 <div className="text-[10px] font-bold bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 space-y-1">
                   <p className="text-amber-700">เลือกไว้: {formatDateTH(newDate)}</p>
-                  {busyDatesForReschedule.has(newDate) && (
+                  {busySlotKeysForReschedule.has(`${newDate}|${newTimeSlot}`) && (
                     <p className="text-amber-900 leading-relaxed">
-                      วันนี้คุณมีนัดกับบ้านหลังอื่นอยู่แล้ว — ถ้ารอบเวลาตรงกันระบบจะไม่ให้เลื่อนมาวันนี้
+                      คุณมีนัดอื่นในวันและรอบเวลานี้อยู่แล้ว — เลื่อนมารอบนี้ไม่ได้ ลองสลับเป็นอีกรอบหรือเลือกวันอื่น
                     </p>
                   )}
                 </div>
