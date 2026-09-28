@@ -22,7 +22,8 @@ import {
   CheckSquare,
   Square,
   Banknote,
-  Filter
+  Filter,
+  Clock
 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 
@@ -445,16 +446,18 @@ export default function AdminAnalyticsPage() {
               <div className="bg-white rounded-2xl p-4 border-l-4 border-slate-400 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">ผู้ใช้งานในระบบ</span>
                 <strong className="text-2xl font-black text-slate-900 block">{(data?.summary.totalUsers ?? 0).toLocaleString()}</strong>
-                <span className="text-[10px] font-black text-slate-500">นายหน้า {data?.summary.agentsCount ?? 0} คน</span>
+                <span className="text-[10px] font-black text-slate-500 block">
+                  นายหน้า {data?.summary.agentsCount ?? 0} คน (PRO {data?.summary.proAgentsCount ?? 0} คน)
+                </span>
                 <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
                   <Users className="w-3 h-3 text-slate-400" />
-                  <span>สะสมทั้งระบบ</span>
+                  <span>ลูกค้าทั่วไป {((data?.summary.totalUsers ?? 0) - (data?.summary.agentsCount ?? 0)).toLocaleString()} คน</span>
                 </span>
               </div>
             </section>
 
             {/* Health of core flow */}
-            {data?.appointmentHealth && data.appointmentHealth.total > 0 && (
+            {data?.appointmentHealth && (
               <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="border-b border-slate-100 pb-3">
                   <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
@@ -462,7 +465,9 @@ export default function AdminAnalyticsPage() {
                     ผลลัพธ์ของนัดหมาย (Appointment Health)
                   </h3>
                   <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-                    จากนัดหมายทั้งหมด {data.appointmentHealth.total} รายการใน {rangeText}
+                    {data.appointmentHealth.total > 0
+                      ? `จากนัดหมายทั้งหมด ${data.appointmentHealth.total} รายการใน ${rangeText}`
+                      : `ไม่มีรายการนัดหมายใหม่ในช่วง ${rangeText} (0 รายการ)`}
                   </p>
                 </div>
 
@@ -485,6 +490,49 @@ export default function AdminAnalyticsPage() {
                       <span className="text-[9px] text-slate-400 font-bold block">{item.note}</span>
                     </div>
                   ))}
+                </div>
+              </section>
+            )}
+
+            {/* Moderation SLA Performance */}
+            {data?.moderationSla && (
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    <span>ประสิทธิภาพการตรวจสอบประกาศ (Moderation SLA Performance)</span>
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                    วิเคราะห์จากประกาศที่ผ่านการตรวจสอบจริงทั้งหมดในระบบ
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">ตรวจทันตามกำหนด (Within SLA)</span>
+                    <strong className="text-2xl font-black text-emerald-600 block">
+                      {data.moderationSla.withinSlaPercent}%
+                      <span className="text-xs font-bold text-slate-400 ml-1.5">({data.moderationSla.withinSlaCount} รายการ)</span>
+                    </strong>
+                    <span className="text-[9px] text-slate-400 font-bold block">เกณฑ์มาตรฐานกำหนดไว้ไม่เกิน 24 ชม.</span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">เวลาตรวจเฉลี่ย (Average Review Time)</span>
+                    <strong className="text-2xl font-black text-blue-600 block">
+                      {data.moderationSla.averageLabel}
+                    </strong>
+                    <span className="text-[9px] text-slate-400 font-bold block">ระยะเวลาเฉลี่ยตั้งแต่ส่งประกาศจนตรวจเสร็จ</span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">ประกาศที่ผ่านการตรวจสะสม (Total Reviewed)</span>
+                    <strong className="text-2xl font-black text-slate-800 block">
+                      {data.moderationSla.reviewedCount.toLocaleString()}
+                      <span className="text-xs font-bold text-slate-400 ml-1.5">ประกาศ</span>
+                    </strong>
+                    <span className="text-[9px] text-slate-400 font-bold block">รวมทั้งที่อนุมัติและตีกลับพร้อมระบุเหตุผล</span>
+                  </div>
                 </div>
               </section>
             )}

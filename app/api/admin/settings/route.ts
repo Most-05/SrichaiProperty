@@ -9,8 +9,32 @@ async function getAdminSession() {
   return session;
 }
 
-// ค่าตั้งต้นมาตรฐานสำหรับ System Configs
+// ค่าตั้งต้นมาตรฐานสำหรับ System Configs (รวมคีย์ที่มีจริงในฐานข้อมูล PostgreSQL)
 const DEFAULT_CONFIGS: Record<string, { value: string; description: string }> = {
+  site_name: {
+    value: "Srichai Property",
+    description: "ชื่อแพลตฟอร์มอสังหาริมทรัพย์"
+  },
+  contact_email: {
+    value: "support@srichaiproperty.com",
+    description: "อีเมลฝ่ายบริการลูกค้า"
+  },
+  contact_phone: {
+    value: "074-123-4567",
+    description: "เบอร์โทรศัพท์ติดต่อส่วนกลาง"
+  },
+  line_oa: {
+    value: "@srichaiproperty",
+    description: "Line Official Account"
+  },
+  default_commission_rate: {
+    value: "3.0",
+    description: "อัตราค่าคอมมิชชั่นขั้นพื้นฐานสำหรับการปิดการขาย (%)"
+  },
+  max_free_listings: {
+    value: "3",
+    description: "จำนวนการลงประกาศอสังหาฯ ฟรีต่อบัญชีนายหน้า"
+  },
   sla_moderation_hours: {
     value: "24",
     description: "กรอบเวลา SLA สำหรับการตรวจสอบและอนุมัติประกาศอสังหาริมทรัพย์ (ชั่วโมง)"

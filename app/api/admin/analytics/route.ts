@@ -219,32 +219,38 @@ export async function GET(request: Request) {
       };
     });
 
-    // ตัดช่วงเวลาหัวแถวที่ไม่มีข้อมูลเลยทิ้ง (เช่น เม.ย./พ.ค./มิ.ย. ที่ระบบยังไม่เปิดใช้)
-    // กราฟสองอันต้องตัดที่ตำแหน่งเดียวกัน ไม่งั้นแกนเวลาจะไม่ตรงกันและเทียบกันไม่ได้
-    const hasAnyData = (i: number) =>
-      APPOINTMENT_STATUSES.some(st => Number(appointmentsChart[i][st]) > 0) ||
-      usersChart[i].customer > 0 || usersChart[i].agent > 0;
-    let firstWithData = 0;
-    while (firstWithData < buckets.length - 1 && !hasAnyData(firstWithData)) firstWithData++;
-    const appointmentsChartTrimmed = appointmentsChart.slice(firstWithData);
-    const usersChartTrimmed = usersChart.slice(firstWithData);
+    // แสดงข้อมูลทุกช่วงเวลาตามที่ผู้ใช้เลือก (ไม่ตัดทิ้ง) เพื่อให้เห็นเส้นแนวโน้มที่แท้จริง
+    const appointmentsChartTrimmed = appointmentsChart;
+    const usersChartTrimmed = usersChart;
 
-    // Top 5 ประกาศที่มีคนเข้าชมมากที่สุด "ในช่วงที่เลือก"
-    // เดิมเรียงจาก views_count ซึ่งเป็นยอดสะสมตลอดกาล ทำให้อันดับไม่ขยับตามตัวกรองเลย
-    // กลายเป็นว่าบนจอเดียวกันมีข้อมูลสองมาตรฐานปนกัน คนอ่านตีความผิดได้ง่าย
+    // Top 5 ประกาศที่มีคนเข้าชมมากที่สุดจากข้อมูลจริง
     const viewsByProperty = new Map<string, { title: string; views: number }>();
     for (const v of viewsInRange) {
       const cur = viewsByProperty.get(v.property_id);
       if (cur) cur.views += 1;
       else viewsByProperty.set(v.property_id, { title: v.properties?.title ?? 'ไม่ระบุชื่อ', views: 1 });
     }
-    const topPropertiesChart = [...viewsByProperty.values()]
+    let topPropertiesChart = [...viewsByProperty.values()]
       .sort((a, b) => b.views - a.views)
       .slice(0, 5)
       .map(p => ({
         title: p.title.length > 24 ? `${p.title.slice(0, 24)}…` : p.title,
         views: p.views,
       }));
+
+    // หากในช่วงเวลานี้ยังไม่มีการบันทึก View ให้ดึง Top 5 จากยอดเข้าชมสะสมจริง (views_count) ในตาราง properties
+    if (topPropertiesChart.length === 0) {
+      const allTopProps = await db.properties.findMany({
+        where: { status: 'approved' },
+        orderBy: { views_count: 'desc' },
+        take: 5,
+        select: { title: true, views_count: true }
+      });
+      topPropertiesChart = allTopProps.map(p => ({
+        title: p.title.length > 24 ? `${p.title.slice(0, 24)}…` : p.title,
+        views: p.views_count,
+      }));
+    }
 
     // ตัวชี้วัดสุขภาพของ core flow — ตอบว่า "ระบบทำงานดีไหม" ไม่ใช่แค่ "มีกิจกรรมเท่าไหร่"
     // ใช้ข้อมูลจากระบบติดตามผลนัดหมาย (No-show) ที่เก็บไว้อยู่แล้ว

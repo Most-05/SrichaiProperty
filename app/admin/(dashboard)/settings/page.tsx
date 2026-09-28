@@ -15,7 +15,13 @@ import {
   Clock,
   Sparkles,
   AlertOctagon,
-  HardDrive
+  HardDrive,
+  Building,
+  Mail,
+  Phone,
+  MessageSquare,
+  Percent,
+  FileText
 } from 'lucide-react';
 
 interface PackageItem {
@@ -26,11 +32,17 @@ interface PackageItem {
 }
 
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<'packages' | 'rules' | 'banner' | 'maintenance'>('packages');
+  const [activeTab, setActiveTab] = useState<'general' | 'packages' | 'rules' | 'banner' | 'maintenance'>('general');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [packages, setPackages] = useState<PackageItem[]>([]);
   const [configs, setConfigs] = useState<Record<string, string>>({
+    site_name: 'Srichai Property',
+    contact_email: 'support@srichaiproperty.com',
+    contact_phone: '074-123-4567',
+    line_oa: '@srichaiproperty',
+    default_commission_rate: '3.0',
+    max_free_listings: '3',
     sla_moderation_hours: '24',
     noshow_penalty_threshold: '3',
     max_upload_size_mb: '10',
@@ -161,6 +173,19 @@ export default function AdminSettingsPage() {
         <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
           <button
             type="button"
+            onClick={() => setActiveTab('general')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
+              activeTab === 'general'
+                ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Building className="w-4 h-4 text-blue-600" />
+            <span>ข้อมูลทั่วไป & ติดต่อ</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('packages')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
               activeTab === 'packages'
@@ -219,6 +244,96 @@ export default function AdminSettingsPage() {
           </div>
         ) : (
           <>
+            {/* ------------------------------------------------------------------------------
+             * TAB 0: GENERAL & CONTACT (system_configs)
+             * ------------------------------------------------------------------------------ */}
+            {activeTab === 'general' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+                  <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-800 flex items-center gap-2">
+                        <Building className="w-4 h-4 text-blue-600" />
+                        <span>ข้อมูลทั่วไปและช่องทางติดต่อแพลตฟอร์ม</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        ข้อมูลจริงที่จัดเก็บในตาราง system_configs สำหรับแสดงผลบนหน้าเว็บไซต์และระบบติดต่อ
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
+                      ตาราง system_configs
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Site Name */}
+                    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-2">
+                      <label className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
+                        <Building className="w-3.5 h-3.5 text-blue-600" />
+                        <span>ชื่อแพลตฟอร์ม (Site Name)</span>
+                      </label>
+                      <p className="text-[11px] text-slate-500">ชื่อแบรนด์ที่จะแสดงในส่วนหัวและชื่อเรื่องของเว็บไซต์</p>
+                      <input
+                        type="text"
+                        value={configs.site_name}
+                        onChange={e => handleConfigChange('site_name', e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Srichai Property"
+                      />
+                    </div>
+
+                    {/* Contact Email */}
+                    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-2">
+                      <label className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
+                        <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>อีเมลฝ่ายบริการลูกค้า (Contact Email)</span>
+                      </label>
+                      <p className="text-[11px] text-slate-500">อีเมลสำหรับรับเรื่องร้องเรียนและติดต่อฝ่ายสนับสนุน</p>
+                      <input
+                        type="email"
+                        value={configs.contact_email}
+                        onChange={e => handleConfigChange('contact_email', e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="support@srichaiproperty.com"
+                      />
+                    </div>
+
+                    {/* Contact Phone */}
+                    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-2">
+                      <label className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 text-amber-500" />
+                        <span>เบอร์โทรศัพท์ติดต่อส่วนกลาง (Contact Phone)</span>
+                      </label>
+                      <p className="text-[11px] text-slate-500">หมายเลขติดต่อสำหรับลูกค้าและนายหน้า</p>
+                      <input
+                        type="text"
+                        value={configs.contact_phone}
+                        onChange={e => handleConfigChange('contact_phone', e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                        placeholder="074-123-4567"
+                      />
+                    </div>
+
+                    {/* Line OA */}
+                    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-2">
+                      <label className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-green-600" />
+                        <span>LINE Official Account (Line OA)</span>
+                      </label>
+                      <p className="text-[11px] text-slate-500">ID สำหรับให้ลูกค้าแอดเพื่อนเพื่อสอบถามข้อมูลด่วน</p>
+                      <input
+                        type="text"
+                        value={configs.line_oa}
+                        onChange={e => handleConfigChange('line_oa', e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="@srichaiproperty"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ------------------------------------------------------------------------------
              * TAB 1: PACKAGE PRICING
              * ------------------------------------------------------------------------------ */}
@@ -388,6 +503,51 @@ export default function AdminSettingsPage() {
                           className="w-24 px-3 py-2 bg-white border border-slate-300 rounded-xl font-extrabold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                         <span className="text-xs font-bold text-slate-600">MB</span>
+                      </div>
+                    </div>
+
+                    {/* Default Commission Rate */}
+                    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-3">
+                      <div className="flex items-center gap-2 text-indigo-600">
+                        <Percent className="w-4 h-4" />
+                        <h4 className="font-extrabold text-xs text-slate-800">อัตราค่าคอมมิชชั่นมาตรฐาน</h4>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        อัตราค่าคอมมิชชั่นขั้นพื้นฐานสำหรับการปิดการขายอสังหาริมทรัพย์
+                      </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={configs.default_commission_rate}
+                          onChange={e => handleConfigChange('default_commission_rate', e.target.value)}
+                          className="w-24 px-3 py-2 bg-white border border-slate-300 rounded-xl font-extrabold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <span className="text-xs font-bold text-slate-600">%</span>
+                      </div>
+                    </div>
+
+                    {/* Max Free Listings */}
+                    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-3">
+                      <div className="flex items-center gap-2 text-violet-600">
+                        <FileText className="w-4 h-4" />
+                        <h4 className="font-extrabold text-xs text-slate-800">โควตาลงประกาศฟรีต่อนายหน้า</h4>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        จำนวนการลงประกาศอสังหาฯ ฟรีสูงสุดต่อบัญชีนายหน้าทั่วไป
+                      </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="number"
+                          min="0"
+                          max="50"
+                          value={configs.max_free_listings}
+                          onChange={e => handleConfigChange('max_free_listings', e.target.value)}
+                          className="w-24 px-3 py-2 bg-white border border-slate-300 rounded-xl font-extrabold text-slate-900 text-sm outline-none focus:ring-2 focus:ring-violet-500"
+                        />
+                        <span className="text-xs font-bold text-slate-600">ประกาศ</span>
                       </div>
                     </div>
                   </div>
