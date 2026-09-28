@@ -17,7 +17,8 @@ import {
   X,
   LogOut,
   Building2,
-  Shield
+  Shield,
+  Settings
 } from 'lucide-react';
 
 export default function AdminSidebar() {
@@ -244,6 +245,20 @@ export default function AdminSidebar() {
               >
                 <Users className={`w-4 h-4 ${isActive('/admin/users') ? 'text-white' : 'text-slate-400'}`} />
                 <span>จัดการผู้ใช้งาน</span>
+              </Link>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-2.5">ระบบและการตั้งค่า</span>
+              <Link 
+                href="/admin/settings" 
+                onClick={() => setIsMobileOpen(false)}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left font-semibold ${
+                  isActive('/admin/settings') ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30' : 'hover:bg-slate-800/70 text-slate-300'
+                }`}
+              >
+                <Settings className={`w-4 h-4 ${isActive('/admin/settings') ? 'text-white' : 'text-slate-400'}`} />
+                <span>ตั้งค่าระบบกลาง</span>
               </Link>
             </div>
           </nav>

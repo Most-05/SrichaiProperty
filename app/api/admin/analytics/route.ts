@@ -13,7 +13,7 @@ interface AdminSession {
   };
 }
 
-type RangeType = 'day' | 'month' | 'year';
+type RangeType = 'day' | 'month' | 'year' | 'quarter' | 'this_month' | 'custom';
 
 interface Bucket {
   key: string;
@@ -22,13 +22,46 @@ interface Bucket {
   end: Date;
 }
 
-// สร้างช่วงเวลา (bucket) สำหรับกราฟ ใช้รูปแบบเดียวกับกราฟสถิติฝั่งนายหน้า (agent/dashboard)
-// เพื่อให้ UX การสลับ วัน/เดือน/ปี เหมือนกันทั้งระบบ
-function getBuckets(range: RangeType): Bucket[] {
+// สร้างช่วงเวลา (bucket) สำหรับกราฟ
+function getBuckets(range: RangeType, customStart?: string | null, customEnd?: string | null): Bucket[] {
   const buckets: Bucket[] = [];
   const now = new Date();
 
-  if (range === 'day') {
+  if (range === 'custom' && customStart && customEnd) {
+    const startD = new Date(customStart);
+    const endD = new Date(customEnd);
+    endD.setHours(23, 59, 59, 999);
+    const diffDays = Math.max(1, Math.round((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)));
+
+    if (diffDays <= 14) {
+      // รายวัน
+      for (let i = 0; i < diffDays; i++) {
+        const d = new Date(startD);
+        d.setDate(d.getDate() + i);
+        const key = d.toISOString().split('T')[0];
+        buckets.push({
+          key,
+          label: d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }),
+          start: new Date(`${key}T00:00:00.000Z`),
+          end: new Date(`${key}T23:59:59.999Z`),
+        });
+      }
+    } else {
+      // รายสัปดาห์ / สรุป
+      const steps = 6;
+      const stepMs = (endD.getTime() - startD.getTime()) / steps;
+      for (let i = 0; i < steps; i++) {
+        const bStart = new Date(startD.getTime() + i * stepMs);
+        const bEnd = new Date(startD.getTime() + (i + 1) * stepMs - 1);
+        buckets.push({
+          key: `step-${i}`,
+          label: `${bStart.getDate()}/${bStart.getMonth() + 1}`,
+          start: bStart,
+          end: bEnd,
+        });
+      }
+    }
+  } else if (range === 'day') {
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -38,6 +71,32 @@ function getBuckets(range: RangeType): Bucket[] {
         label: d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric' }),
         start: new Date(`${key}T00:00:00.000Z`),
         end: new Date(`${key}T23:59:59.999Z`),
+      });
+    }
+  } else if (range === 'this_month') {
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const intervals = 4;
+    const intervalDays = Math.ceil(daysInMonth / intervals);
+    for (let i = 0; i < intervals; i++) {
+      const s = 1 + i * intervalDays;
+      const e = Math.min(daysInMonth, (i + 1) * intervalDays);
+      buckets.push({
+        key: `w-${i}`,
+        label: `${s}-${e} ${now.toLocaleDateString('th-TH', { month: 'short' })}`,
+        start: new Date(now.getFullYear(), now.getMonth(), s, 0, 0, 0),
+        end: new Date(now.getFullYear(), now.getMonth(), e, 23, 59, 59, 999),
+      });
+    }
+  } else if (range === 'quarter') {
+    const currentQ = Math.floor(now.getMonth() / 3);
+    for (let i = 0; i < 3; i++) {
+      const m = currentQ * 3 + i;
+      const d = new Date(now.getFullYear(), m, 1);
+      buckets.push({
+        key: `${now.getFullYear()}-${m}`,
+        label: d.toLocaleDateString('th-TH', { month: 'short' }),
+        start: new Date(now.getFullYear(), m, 1),
+        end: new Date(now.getFullYear(), m + 1, 0, 23, 59, 59, 999),
       });
     }
   } else if (range === 'month') {
@@ -55,19 +114,21 @@ function getBuckets(range: RangeType): Bucket[] {
       const year = now.getFullYear() - i;
       buckets.push({
         key: String(year),
-        label: String(year + 543), // แสดงเป็น พ.ศ.
+        label: String(year + 543),
         start: new Date(year, 0, 1),
         end: new Date(year, 11, 31, 23, 59, 59, 999),
       });
     }
   }
 
-  return buckets;
+  return buckets.length > 0 ? buckets : [
+    { key: 'now', label: 'ปัจจุบัน', start: new Date(Date.now() - 7 * 86400000), end: new Date() }
+  ];
 }
 
 const APPOINTMENT_STATUSES = ['pending', 'approved', 'completed', 'rejected', 'cancelled'] as const;
 
-// GET: สถิติภาพรวมสำหรับหน้า /admin/analytics (นัดหมาย, ยอดเข้าชมบ้าน, ผู้ใช้/นายหน้า)
+// GET: สถิติภาพรวมสำหรับหน้า /admin/analytics (นัดหมาย, ยอดเข้าชมบ้าน, ผู้ใช้, การเงิน)
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions) as AdminSession | null;
@@ -77,15 +138,20 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const rangeParam = searchParams.get('range');
-    const range: RangeType = rangeParam === 'day' || rangeParam === 'year' ? rangeParam : 'month';
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
 
-    const buckets = getBuckets(range);
+    let range: RangeType = 'month';
+    if (rangeParam === 'day' || rangeParam === 'year' || rangeParam === 'quarter' || rangeParam === 'this_month') {
+      range = rangeParam;
+    } else if (startDateParam && endDateParam) {
+      range = 'custom';
+    }
+
+    const buckets = getBuckets(range, startDateParam, endDateParam);
     const rangeStart = buckets[0].start;
-
-    // ช่วงก่อนหน้าที่ยาวเท่ากัน ใช้เทียบว่าตัวเลขดีขึ้นหรือแย่ลง
-    // ตัวเลขเดี่ยวๆ อย่าง "34 นัดหมาย" ตีความไม่ได้ว่าดีหรือแย่ ต้องมีฐานเทียบเสมอ
     const rangeEnd = buckets[buckets.length - 1].end;
-    const rangeMs = rangeEnd.getTime() - rangeStart.getTime();
+    const rangeMs = Math.max(86400000, rangeEnd.getTime() - rangeStart.getTime());
     const prevStart = new Date(rangeStart.getTime() - rangeMs);
     const prevEnd = new Date(rangeStart.getTime() - 1);
 
@@ -93,6 +159,8 @@ export async function GET(request: Request) {
       appointmentsRaw,
       usersRaw,
       viewsInRange,
+      paymentsApproved,
+      prevPaymentsApproved,
       prevAppointmentsCount,
       prevUsersCount,
       prevViewsCount,
@@ -101,18 +169,24 @@ export async function GET(request: Request) {
       proAgentsCount,
     ] = await Promise.all([
       db.appointments.findMany({
-        where: { created_at: { gte: rangeStart } },
+        where: { created_at: { gte: rangeStart, lte: rangeEnd } },
         select: { created_at: true, status: true },
       }),
       db.users.findMany({
-        where: { created_at: { gte: rangeStart } },
+        where: { created_at: { gte: rangeStart, lte: rangeEnd } },
         select: { created_at: true, role_id: true },
       }),
-      // ใช้ log การเข้าชมรายครั้ง (property_views) แทนตัวนับสะสม properties.views_count
-      // เพื่อให้ Top 5 ขยับตามช่วงเวลาที่เลือกจริง ตารางนี้มี index สำหรับงานนี้อยู่แล้ว
       db.property_views.findMany({
         where: { viewed_at: { gte: rangeStart, lte: rangeEnd } },
         select: { property_id: true, properties: { select: { title: true } } },
+      }),
+      db.payment_transactions.findMany({
+        where: { status: 'approved', created_at: { gte: rangeStart, lte: rangeEnd } },
+        select: { amount: true, created_at: true }
+      }),
+      db.payment_transactions.findMany({
+        where: { status: 'approved', created_at: { gte: prevStart, lte: prevEnd } },
+        select: { amount: true }
       }),
       db.appointments.count({ where: { created_at: { gte: prevStart, lte: prevEnd } } }),
       db.users.count({ where: { created_at: { gte: prevStart, lte: prevEnd } } }),
@@ -121,6 +195,9 @@ export async function GET(request: Request) {
       db.users.count({ where: { role_id: 'agent' } }),
       db.users.count({ where: { role_id: 'agent', plan_type: 'pro' } }),
     ]);
+
+    const revenueInRange = paymentsApproved.reduce((sum, p) => sum + Number(p.amount), 0);
+    const prevRevenue = prevPaymentsApproved.reduce((sum, p) => sum + Number(p.amount), 0);
 
     // นับจำนวนนัดหมายแยกตามสถานะในแต่ละช่วงเวลา
     const appointmentsChart = buckets.map(b => {
@@ -194,7 +271,7 @@ export async function GET(request: Request) {
     const viewsInRangeCount = viewsInRange.length;
     const newUsersInRange = usersRaw.length;
 
-    // 🔑 KEYWORD: สรุปผล SLA การตรวจประกาศ
+    // KEYWORD: สรุปผล SLA การตรวจประกาศ
     // ตอบว่าทีมแอดมินตรวจทันกำหนดจริงไหม ด้วยตัวเลขจากข้อมูลจริง
     // นับเฉพาะใบที่มี reviewed_at (ประกาศเก่าก่อนเริ่มเก็บข้อมูลจะถูกข้าม)
     const reviewedRows = await db.properties.findMany({
@@ -216,6 +293,8 @@ export async function GET(request: Request) {
         viewsChangePercent: changePercent(viewsInRangeCount, prevViewsCount),
         newUsersInRange,
         newUsersChangePercent: changePercent(newUsersInRange, prevUsersCount),
+        revenueInRange,
+        revenueChangePercent: changePercent(revenueInRange, prevRevenue),
         // ตัวเลขสะสมทั้งระบบ แยกกลุ่มให้ชัดว่าไม่ได้ขยับตามตัวกรอง
         totalUsers,
         agentsCount,

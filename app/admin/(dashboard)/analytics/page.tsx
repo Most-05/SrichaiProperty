@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import {
   ChartConfig,
@@ -10,9 +10,23 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart';
-import { AlertTriangle, Loader2, Calendar, Eye, Users, Trophy } from 'lucide-react';
+import {
+  AlertTriangle,
+  Loader2,
+  Calendar,
+  Eye,
+  Users,
+  Trophy,
+  Download,
+  Printer,
+  CheckSquare,
+  Square,
+  Banknote,
+  Filter
+} from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
-type RangeType = 'day' | 'month' | 'year';
+type RangeType = 'day' | 'this_month' | 'month' | 'quarter' | 'year' | 'custom';
 
 interface AppointmentBucket {
   timeframe: string;
@@ -39,19 +53,18 @@ interface AnalyticsData {
   usersChart: UserBucket[];
   topPropertiesChart: TopProperty[];
   summary: {
-    /** ตัวเลขของช่วงที่เลือก (ขยับตามตัวกรอง) */
     appointmentsInRange: number;
     appointmentsChangePercent: number | null;
     viewsInRange: number;
     viewsChangePercent: number | null;
     newUsersInRange: number;
     newUsersChangePercent: number | null;
-    /** ตัวเลขสะสมทั้งระบบ (ไม่ขยับตามตัวกรอง) */
+    revenueInRange?: number;
+    revenueChangePercent?: number | null;
     totalUsers: number;
     agentsCount: number;
     proAgentsCount: number;
   };
-  /** อัตราสุขภาพของ core flow ในช่วงที่เลือก */
   appointmentHealth?: {
     total: number;
     completed: number; completedPercent: number;
@@ -59,7 +72,6 @@ interface AnalyticsData {
     rejected: number; rejectedPercent: number;
     cancelled: number; cancelledPercent: number;
   };
-  /** สรุปผล SLA การตรวจประกาศย้อนหลัง (นับเฉพาะใบที่มีบันทึกเวลาตรวจ) */
   moderationSla?: {
     reviewedCount: number;
     averageLabel: string;
@@ -68,7 +80,6 @@ interface AnalyticsData {
   };
 }
 
-// สีและป้ายกำกับกราฟนัดหมาย แยกตามสถานะจริงในระบบ (pending/approved/completed/rejected/cancelled)
 const appointmentsChartConfig = {
   pending: { label: 'รอดำเนินการ', color: '#f59e0b' },
   approved: { label: 'ยืนยันแล้ว', color: '#3b82f6' },
@@ -87,16 +98,14 @@ const viewsChartConfig = {
 } satisfies ChartConfig;
 
 const RANGE_LABELS: { value: RangeType; label: string }[] = [
-  { value: 'day', label: 'รายวัน (7 วัน)' },
-  { value: 'month', label: 'รายเดือน (6 เดือน)' },
+  { value: 'day', label: '7 วันล่าสุด' },
+  { value: 'this_month', label: 'เดือนนี้' },
+  { value: 'month', label: '6 เดือนล่าสุด' },
+  { value: 'quarter', label: 'ไตรมาสนี้' },
   { value: 'year', label: 'รายปี' },
+  { value: 'custom', label: 'กำหนดเอง' },
 ];
 
-/**
- * ป้ายเปรียบเทียบกับช่วงก่อนหน้าที่ยาวเท่ากัน
- * ตัวเลขเดี่ยวๆ ตีความไม่ได้ว่าดีหรือแย่ ต้องมีฐานเทียบ
- * null = ช่วงก่อนหน้าไม่มีข้อมูล จึงเทียบไม่ได้ (ไม่โชว์ +100% จากฐาน 0 ให้เข้าใจผิด)
- */
 function ChangeBadge({ percent }: { percent: number | null | undefined }) {
   if (percent === null || percent === undefined) {
     return <span className="text-[10px] font-bold text-slate-300">ไม่มีข้อมูลช่วงก่อนหน้า</span>;
@@ -113,15 +122,84 @@ function ChangeBadge({ percent }: { percent: number | null | undefined }) {
 
 export default function AdminAnalyticsPage() {
   const [range, setRange] = useState<RangeType>('month');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const loadAnalytics = useCallback((selectedRange: RangeType) => {
+  // Metric series toggles for appointment chart
+  const [visibleSeries, setVisibleSeries] = useState<Record<string, boolean>>({
+    completed: true,
+    approved: true,
+    pending: true,
+    rejected: true,
+    cancelled: true,
+  });
+
+  const toggleSeries = (key: string) => {
+    setVisibleSeries(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleRangeChange = (newRange: RangeType) => {
+    if (newRange === range) return;
     setLoading(true);
-    fetch(`/api/admin/analytics?range=${selectedRange}`)
+    setRange(newRange);
+  };
+
+  const handleApplyCustomRange = async () => {
+    if (!customStartDate || !customEndDate) {
+      toast.error('กรุณาระบุทั้งวันที่เริ่มต้นและสิ้นสุด');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/analytics?range=custom&startDate=${customStartDate}&endDate=${customEndDate}&t=${Date.now()}`);
+      const json = await res.json();
+      if (json.error) {
+        setFetchError(json.error);
+      } else {
+        setData(json);
+        setFetchError(null);
+      }
+    } catch {
+      setFetchError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    setLoading(true);
+    let url = `/api/admin/analytics?range=${range}&t=${Date.now()}`;
+    if (range === 'custom' && customStartDate && customEndDate) {
+      url += `&startDate=${customStartDate}&endDate=${customEndDate}`;
+    }
+    try {
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.error) {
+        setFetchError(json.error);
+      } else {
+        setData(json);
+        setFetchError(null);
+      }
+    } catch {
+      setFetchError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (range === 'custom') return;
+    let ignore = false;
+    const url = `/api/admin/analytics?range=${range}&t=${Date.now()}`;
+
+    fetch(url)
       .then(res => res.json())
       .then(json => {
+        if (ignore) return;
         if (json.error) {
           setFetchError(json.error);
         } else {
@@ -131,70 +209,156 @@ export default function AdminAnalyticsPage() {
         setLoading(false);
       })
       .catch(() => {
+        if (ignore) return;
         setFetchError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
         setLoading(false);
       });
-  }, []);
 
-  useEffect(() => {
-    let ignore = false;
-    fetch(`/api/admin/analytics?range=${range}`)
-      .then(res => res.json())
-      .then(json => {
-        if (!ignore) {
-          if (json.error) {
-            setFetchError(json.error);
-          } else {
-            setData(json);
-            setFetchError(null);
-          }
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          setFetchError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
-          setLoading(false);
-        }
-      });
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [range]);
 
-  // คำอธิบายช่วงเวลาที่กำลังดู ใช้ต่อท้ายการ์ด KPI ให้รู้ว่าตัวเลขนับจากช่วงไหน
-  const rangeText = range === 'day' ? '7 วันล่าสุด' : range === 'month' ? '6 เดือนล่าสุด' : '3 ปีล่าสุด';
+  const rangeText = useMemo(() => {
+    if (range === 'day') return '7 วันล่าสุด';
+    if (range === 'this_month') return 'เดือนปัจจุบัน';
+    if (range === 'month') return '6 เดือนล่าสุด';
+    if (range === 'quarter') return 'ไตรมาสปัจจุบัน';
+    if (range === 'year') return 'รายปี';
+    if (range === 'custom') return `${customStartDate} ถึง ${customEndDate}`;
+    return '';
+  }, [range, customStartDate, customEndDate]);
+
+  // Export Executive CSV
+  const handleExportCSV = () => {
+    if (!data) return;
+
+    const summaryRows = [
+      ['ตัวชี้วัดสำคัญ (Executive KPI)', 'ค่าในช่วงเวลา', 'เทียบช่วงก่อนหน้า'],
+      ['นัดหมายเข้าชมบ้านใหม่', data.summary.appointmentsInRange, data.summary.appointmentsChangePercent ? `${data.summary.appointmentsChangePercent}%` : '-'],
+      ['ยอดเข้าชมบ้าน (Views)', data.summary.viewsInRange, data.summary.viewsChangePercent ? `${data.summary.viewsChangePercent}%` : '-'],
+      ['ยอดรายได้ Verified PRO (บาท)', data.summary.revenueInRange ?? 0, data.summary.revenueChangePercent ? `${data.summary.revenueChangePercent}%` : '-'],
+      ['สมาชิกใหม่', data.summary.newUsersInRange, data.summary.newUsersChangePercent ? `${data.summary.newUsersChangePercent}%` : '-'],
+      ['ผู้ใช้งานสะสมทั้งระบบ', data.summary.totalUsers, '-'],
+      ['นายหน้าสะสม', data.summary.agentsCount, '-'],
+      ['นายหน้า Verified PRO', data.summary.proAgentsCount, '-'],
+      [],
+      ['สุขภาพนัดหมาย (Appointment Health)', 'จำนวนรายการ', 'สัดส่วน (%)'],
+      ['เข้าชมสำเร็จ (Completed)', data.appointmentHealth?.completed ?? 0, `${data.appointmentHealth?.completedPercent ?? 0}%`],
+      ['ไม่มาตามนัด (No-show)', data.appointmentHealth?.noShow ?? 0, `${data.appointmentHealth?.noShowPercent ?? 0}%`],
+      ['ปฏิเสธคำขอ (Rejected)', data.appointmentHealth?.rejected ?? 0, `${data.appointmentHealth?.rejectedPercent ?? 0}%`],
+      ['ยกเลิก (Cancelled)', data.appointmentHealth?.cancelled ?? 0, `${data.appointmentHealth?.cancelledPercent ?? 0}%`],
+    ];
+
+    const csvContent = '\uFEFF' + summaryRows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `srichai_analytics_${range}_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('ดาวน์โหลดไฟล์ CSV สถิติเรียบร้อยแล้ว');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <>
-      <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0">
+      <header className="min-h-16 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 shrink-0 relative z-0 print:hidden">
         <div>
           <h2 className="text-lg font-extrabold text-slate-800">สถิติและรายงาน (Analytics)</h2>
-          <p className="text-[10px] text-slate-400 font-bold mt-0.5">ภาพรวมนัดหมาย ยอดเข้าชมบ้าน และผู้ใช้งานในระบบ</p>
+          <p className="text-[10px] text-slate-400 font-bold mt-0.5">ภาพรวมนัดหมาย สุขภาพระบบ ยอดขายแพ็กเกจ และการเข้าชม</p>
         </div>
 
-        {/* ตัวสลับช่วงเวลา ใช้รูปแบบเดียวกับกราฟฝั่งนายหน้า */}
-        <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
-          {RANGE_LABELS.map(r => (
-            <button
-              key={r.value}
-              onClick={() => setRange(r.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
-                range === r.value ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Quick Presets */}
+          <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 overflow-x-auto">
+            {RANGE_LABELS.map(r => (
+              <button
+                key={r.value}
+                onClick={() => handleRangeChange(r.value)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer shrink-0 ${
+                  range === r.value ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            disabled={!data}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-lg transition border border-slate-200 shadow-sm cursor-pointer disabled:opacity-50"
+            title="ส่งออก CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline">ส่งออก CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-lg transition border border-slate-200 shadow-sm cursor-pointer"
+            title="พิมพ์รายงานสรุป"
+          >
+            <Printer className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline">พิมพ์รายงาน</span>
+          </button>
         </div>
       </header>
 
+      {/* Print-only Header for Executive Presentation */}
+      <div className="hidden print:block p-6 border-b border-slate-300">
+        <h1 className="text-xl font-black text-slate-900">Srichai Property — รายงานสรุปผลการดำเนินงานผู้บริหาร</h1>
+        <p className="text-xs text-slate-500 mt-1">ช่วงเวลาที่วิเคราะห์: {rangeText} | วันที่ออกรายงาน: {new Date().toLocaleDateString('th-TH')}</p>
+      </div>
+
       <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto space-y-6">
+        {/* Custom Date Range Picker Strip */}
+        {range === 'custom' && (
+          <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex flex-wrap items-center gap-3 print:hidden">
+            <span className="text-xs font-extrabold text-blue-900 flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-blue-600" />
+              <span>กำหนดช่วงวันที่วิเคราะห์:</span>
+            </span>
+            <div className="flex items-center gap-2 text-xs">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={e => setCustomStartDate(e.target.value)}
+                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 font-bold outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-slate-400 font-bold">ถึง</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={e => setCustomEndDate(e.target.value)}
+                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 font-bold outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleApplyCustomRange}
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition cursor-pointer"
+            >
+              คำนวณสถิติ
+            </button>
+          </div>
+        )}
+
         {fetchError && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>{fetchError}</span>
             </div>
-            <button onClick={() => loadAnalytics(range)} className="underline font-black">ลองใหม่</button>
+            <button onClick={handleRetry} className="underline font-black">ลองใหม่</button>
           </div>
         )}
 
@@ -205,9 +369,7 @@ export default function AdminAnalyticsPage() {
           </div>
         ) : (
           <>
-            {/* 🔑 KEYWORD: แถบสรุปผล SLA การตรวจประกาศ
-                ตอบคำถาม "ทีมตรวจทันกำหนดจริงไหม" ด้วยตัวเลขจากข้อมูลจริง
-                ซ่อนไว้ถ้ายังไม่มีประกาศที่บันทึกเวลาตรวจ จะได้ไม่โชว์ 0% ให้เข้าใจผิด */}
+            {/* SLA Bar */}
             {data?.moderationSla && data.moderationSla.reviewedCount > 0 && (
               <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 flex flex-wrap items-center gap-x-10 gap-y-3">
                 <div>
@@ -235,9 +397,8 @@ export default function AdminAnalyticsPage() {
               </section>
             )}
 
-            {/* การ์ดสรุป 4 ใบ — 3 ใบแรกเป็นตัวเลขของช่วงที่เลือก ใบสุดท้ายเป็นยอดสะสม
-                เดิมทั้ง 4 ใบเป็นยอดสะสมตลอดกาล ไม่ขยับตามตัวกรอง ทำให้อ่านผิดว่าเป็นตัวเลขของช่วงนั้น */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* KPI Cards: Appointments, Views, PRO Revenue, New Users, Total Users */}
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-white rounded-2xl p-4 border-l-4 border-blue-500 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">นัดหมายใหม่</span>
                 <strong className="text-2xl font-black text-slate-900 block">{(data?.summary.appointmentsInRange ?? 0).toLocaleString()}</strong>
@@ -254,6 +415,19 @@ export default function AdminAnalyticsPage() {
                 <ChangeBadge percent={data?.summary.viewsChangePercent} />
                 <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
                   <Eye className="w-3 h-3 text-slate-400" />
+                  <span>{rangeText}</span>
+                </span>
+              </div>
+
+              {/* Financial Revenue Card */}
+              <div className="bg-white rounded-2xl p-4 border-l-4 border-amber-500 border-y border-r border-slate-200/80 shadow-sm space-y-1.5">
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">ยอดขาย Verified PRO</span>
+                <strong className="text-2xl font-black text-amber-600 block">
+                  ฿{(data?.summary.revenueInRange ?? 0).toLocaleString()}
+                </strong>
+                <ChangeBadge percent={data?.summary.revenueChangePercent} />
+                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                  <Banknote className="w-3 h-3 text-amber-500" />
                   <span>{rangeText}</span>
                 </span>
               </div>
@@ -279,16 +453,13 @@ export default function AdminAnalyticsPage() {
               </div>
             </section>
 
-            {/* 🔑 KEYWORD: อัตราสุขภาพของ core flow
-                การ์ดด้านบนตอบว่า "มีกิจกรรมเท่าไหร่" แถบนี้ตอบว่า "ผลลัพธ์เป็นยังไง"
-                ซึ่งเป็นสิ่งที่ผู้ดูแลแพลตฟอร์มต้องเฝ้าจริงๆ ใช้ข้อมูลจากระบบติดตามผลนัดหมาย
-                ซ่อนไว้ถ้าช่วงนั้นไม่มีนัดเลย ไม่งั้นจะขึ้น 0% ทุกช่องให้เข้าใจผิด */}
+            {/* Health of core flow */}
             {data?.appointmentHealth && data.appointmentHealth.total > 0 && (
               <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="border-b border-slate-100 pb-3">
                   <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-blue-600" />
-                    ผลลัพธ์ของนัดหมาย
+                    ผลลัพธ์ของนัดหมาย (Appointment Health)
                   </h3>
                   <p className="text-[10px] text-slate-400 font-bold mt-0.5">
                     จากนัดหมายทั้งหมด {data.appointmentHealth.total} รายการใน {rangeText}
@@ -308,7 +479,6 @@ export default function AdminAnalyticsPage() {
                         {item.p}%
                         <span className="text-xs font-bold text-slate-400 ml-1.5">({item.n} รายการ)</span>
                       </strong>
-                      {/* แถบสัดส่วนช่วยให้เทียบขนาดได้เร็วกว่าอ่านตัวเลขอย่างเดียว */}
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${item.tone.replace('text-', 'bg-')}`} style={{ width: `${item.p}%` }} />
                       </div>
@@ -319,14 +489,45 @@ export default function AdminAnalyticsPage() {
               </section>
             )}
 
-            {/* กราฟนัดหมาย แยกตามสถานะ */}
+            {/* Appointment Chart with Metric Toggles */}
             <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-              <div className="border-b border-slate-100 pb-3">
-                <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-blue-600" />
-                  <span>สถิตินัดหมาย (Appointments)</span>
-                </h3>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">จำนวนนัดหมายแยกตามสถานะ ตามช่วงเวลาที่เลือก</p>
+              <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <span>สถิตินัดหมาย (Appointments)</span>
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">จำนวนนัดหมายแยกตามสถานะ ตามช่วงเวลาที่เลือก</p>
+                </div>
+
+                {/* Metric Series Toggles */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold print:hidden">
+                  <span className="text-[10px] text-slate-400 uppercase font-extrabold flex items-center gap-1 mr-1">
+                    <Filter className="w-3 h-3" />
+                    <span>ชุดข้อมูล:</span>
+                  </span>
+                  {[
+                    { key: 'completed', label: 'สำเร็จ', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+                    { key: 'approved', label: 'ยืนยัน', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+                    { key: 'pending', label: 'รอดำเนินการ', color: 'text-amber-700 bg-amber-50 border-amber-200' },
+                    { key: 'rejected', label: 'ปฏิเสธ', color: 'text-red-700 bg-red-50 border-red-200' },
+                    { key: 'cancelled', label: 'ยกเลิก', color: 'text-slate-700 bg-slate-100 border-slate-200' },
+                  ].map(s => (
+                    <button
+                      key={s.key}
+                      type="button"
+                      onClick={() => toggleSeries(s.key)}
+                      className={`px-2 py-1 rounded-md border text-[11px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                        visibleSeries[s.key]
+                          ? s.color
+                          : 'opacity-40 bg-slate-50 text-slate-400 border-slate-200'
+                      }`}
+                    >
+                      {visibleSeries[s.key] ? <CheckSquare className="w-3 h-3" /> : <Square className="w-3 h-3" />}
+                      <span>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {data && data.appointmentsChart.every(b => b.pending + b.approved + b.completed + b.rejected + b.cancelled === 0) ? (
@@ -339,18 +540,18 @@ export default function AdminAnalyticsPage() {
                     <YAxis tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} allowDecimals={false} />
                     <ChartTooltip content={<ChartTooltipContent indicator="dashed" />} />
                     <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="pending" fill="var(--color-pending)" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="approved" fill="var(--color-approved)" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="completed" fill="var(--color-completed)" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="rejected" fill="var(--color-rejected)" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="cancelled" fill="var(--color-cancelled)" radius={[6, 6, 0, 0]} />
+                    {visibleSeries.pending && <Bar dataKey="pending" fill="var(--color-pending)" radius={[6, 6, 0, 0]} />}
+                    {visibleSeries.approved && <Bar dataKey="approved" fill="var(--color-approved)" radius={[6, 6, 0, 0]} />}
+                    {visibleSeries.completed && <Bar dataKey="completed" fill="var(--color-completed)" radius={[6, 6, 0, 0]} />}
+                    {visibleSeries.rejected && <Bar dataKey="rejected" fill="var(--color-rejected)" radius={[6, 6, 0, 0]} />}
+                    {visibleSeries.cancelled && <Bar dataKey="cancelled" fill="var(--color-cancelled)" radius={[6, 6, 0, 0]} />}
                   </BarChart>
                 </ChartContainer>
               )}
             </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* กราฟผู้ใช้/นายหน้าสมัครใหม่ */}
+              {/* Users Chart */}
               <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="border-b border-slate-100 pb-3">
                   <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
@@ -377,7 +578,7 @@ export default function AdminAnalyticsPage() {
                 )}
               </section>
 
-              {/* Top 5 บ้านที่มีคนเข้าชมมากที่สุด (views_count เป็นตัวเลขสะสม ไม่มี log รายวัน จึงไม่มี toggle ช่วงเวลา) */}
+              {/* Top 5 Properties */}
               <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="border-b border-slate-100 pb-3">
                   <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
@@ -415,3 +616,4 @@ export default function AdminAnalyticsPage() {
     </>
   );
 }
+
