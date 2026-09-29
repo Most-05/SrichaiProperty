@@ -92,6 +92,27 @@ const RANGE_LABELS: { value: RangeType; label: string }[] = [
   { value: 'year', label: 'รายปี' },
 ];
 
+/**
+ * ป้ายเปรียบเทียบกับช่วงก่อนหน้าที่ยาวเท่ากัน
+ * ตัวเลขเดี่ยวๆ ตีความไม่ได้ว่าดีหรือแย่ ต้องมีฐานเทียบ
+ * null = ช่วงก่อนหน้าไม่มีข้อมูล จึงเทียบไม่ได้ (ไม่โชว์ +100% จากฐาน 0 ให้เข้าใจผิด)
+ */
+function ChangeBadge({ percent }: { percent: number | null | undefined }) {
+  if (percent === null || percent === undefined) {
+    return <span className="text-[11px] text-slate-400">ไม่มีข้อมูลช่วงก่อนหน้า</span>;
+  }
+  const up = percent > 0;
+  const flat = percent === 0;
+  return (
+    <span className="text-[11px] text-slate-400">
+      <span className={`font-medium tabular-nums ${flat ? 'text-slate-500' : up ? 'text-emerald-600' : 'text-rose-600'}`}>
+        {flat ? 'เท่าเดิม' : `${up ? '+' : '−'}${Math.abs(percent)}%`}
+      </span>
+      <span className="ml-1.5">เทียบช่วงก่อนหน้า</span>
+    </span>
+  );
+}
+
 export default function AdminAnalyticsPage() {
   const [range, setRange] = useState<RangeType>('month');
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -143,27 +164,6 @@ export default function AdminAnalyticsPage() {
 
   // คำอธิบายช่วงเวลาที่กำลังดู ใช้ต่อท้ายการ์ด KPI ให้รู้ว่าตัวเลขนับจากช่วงไหน
   const rangeText = range === 'day' ? '7 วันล่าสุด' : range === 'month' ? '6 เดือนล่าสุด' : '3 ปีล่าสุด';
-
-  /**
-   * ป้ายเปรียบเทียบกับช่วงก่อนหน้าที่ยาวเท่ากัน
-   * ตัวเลขเดี่ยวๆ ตีความไม่ได้ว่าดีหรือแย่ ต้องมีฐานเทียบ
-   * null = ช่วงก่อนหน้าไม่มีข้อมูล จึงเทียบไม่ได้ (ไม่โชว์ +100% จากฐาน 0 ให้เข้าใจผิด)
-   */
-  const ChangeBadge = ({ percent }: { percent: number | null | undefined }) => {
-    if (percent === null || percent === undefined) {
-      return <span className="text-[11px] text-slate-400">ไม่มีข้อมูลช่วงก่อนหน้า</span>;
-    }
-    const up = percent > 0;
-    const flat = percent === 0;
-    return (
-      <span className="text-[11px] text-slate-400">
-        <span className={`font-medium tabular-nums ${flat ? 'text-slate-500' : up ? 'text-emerald-600' : 'text-rose-600'}`}>
-          {flat ? 'เท่าเดิม' : `${up ? '+' : '−'}${Math.abs(percent)}%`}
-        </span>
-        <span className="ml-1.5">เทียบช่วงก่อนหน้า</span>
-      </span>
-    );
-  };
 
   return (
     <>

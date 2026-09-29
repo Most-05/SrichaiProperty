@@ -1,30 +1,27 @@
 import { db } from '@/lib/db';
+import { notifyUser } from '@/lib/notify';
+import { getTodayDateBangkok } from './noShowService';
 import { APPOINTMENT_STATUS } from '@/lib/constants';
 
 /**
  * ==============================================================================
  * ระบบเตือนก่อนถึงวันนัด (Appointment Reminder)
  * ==============================================================================
- * ระบบ No-show ที่ทำไว้ก่อนหน้านี้ตอบคำถามว่า "ใครไม่มาตามนัด" แต่ไม่ได้ช่วยลด
- * จำนวนคนที่ไม่มา ซึ่งสาเหตุส่วนใหญ่คือลืม ไม่ใช่ตั้งใจเบี้ยว ไฟล์นี้จึงเติมอีกด้าน
- * คือเตือนล่วงหน้าให้ทั้งลูกค้าและนายหน้าก่อนถึงวันนัด
- *
- * ยืมโครงมาจาก slotAvailabilityService.ts ทั้งหมด (หา -> กรองที่เพิ่งเตือนไป -> ส่ง)
- * เพราะเงื่อนไขเหมือนกันคือ "ต้องเตือนซ้ำได้เรื่อยๆ แต่ห้ามถี่จนกระดิ่งท่วม"
- *
- * ทำไมไม่ใช้ cron: โปรเจกต์นี้ไม่มี background job (ดู auto-complete ของ No-show
- * ซึ่งก็ทำงานตอนมีคนเปิดหน้าเหมือนกัน) การเช็คตอนผู้ใช้เปิดเว็บจึงเป็นรูปแบบเดียว
- * ที่ใช้กันทั้งระบบอยู่แล้ว และเพียงพอเพราะคนที่ต้องได้รับการเตือนคือคนที่เปิดเว็บ
+ * ระบบเตือนความจำล่วงหน้าให้ทั้งลูกค้าและนายหน้าก่อนถึงวันนัด
+ * - ตรวจสอบนัดหมายที่ยืนยันแล้ว (status = 'approved') ภายในวันนี้หรือวันพรุ่งนี้
+ * - มีระบบ Anti-Duplication Guard: ป้องกันไม่ให้เตือนนัดหมายรายการเดิมซ้ำภายใน 20 ชั่วโมง
  * ==============================================================================
  */
 
 /** ชนิดการแจ้งเตือน ใช้ทั้งตอนสร้างและตอนเช็คว่าเพิ่งเตือนไปหรือยัง */
 export const REMINDER_TYPE = 'appointment_reminder';
 
+/** ชนิดการแจ้งเตือนสำหรับเตือนนัดหมาย (แมปกับ appointment เพื่อใช้ไอคอนปฏิทิน) */
+export const REMINDER_NOTIFICATION_TYPE = 'appointment';
+
 /**
  * เตือนนัดที่จะถึงภายในกี่วันข้างหน้า
  * 1 = เตือนทั้งนัดของ "วันนี้" และ "พรุ่งนี้"
- * รวมวันนี้ด้วยเพราะคนที่เปิดเว็บตอนเช้าวันนัดคือคนที่ได้ประโยชน์จากการเตือนที่สุด
  */
 export const REMINDER_LOOKAHEAD_DAYS = 1;
 
@@ -55,11 +52,16 @@ function startOfTodayBangkok(now: Date = new Date()): Date {
 
 const timeLabel = (slot: string) => (slot === 'afternoon' ? '13:00 น.' : '10:00 น.');
 
+/** แปลงรอบเวลาเป็นภาษาไทยที่อ่านง่าย */
+function formatTimeSlot(slot: string | null): string {
+  if (!slot) return 'ไม่ระบุเวลา';
+  if (slot === 'morning' || slot.includes('เช้า')) return 'ช่วงเช้า (10:00 - 12:00 น.)';
+  if (slot === 'afternoon' || slot.includes('บ่าย')) return 'ช่วงบ่าย (14:00 - 16:00 น.)';
+  return slot;
+}
+
 /**
  * หานัดที่ยืนยันแล้วและกำลังจะถึงภายใน REMINDER_LOOKAHEAD_DAYS วัน
- *
- * นับเฉพาะสถานะ approved เท่านั้น — นัดที่ยังรอนายหน้ายืนยัน (pending) หรือรอลูกค้า
- * ตอบรับวันใหม่ (awaiting_customer) ยังไม่ใช่นัดที่ตกลงกันแล้ว เตือนไปก็ทำให้สับสน
  */
 export async function findUpcomingAppointments(
   userId: string,
@@ -103,9 +105,6 @@ export async function findUpcomingAppointments(
 
 /**
  * คืนรายชื่อ appointmentId ที่เพิ่งเตือนผู้ใช้คนนี้ไปแล้วภายใน REMINDER_COOLDOWN_HOURS
- *
- * ดูจาก link_url เหมือน findRecentlyAlertedPropertyIds เพราะตาราง notifications
- * ไม่มีคอลัมน์อ้างอิงนัดหมายโดยตรง (link_url เก็บ appointmentId ต่อท้ายไว้อยู่แล้ว)
  */
 export async function findRecentlyRemindedAppointmentIds(
   userId: string,
@@ -114,18 +113,27 @@ export async function findRecentlyRemindedAppointmentIds(
   const cooldownSince = new Date(now.getTime() - REMINDER_COOLDOWN_HOURS * 60 * 60 * 1000);
 
   const recent = await db.notifications.findMany({
-    where: { user_id: userId, type: REMINDER_TYPE, created_at: { gte: cooldownSince } },
+    where: {
+      user_id: userId,
+      type: { in: [REMINDER_TYPE, REMINDER_NOTIFICATION_TYPE] },
+      created_at: { gte: cooldownSince }
+    },
     select: { link_url: true }
   });
 
-  return new Set(
-    recent
-      .map((n) => n.link_url?.split('#').pop())
-      .filter((id): id is string => Boolean(id))
-  );
+  const ids = new Set<string>();
+  for (const n of recent) {
+    if (!n.link_url) continue;
+    const hashId = n.link_url.split('#').pop();
+    if (hashId) ids.add(hashId);
+    const match = n.link_url.match(/aptId=([a-f0-9-]+)/i);
+    if (match?.[1]) ids.add(match[1]);
+  }
+
+  return ids;
 }
 
-/** ข้อความแจ้งเตือนของนัดหนึ่งใบ แยกออกมาเพื่อให้ทั้ง API และเทสใช้ชุดเดียวกัน */
+/** ข้อความแจ้งเตือนของนัดหนึ่งใบ */
 export function buildReminderMessage(apt: UpcomingAppointment, isAgent: boolean) {
   const when = apt.isToday ? 'วันนี้' : 'พรุ่งนี้';
   return {
@@ -135,4 +143,94 @@ export function buildReminderMessage(apt: UpcomingAppointment, isAgent: boolean)
       : `${when} ${timeLabel(apt.timeSlot)} คุณมีนัดชม "${apt.propertyTitle}" กับคุณ ${apt.counterpartName}`,
     linkUrl: `${isAgent ? '/agent/appointments' : '/appointments'}#${apt.appointmentId}`
   };
+}
+
+/**
+ * ตรวจสอบและส่งการแจ้งเตือนเตือนความจำนัดหมายล่วงหน้า (Upcoming Reminder)
+ */
+export async function checkAndSendAppointmentReminders(userId: string, role?: string | null): Promise<number> {
+  if (!userId) return 0;
+
+  const today = getTodayDateBangkok();
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+  const todayKey = toDateKey(today);
+
+  // 1. ค้นหานัดหมายที่ยืนยันแล้วของวันนี้และวันพรุ่งนี้
+  const appointments = await db.appointments.findMany({
+    where: {
+      OR: [
+        { customer_id: userId },
+        { agent_id: userId }
+      ],
+      status: 'approved',
+      appointment_date: {
+        in: [today, tomorrow]
+      }
+    },
+    include: {
+      properties: {
+        select: { id: true, title: true }
+      },
+      users_appointments_customer_idTousers: {
+        select: { first_name: true, last_name: true }
+      },
+      users_appointments_agent_idTousers: {
+        select: { first_name: true, last_name: true }
+      }
+    }
+  });
+
+  if (appointments.length === 0) return 0;
+
+  // 2. ดึงรายการแจ้งเตือนที่เคยส่งไปแล้วใน cooldown
+  const alertedAppointmentIds = await findRecentlyRemindedAppointmentIds(userId);
+
+  let sentCount = 0;
+
+  for (const apt of appointments) {
+    if (alertedAppointmentIds.has(apt.id)) {
+      continue;
+    }
+
+    const aptDateKey = toDateKey(apt.appointment_date);
+    const isToday = aptDateKey === todayKey;
+    const dayLabel = isToday ? 'วันนี้' : 'วันพรุ่งนี้';
+    const propertyTitle = apt.properties?.title || 'อสังหาริมทรัพย์';
+    const timeSlotLabel = formatTimeSlot(apt.time_slot);
+
+    const isCustomerRecipient = apt.customer_id === userId;
+    const targetUrl = isCustomerRecipient 
+      ? `/appointments?aptId=${apt.id}`
+      : `/agent/appointments?aptId=${apt.id}`;
+
+    let title = '';
+    let content = '';
+
+    if (isCustomerRecipient) {
+      title = isToday 
+        ? `เตือนความจำ: วันนี้คุณมีนัดหมายเข้าชมโครงการ`
+        : `เตือนความจำ: วันพรุ่งนี้คุณมีนัดหมายเข้าชมโครงการ`;
+      content = `${dayLabel}คุณมีนัดหมายเข้าชม "${propertyTitle}" (${timeSlotLabel}) กรุณาเตรียมตัวและตรวจสอบเส้นทางการเดินทาง`;
+    } else {
+      const customer = apt.users_appointments_customer_idTousers;
+      const customerName = customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : 'ลูกค้า';
+      title = isToday
+        ? `เตือนความจำ: วันนี้คุณมีคิวนำชมโครงการ`
+        : `เตือนความจำ: วันพรุ่งนี้คุณมีคิวนำชมโครงการ`;
+      content = `${dayLabel}คุณมีคิวนำชม "${propertyTitle}" กับคุณ ${customerName} (${timeSlotLabel})`;
+    }
+
+    await notifyUser({
+      userId,
+      title,
+      content,
+      type: REMINDER_NOTIFICATION_TYPE,
+      linkUrl: targetUrl
+    }).catch(err => console.error('Error sending appointment reminder:', err));
+
+    alertedAppointmentIds.add(apt.id);
+    sentCount++;
+  }
+
+  return sentCount;
 }

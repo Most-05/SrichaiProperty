@@ -153,6 +153,8 @@ export async function GET(request: Request) {
         price: p ? "฿" + Number(p.price).toLocaleString() : "",
         propertyImage: p?.property_images?.[0]?.image_url || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600",
         location: p?.location || "",
+        latitude: p?.latitude ? Number(p.latitude) : null,
+        longitude: p?.longitude ? Number(p.longitude) : null,
         date: toDateKey(apt.appointment_date),
         timeSlot: apt.time_slot,
         timeSlotText,
@@ -646,6 +648,20 @@ export async function PATCH(request: Request) {
           }
         });
       });
+
+      // แจ้งเตือนไปยังนายหน้าผู้ดูแลเมื่อลูกค้าขอเปลี่ยนวันเวลา
+      if (appointment.agent_id) {
+        const prop = await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } });
+        const customerName = `${user.first_name || ""}`.trim() + (user.last_name ? ` ${user.last_name}` : "") || "ลูกค้า";
+        const timeLabel = timeSlot === "morning" ? "ช่วงเช้า (10:00 - 12:00 น.)" : timeSlot === "afternoon" ? "ช่วงบ่าย (14:00 - 16:00 น.)" : timeSlot;
+        sendNotification(
+          appointment.agent_id,
+          "ลูกค้าขอเปลี่ยนวันเวลานัดหมาย",
+          `คุณ ${customerName} ได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} (${timeLabel})`,
+          "appointment",
+          "/agent/appointments"
+        );
+      }
 
       if (freedSlotFromCustomerEdit) {
         notifyWaitlistForFreedSlot(appointment.property_id, appointment.appointment_date, appointment.time_slot);
