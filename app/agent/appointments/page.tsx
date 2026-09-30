@@ -313,7 +313,6 @@ export default function AgentAppointmentsPage() {
       setToast({ kind: 'error', text: 'กรุณาเลือกวันใหม่ก่อน' });
       return;
     }
-
     const targetId = reschedulingApt.id;
     closeRescheduleModal();
     setBusyId(targetId);
@@ -1179,8 +1178,9 @@ export default function AgentAppointmentsPage() {
               <button
                 type="button"
                 onClick={confirmReschedule}
-                disabled={busyId === reschedulingApt.id}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs cursor-pointer shadow disabled:opacity-50"
+                /* ปิดปุ่มเมื่อรอบที่เลือกมีนัดอยู่แล้ว (เดิมขึ้นข้อความเตือนแต่ยังกดส่งได้ → นัดซ้อน) */
+                disabled={busyId === reschedulingApt.id || busySlotKeysForReschedule.has(`${newDate}|${newTimeSlot}`)}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs cursor-pointer shadow disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {busyId === reschedulingApt.id ? 'กำลังส่ง...' : 'ส่งคำขอเลื่อนวัน'}
               </button>
