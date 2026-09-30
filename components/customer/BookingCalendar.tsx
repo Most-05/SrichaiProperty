@@ -28,6 +28,7 @@ interface BookingCalendarProps {
   setSelectedDateStr: (date: string) => void;                   // ฟังก์ชันบันทึกวันที่เลือก
   holidays: string[];                                           // รายการวันหยุดในรูปแบบอาร์เรย์ของ "YYYY-MM-DD"
   availableDates: string[];                                     // รายการวันที่เปิดว่างจริงในรูปแบบอาร์เรย์ของ "YYYY-MM-DD"
+  fullyBookedDates?: string[];                                  // รายการวันที่นายหน้าเปิดรอบแต่นัดเต็มแล้วทุกรอบ ("YYYY-MM-DD")
 }
 
 // อาร์เรย์ชื่อเดือนภาษาไทยสำหรับแสดงผลบนหัวปฏิทิน
@@ -44,7 +45,8 @@ export default function BookingCalendar({
   selectedDateStr,
   setSelectedDateStr,
   holidays,
-  availableDates
+  availableDates,
+  fullyBookedDates = []
 }: BookingCalendarProps) {
   
   // ----------------------------------------------------------------------------
@@ -71,6 +73,7 @@ export default function BookingCalendar({
   // ----------------------------------------------------------------------------
   const holidaySet = useMemo(() => new Set(holidays), [holidays]);
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
+  const fullyBookedSet = useMemo(() => new Set(fullyBookedDates), [fullyBookedDates]);
 
   // คำนวณวันเริ่มต้นของวันนี้ (ตั้งค่าเวลาเป็น 00:00:00) เพื่อนำไปเช็คเปรียบเทียบวันในอดีต
   const todayStart = useMemo(() => {
@@ -124,13 +127,26 @@ export default function BookingCalendar({
           // แปลงเป็นข้อความวันที่รูปแบบ "YYYY-MM-DD" (เช่น 2026-08-09)
           const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
           
-          const isSelected = selectedDateStr === dateStr;  // เป็นวันที่กำลังคลิกเลือกอยู่หรือไม่
-          const isHoliday = holidaySet.has(dateStr);       // เป็นวันหยุดนักขัตฤกษ์หรือไม่
-          const isAvailable = availableSet.has(dateStr);   // เป็นวันที่นายหน้าเปิดว่างจริงหรือไม่
+          const isSelected = selectedDateStr === dateStr;       // เป็นวันที่กำลังคลิกเลือกอยู่หรือไม่
+          const isHoliday = holidaySet.has(dateStr);            // เป็นวันหยุดนักขัตฤกษ์หรือไม่
+          const isAvailable = availableSet.has(dateStr);        // มีรอบเวลาว่างอย่างน้อย 1 รอบหรือไม่
+          const isFullyBooked = fullyBookedSet.has(dateStr);    // เปิดรับนัดแต่นัดเต็มแล้วทุกรอบหรือไม่
           const isPast = new Date(currentYear, currentMonth, dayNum) < todayStart; // เป็นวันในอดีตหรือไม่
           
-          // อนุญาตให้กดเลือกได้เฉพาะวันที่เปิดว่างจริง และต้องไม่ใช่วันในอดีต
-          const isDisabled = isPast || !isAvailable;
+          // อนุญาตให้กดเลือกได้ทั้งวันที่เปิดว่าง และวันที่นัดเต็มแล้ว (เพื่อให้ลูกค้าคลิกดูและลงชื่อคิวรอ Waitlist ได้)
+          const isDisabled = isPast || (!isAvailable && !isFullyBooked);
+
+          // ข้อความ Tooltip เมื่อเอาเมาส์ชี้
+          let tooltip = "";
+          if (isPast) {
+            tooltip = "วันที่ผ่านมาแล้ว";
+          } else if (isFullyBooked) {
+            tooltip = "นัดเต็มทุกรอบแล้ว (คลิกเพื่อลงชื่อคิวรอ)";
+          } else if (isAvailable) {
+            tooltip = "มีรอบว่างให้จอง";
+          } else {
+            tooltip = "ไม่เปิดรับนัด";
+          }
 
           // กำหนด Class การแต่งสไตล์ตามสถานะของวัน
           let dayClass = "w-8 h-8 flex items-center justify-center mx-auto rounded-full transition-all ";
@@ -138,10 +154,14 @@ export default function BookingCalendar({
           if (isSelected) {
             dayClass += "bg-blue-600 text-white shadow-md active:scale-95 cursor-pointer";
           } else if (isHoliday) {
-            dayClass += `border border-amber-500 text-amber-500 bg-amber-50/50 ${!isDisabled ? 'hover:bg-amber-100 cursor-pointer' : 'cursor-not-allowed'}`;
+            dayClass += `border border-amber-500 text-amber-600 bg-amber-50/50 ${!isDisabled ? 'hover:bg-amber-100 cursor-pointer' : 'cursor-not-allowed'}`;
           } else if (isDisabled) {
             dayClass += "text-slate-200 cursor-not-allowed";
+          } else if (isFullyBooked) {
+            // วันที่นายหน้าเปิดรอบ แต่ถูกจองเต็มแล้วทุกรอบ
+            dayClass += "border border-rose-300 bg-rose-50/80 text-rose-600 hover:bg-rose-100 cursor-pointer";
           } else {
+            // วันที่ยังมีรอบว่างให้จอง
             dayClass += "border border-emerald-300 text-emerald-700 hover:bg-emerald-50 cursor-pointer";
           }
 
@@ -152,6 +172,7 @@ export default function BookingCalendar({
               disabled={isDisabled}
               onClick={() => setSelectedDateStr(dateStr)}
               className={dayClass}
+              title={tooltip}
             >
               {dayNum}
             </button>
@@ -161,10 +182,11 @@ export default function BookingCalendar({
 
       {/* 4.4 คำอธิบายสัญลักษณ์สีของปฏิทิน (Legend Indicator) */}
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-6 pt-4 border-t border-slate-100 text-[9px] font-black text-slate-400">
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-emerald-300" /> นายหน้าเปิดว่าง</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> เลือก</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border border-amber-500" /> วันหยุดพิเศษ</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-slate-200" /> ไม่เปิดว่าง</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-emerald-400 bg-emerald-50 shrink-0" /> ว่างให้จอง</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-rose-300 bg-rose-100 shrink-0" /> นัดเต็มแล้ว</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" /> กำลังเลือก</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-amber-500 bg-amber-50 shrink-0" /> วันหยุดพิเศษ</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-200 shrink-0" /> ไม่เปิดรับนัด</span>
       </div>
 
     </div>

@@ -143,10 +143,38 @@ function BookAppointmentForm() {
   // ----------------------------------------------------------------------------
   // 5. COMPUTED & MEMOIZED VALUES
   // ----------------------------------------------------------------------------
-  // 5.1 รายชื่อวันที่ที่มีอย่างน้อย 1 รอบเวลาว่างและยังไม่มีคนจอง (นำไปไฮไลต์ในปฏิทิน)
-  const availableDates = useMemo(() =>
-    Array.from(new Set(viewingSlots.filter((s) => !s.isBooked && !s.agentBusyElsewhere).map((s) => s.date)))
-  , [viewingSlots]);
+  // 5.1 คำนวณแยก 2 กลุ่ม: วันที่มีรอบว่างให้จองได้ (availableDates) vs วันที่เปิดรับนัดแต่ถูกจองเต็มแล้วทุกรอบ (fullyBookedDates)
+  const { availableDates, fullyBookedDates } = useMemo(() => {
+    const dateMap = new Map<string, { total: number; bookedCount: number }>();
+
+    viewingSlots.forEach((slot) => {
+      const current = dateMap.get(slot.date) || { total: 0, bookedCount: 0 };
+      current.total += 1;
+      if (slot.isBooked || slot.agentBusyElsewhere) {
+        current.bookedCount += 1;
+      }
+      dateMap.set(slot.date, current);
+    });
+
+    const available: string[] = [];
+    const fullyBooked: string[] = [];
+
+    dateMap.forEach((info, date) => {
+      if (info.total > 0 && info.bookedCount >= info.total) {
+        fullyBooked.push(date); // นายหน้าเปิดรอบรับนัด แต่ถูกจองเต็มแล้วทุกรอบ
+      } else if (info.total > info.bookedCount) {
+        available.push(date);   // ยังมีอย่างน้อย 1 รอบว่างให้จอง
+      }
+    });
+
+    return { availableDates: available, fullyBookedDates: fullyBooked };
+  }, [viewingSlots]);
+
+  // ตรวจสอบว่าวันที่กำลังเลือกอยู่เป็น "วันนัดเต็มแล้ว" หรือไม่
+  const isSelectedDateFullyBooked = useMemo(() => {
+    if (!selectedDateStr) return false;
+    return fullyBookedDates.includes(selectedDateStr);
+  }, [selectedDateStr, fullyBookedDates]);
 
   // 5.2 กรองเฉพาะรอบเวลาของ "วันที่ที่เลือกอยู่ปัจจุบัน"
   const slotsForSelectedDate = useMemo(() => 
@@ -312,15 +340,20 @@ function BookAppointmentForm() {
                   setSelectedDateStr={handleDateSelect}
                   holidays={holidays}
                   availableDates={availableDates}
+                  fullyBookedDates={fullyBookedDates}
                 />
 
                 {/* ข้อความเตือนกรณีไม่มีวันว่างเปิดให้จองเลย */}
-                {!slotsLoading && availableDates.length === 0 && (
+                {!slotsLoading && availableDates.length === 0 && fullyBookedDates.length === 0 && (
                   <div className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center justify-center gap-1.5">
-                    <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                     <span>นายหน้ายังไม่ได้เปิดวันว่างสำหรับบ้านหลังนี้ กรุณาติดต่อนายหน้าโดยตรง</span>
+                  </div>
+                )}
+                {!slotsLoading && availableDates.length === 0 && fullyBookedDates.length > 0 && (
+                  <div className="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-center justify-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>วันนัดหมายที่เปิดไว้ถูกจองเต็มทั้งหมดแล้ว คุณสามารถคลิกวันที่ต้องการเพื่อลงชื่อคิวรอรับการแจ้งเตือนได้</span>
                   </div>
                 )}
               </div>
@@ -332,12 +365,25 @@ function BookAppointmentForm() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold">2</span>
-                    <label className="text-xs font-black text-slate-800 uppercase tracking-wider">เลือกตอบรอบเวลา</label>
+                    <label className="text-xs font-black text-slate-800 uppercase tracking-wider">เลือกรอบเวลา</label>
                   </div>
                   <span className="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
                     {getThaiPreviewDate()}
                   </span>
                 </div>
+
+                {/* แจ้งเตือนเมื่อเลือกวันที่ถูกจองเต็มแล้วทุกรอบ */}
+                {isSelectedDateFullyBooked && (
+                  <div className="p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-900">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-extrabold text-rose-950">วันนี้นัดหมายเต็มทุกรอบแล้ว</p>
+                      <p className="text-rose-700 text-[11px] mt-0.5 leading-relaxed">
+                        นายหน้าเปิดรับนัดในวันนี้ แต่มีผู้จองเต็มครบทุกรอบแล้ว คุณสามารถกดปุ่ม <span className="font-black text-rose-900">"แจ้งเตือนฉันถ้ารอบนี้ว่าง"</span> ที่รอบเวลาด้านล่าง เพื่อเข้าคิวรอรับการแจ้งเตือนทันทีหากมีผู้ยกเลิกนัด
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
@@ -445,7 +491,7 @@ function BookAppointmentForm() {
                   {submitting ? (
                     <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin shrink-0" /> กำลังบันทึกข้อมูลนัดชม...</span>
                   ) : (!selectedDateStr || !selectedTimeSlot) ? (
-                    'กรุณาเลือกวันและช่วงเวลาก่อน'
+                    isSelectedDateFullyBooked ? 'วันนี้นัดหมายเต็มทุกรอบแล้ว (กดปุ่มลงคิวรอด้านบน)' : 'กรุณาเลือกวันและช่วงเวลาก่อน'
                   ) : (
                     'ยืนยันการนัดหมาย'
                   )}
