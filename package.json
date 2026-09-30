@@ -7,6 +7,7 @@
     "dev:all": "concurrently -n \"NEXT,ROLES\" -c \"cyan,green\" \"next dev\" \"node scripts/open-3-roles.js\"",
     "build": "next build",
     "start": "next start",
+    "seed": "prisma db seed",
     "postinstall": "prisma generate",
     "lint": "eslint"
   },
