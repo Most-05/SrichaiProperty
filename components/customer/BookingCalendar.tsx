@@ -7,31 +7,31 @@
  * ==============================================================================
  * วัตถุประสงค์หลัก:
  * 1. คำนวณและแสดงผลตารางปฏิทินประจำเดือน พร้อมปุ่มเลื่อนเดือนถอยหลัง/เดินหน้า
- * 2. ตรวจสอบสถานะของแต่ละวันในเดือน (วันอดีต, วันที่นายหน้าเปิดว่าง, วันหยุดนักขัตฤกษ์)
- * 3. ไฮไลต์สีตามสถานะ:
- *    - 🟩 สีเขียว = วันที่นายหน้าเปิดว่างให้จองได้ (Available)
- *    - 🟦 สีน้ำเงิน = วันที่ผู้ใช้กำลังคลิกเลือกอยู่ปัจจุบัน (Selected)
- *    - 🟨 สีเหลือง = วันหยุดพิเศษ/นักขัตฤกษ์ (Holiday)
- *    - ⬜ สีเทา = วันในอดีต หรือ วันที่นายหน้าไม่ได้เปิดว่าง (Disabled)
+ * 2. ตรวจสอบสถานะของแต่ละวันในเดือน:
+ *    - วันที่ผ่านมาแล้ว (isPast)
+ *    - วันที่เปิดว่างให้จอง (isAvailable) -> แสดงป้าย "ว่าง"
+ *    - วันที่เปิดรับนัดแต่นัดเต็มแล้วทุกรอบ (isFullyBooked) -> แสดงป้าย "เต็ม"
+ *    - วันหยุดนักขัตฤกษ์ (isHoliday) -> แสดงป้าย "หยุด"
+ *    - วันที่นายหน้าไม่ได้เปิดรับนัด (isDisabled) -> สีเทาจาง กดไม่ได้
+ * 3. ออกแบบช่องวันเป็น Tile ชัดเจน แสดงตัวเลขวันที่คู่กับป้ายสถานะภาษาไทยชัดเจน
  * ==============================================================================
  */
 
 import React, { useMemo } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-// อินเทอร์เฟซกำหนด Props ที่คอมโพเนนต์นี้รับเข้ามาจากหน้าแม่ (BookAppointmentPage)
 interface BookingCalendarProps {
-  currentYear: number;                                          // ปีที่เปิดดูอยู่ (ค.ศ. เช่น 2026)
-  currentMonth: number;                                         // เดือนที่เปิดดูอยู่ (0 = ม.ค., 11 = ธ.ค.)
-  setCurrentYear: React.Dispatch<React.SetStateAction<number>>; // ฟังก์ชันอัปเดตปี
-  setCurrentMonth: React.Dispatch<React.SetStateAction<number>>;// ฟังก์ชันอัปเดตเดือน
-  selectedDateStr: string;                                      // วันที่ผู้ใช้เลือกในรูปแบบ "YYYY-MM-DD"
-  setSelectedDateStr: (date: string) => void;                   // ฟังก์ชันบันทึกวันที่เลือก
-  holidays: string[];                                           // รายการวันหยุดในรูปแบบอาร์เรย์ของ "YYYY-MM-DD"
-  availableDates: string[];                                     // รายการวันที่เปิดว่างจริงในรูปแบบอาร์เรย์ของ "YYYY-MM-DD"
-  fullyBookedDates?: string[];                                  // รายการวันที่นายหน้าเปิดรอบแต่นัดเต็มแล้วทุกรอบ ("YYYY-MM-DD")
+  currentYear: number;
+  currentMonth: number;
+  setCurrentYear: React.Dispatch<React.SetStateAction<number>>;
+  setCurrentMonth: React.Dispatch<React.SetStateAction<number>>;
+  selectedDateStr: string;
+  setSelectedDateStr: (date: string) => void;
+  holidays: string[];
+  availableDates: string[];
+  fullyBookedDates?: string[];
 }
 
-// อาร์เรย์ชื่อเดือนภาษาไทยสำหรับแสดงผลบนหัวปฏิทิน
 const MONTH_NAMES_TH = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
@@ -49,62 +49,56 @@ export default function BookingCalendar({
   fullyBookedDates = []
 }: BookingCalendarProps) {
   
-  // ----------------------------------------------------------------------------
-  // 1. MONTH NAVIGATION ALGORITHM (อัลกอริทึมการเลื่อนเดือน)
-  // ----------------------------------------------------------------------------
-  // ใช้ JavaScript Native Date ช่วยคำนวณทดเดือนและข้ามปีให้อัตโนมัติ (delta = -1 เลื่อนถอยหลัง, +1 เลื่อนไปข้างหน้า)
   const changeMonth = (delta: number) => {
     const d = new Date(currentYear, currentMonth + delta, 1);
     setCurrentYear(d.getFullYear());
     setCurrentMonth(d.getMonth());
   };
 
-  // ----------------------------------------------------------------------------
-  // 2. CALENDAR GRID CALCULATIONS (การคำนวณโครงสร้างตารางปฏิทิน)
-  // ----------------------------------------------------------------------------
-  // firstDayOfWeek: หาว่าวันที่ 1 ของเดือนตรงกับวันอะไรในสัปดาห์ (0 = อาทิตย์, 1 = จันทร์, ..., 6 = เสาร์)
   const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
-  
-  // totalDaysInMonth: หาว่าเดือนนี้มีทั้งหมดกี่วัน (โดยส่ง day = 0 ของเดือนถัดไป)
   const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  // ----------------------------------------------------------------------------
-  // 3. OPTIMIZED SEARCH LOOKUP (แปลงเป็น Set เพื่อเพิ่มความเร็วในการค้นหาเป็น O(1))
-  // ----------------------------------------------------------------------------
   const holidaySet = useMemo(() => new Set(holidays), [holidays]);
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
   const fullyBookedSet = useMemo(() => new Set(fullyBookedDates), [fullyBookedDates]);
 
-  // คำนวณวันเริ่มต้นของวันนี้ (ตั้งค่าเวลาเป็น 00:00:00) เพื่อนำไปเช็คเปรียบเทียบวันในอดีต
   const todayStart = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
   }, []);
 
-  // ----------------------------------------------------------------------------
-  // 4. RENDERING SECTION
-  // ----------------------------------------------------------------------------
   return (
-    <div className="border border-slate-200 rounded-3xl p-5 max-w-lg mx-auto bg-white shadow-sm">
+    <div className="border border-slate-200 rounded-3xl p-4 sm:p-5 max-w-lg mx-auto bg-white shadow-sm">
       
       {/* 4.1 แผงควบคุมเลื่อนเดือน (Header Control) */}
-      <div className="flex items-center justify-between mb-4 px-2">
-        <button type="button" onClick={() => changeMonth(-1)} className="text-slate-400 hover:text-slate-600 font-bold text-xs p-1 cursor-pointer">
-          &lt;
+      <div className="flex items-center justify-between mb-4 px-1">
+        <button 
+          type="button" 
+          onClick={() => changeMonth(-1)} 
+          className="w-8 h-8 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition cursor-pointer"
+          aria-label="เดือนก่อนหน้า"
+        >
+          <ChevronLeft className="w-4 h-4 shrink-0" />
         </button>
-        {/* แสดงชื่อเดือนภาษาไทย + พ.ศ. (ค.ศ. + 543) */}
-        <span className="text-xs font-black text-slate-800">
+        
+        <span className="text-xs sm:text-sm font-black text-slate-800">
           {MONTH_NAMES_TH[currentMonth]} {currentYear + 543}
         </span>
-        <button type="button" onClick={() => changeMonth(1)} className="text-slate-400 hover:text-slate-600 font-bold text-xs p-1 cursor-pointer">
-          &gt;
+        
+        <button 
+          type="button" 
+          onClick={() => changeMonth(1)} 
+          className="w-8 h-8 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition cursor-pointer"
+          aria-label="เดือนถัดไป"
+        >
+          <ChevronRight className="w-4 h-4 shrink-0" />
         </button>
       </div>
 
       {/* 4.2 หัวแถววันในสัปดาห์ (Days of Week Header) */}
       <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black pb-2 mb-2 border-b border-slate-100">
-        <span className="text-red-500">อา</span>
+        <span className="text-rose-500">อา</span>
         <span className="text-slate-400">จ</span>
         <span className="text-slate-400">อ</span>
         <span className="text-slate-400">พ</span>
@@ -114,29 +108,27 @@ export default function BookingCalendar({
       </div>
 
       {/* 4.3 ตารางแสดงวันที่ทั้งหมดในเดือน (Calendar Days Grid) */}
-      <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold">
+      <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center text-xs font-bold">
         
         {/* เติมบล็อกช่องว่างสำหรับวันก่อนวันที่ 1 ของเดือน */}
         {Array.from({ length: firstDayOfWeek }).map((_, idx) => (
-          <div key={`empty-${idx}`} className="w-8 h-8" />
+          <div key={`empty-${idx}`} className="min-h-[50px] sm:min-h-[56px]" />
         ))}
 
         {/* วนลูปสร้างปุ่มกดตั้งแต่วันที่ 1 ถึงวันสุดท้ายของเดือน */}
         {Array.from({ length: totalDaysInMonth }).map((_, i) => {
           const dayNum = i + 1;
-          // แปลงเป็นข้อความวันที่รูปแบบ "YYYY-MM-DD" (เช่น 2026-08-09)
           const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
           
-          const isSelected = selectedDateStr === dateStr;       // เป็นวันที่กำลังคลิกเลือกอยู่หรือไม่
-          const isHoliday = holidaySet.has(dateStr);            // เป็นวันหยุดนักขัตฤกษ์หรือไม่
-          const isAvailable = availableSet.has(dateStr);        // มีรอบเวลาว่างอย่างน้อย 1 รอบหรือไม่
-          const isFullyBooked = fullyBookedSet.has(dateStr);    // เปิดรับนัดแต่นัดเต็มแล้วทุกรอบหรือไม่
-          const isPast = new Date(currentYear, currentMonth, dayNum) < todayStart; // เป็นวันในอดีตหรือไม่
+          const isSelected = selectedDateStr === dateStr;
+          const isHoliday = holidaySet.has(dateStr);
+          const isAvailable = availableSet.has(dateStr);
+          const isFullyBooked = fullyBookedSet.has(dateStr);
+          const isPast = new Date(currentYear, currentMonth, dayNum) < todayStart;
           
-          // อนุญาตให้กดเลือกได้ทั้งวันที่เปิดว่าง และวันที่นัดเต็มแล้ว (เพื่อให้ลูกค้าคลิกดูและลงชื่อคิวรอ Waitlist ได้)
           const isDisabled = isPast || (!isAvailable && !isFullyBooked);
 
-          // ข้อความ Tooltip เมื่อเอาเมาส์ชี้
+          // ข้อความ Tooltip
           let tooltip = "";
           if (isPast) {
             tooltip = "วันที่ผ่านมาแล้ว";
@@ -144,25 +136,57 @@ export default function BookingCalendar({
             tooltip = "นัดเต็มทุกรอบแล้ว (คลิกเพื่อลงชื่อคิวรอ)";
           } else if (isAvailable) {
             tooltip = "มีรอบว่างให้จอง";
+          } else if (isHoliday) {
+            tooltip = "วันหยุดพิเศษ";
           } else {
             tooltip = "ไม่เปิดรับนัด";
           }
 
-          // กำหนด Class การแต่งสไตล์ตามสถานะของวัน
-          let dayClass = "w-8 h-8 flex items-center justify-center mx-auto rounded-full transition-all ";
+          // สไตล์ของ Cell และ Badge ป้ายกำกับ
+          let cellClass = "w-full min-h-[50px] sm:min-h-[56px] p-1 sm:p-1.5 rounded-xl border flex flex-col items-center justify-between transition-all ";
+          let numClass = "text-xs sm:text-sm font-bold leading-none ";
+          let badge: React.ReactNode = null;
 
-          if (isSelected) {
-            dayClass += "bg-blue-600 text-white shadow-md active:scale-95 cursor-pointer";
-          } else if (isHoliday) {
-            dayClass += `border border-amber-500 text-amber-600 bg-amber-50/50 ${!isDisabled ? 'hover:bg-amber-100 cursor-pointer' : 'cursor-not-allowed'}`;
-          } else if (isDisabled) {
-            dayClass += "text-slate-200 cursor-not-allowed";
+          if (isPast) {
+            cellClass += "border-transparent bg-slate-50/40 text-slate-300 cursor-not-allowed";
+            numClass += "text-slate-300";
+          } else if (isSelected) {
+            cellClass += "border-blue-600 bg-blue-600 text-white shadow-md ring-2 ring-blue-500/30 cursor-pointer active:scale-95";
+            numClass += "text-white font-extrabold";
+            if (isFullyBooked) {
+              badge = <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-white text-rose-600 leading-none shadow-xs">เต็ม</span>;
+            } else if (isAvailable) {
+              badge = <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-white text-emerald-700 leading-none shadow-xs">ว่าง</span>;
+            } else {
+              badge = <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500 text-white leading-none">เลือก</span>;
+            }
           } else if (isFullyBooked) {
-            // วันที่นายหน้าเปิดรอบ แต่ถูกจองเต็มแล้วทุกรอบ
-            dayClass += "border border-rose-300 bg-rose-50/80 text-rose-600 hover:bg-rose-100 cursor-pointer";
+            // วันที่นายหน้าเปิดรับนัด แต่ถูกลูกค้าจองเต็มทุกรอบแล้ว
+            cellClass += "border-2 border-rose-300 bg-rose-50/90 text-rose-700 hover:bg-rose-100 hover:border-rose-400 cursor-pointer shadow-xs active:scale-95";
+            numClass += "text-rose-950 font-black";
+            badge = (
+              <span className="text-[8px] sm:text-[9px] font-black px-1 sm:px-1.5 py-0.5 rounded-md bg-rose-200/90 text-rose-900 border border-rose-300 leading-none">
+                เต็ม
+              </span>
+            );
+          } else if (isAvailable) {
+            // วันที่นายหน้าเปิดและยังมีรอบว่างให้จอง
+            cellClass += "border border-emerald-300 bg-emerald-50/60 text-emerald-800 hover:bg-emerald-100/70 hover:border-emerald-400 cursor-pointer shadow-xs active:scale-95";
+            numClass += "text-emerald-950 font-bold";
+            badge = (
+              <span className="text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300/80 leading-none">
+                ว่าง
+              </span>
+            );
+          } else if (isHoliday) {
+            cellClass += "border border-amber-200 bg-amber-50/50 text-amber-700 cursor-not-allowed";
+            numClass += "text-amber-800";
+            badge = <span className="text-[8px] font-medium text-amber-600 leading-none">หยุด</span>;
           } else {
-            // วันที่ยังมีรอบว่างให้จอง
-            dayClass += "border border-emerald-300 text-emerald-700 hover:bg-emerald-50 cursor-pointer";
+            // วันที่ไม่ได้เปิดรับนัด
+            cellClass += "border border-transparent bg-slate-50/40 text-slate-300 cursor-not-allowed";
+            numClass += "text-slate-300";
+            badge = <span className="text-[9px] text-slate-200 leading-none">·</span>;
           }
 
           return (
@@ -171,22 +195,38 @@ export default function BookingCalendar({
               type="button"
               disabled={isDisabled}
               onClick={() => setSelectedDateStr(dateStr)}
-              className={dayClass}
+              className={cellClass}
               title={tooltip}
             >
-              {dayNum}
+              <span className={numClass}>{dayNum}</span>
+              {badge}
             </button>
           );
         })}
       </div>
 
       {/* 4.4 คำอธิบายสัญลักษณ์สีของปฏิทิน (Legend Indicator) */}
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-6 pt-4 border-t border-slate-100 text-[9px] font-black text-slate-400">
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-emerald-400 bg-emerald-50 shrink-0" /> ว่างให้จอง</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-rose-300 bg-rose-100 shrink-0" /> นัดเต็มแล้ว</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" /> กำลังเลือก</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-amber-500 bg-amber-50 shrink-0" /> วันหยุดพิเศษ</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-200 shrink-0" /> ไม่เปิดรับนัด</span>
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-5 pt-4 border-t border-slate-100 text-[10px] font-bold text-slate-500">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm border border-emerald-400 bg-emerald-100 shrink-0" /> 
+          <span>ว่างให้จอง</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm border-2 border-rose-300 bg-rose-200 shrink-0" /> 
+          <span className="text-rose-700 font-extrabold">นัดเต็มแล้ว</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 shrink-0" /> 
+          <span>กำลังเลือก</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm border border-amber-300 bg-amber-100 shrink-0" /> 
+          <span>วันหยุด</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 shrink-0" /> 
+          <span className="text-slate-400 font-normal">ไม่เปิดรับนัด</span>
+        </span>
       </div>
 
     </div>
