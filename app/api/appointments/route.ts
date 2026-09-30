@@ -737,9 +737,16 @@ export async function DELETE(request: Request) {
     const isAgent = appointment.agent_id === user.id;
     if (!isCustomer && !isAgent) return NextResponse.json({ error: "คุณไม่มีสิทธิ์ยกเลิกนัดหมายนี้" }, { status: 403 });
 
-    // 4.5 ป้องกันการยกเลิกซ้ำในนัดที่ปิดงานไปแล้ว (completed, cancelled, rejected)
-    if (["completed", "cancelled", "rejected"].includes(appointment.status || "")) {
+    // 4.5 ป้องกันการยกเลิกซ้ำในนัดที่ปิดงานไปแล้ว (completed, cancelled, rejected, no_show)
+    // no_show ต้องอยู่ในลิสต์ด้วย ไม่งั้นลูกค้ายกเลิกนัดที่ถูกบันทึกว่าไม่มาได้ → ประวัติไม่มาหาย หลุดโควตาบล็อก
+    if (["completed", "cancelled", "rejected", "no_show"].includes(appointment.status || "")) {
       return NextResponse.json({ error: "นัดหมายนี้ถูกปิดไปแล้ว ไม่สามารถยกเลิกซ้ำได้" }, { status: 400 });
+    }
+
+    // 4.5.1 นัดที่เลยวันไปแล้วยกเลิกไม่ได้ — ต้องจบที่ "มาแล้ว" หรือ "ไม่มา" เท่านั้น
+    // (กันลูกค้ายกเลิกย้อนหลังเพื่อหนีการถูกบันทึกว่าไม่มาตามนัด · หน้าเว็บซ่อนปุ่มอยู่แล้ว แต่ API ต้องกันเองด้วย)
+    if (appointment.appointment_date < getTodayDateBangkok()) {
+      return NextResponse.json({ error: "นัดหมายนี้เลยวันนัดแล้ว ไม่สามารถยกเลิกได้" }, { status: 400 });
     }
 
     // 4.6 ปลดล็อกรอบเวลาว่างคืนให้ระบบ (ตั้งค่า is_booked = false)
