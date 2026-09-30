@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { MessageSquare, Search, Users } from 'lucide-react';
 import { useChatRealtime } from '@/hooks/useChatRealtime';
 import SharedChatView, { SharedChatSession, OutgoingChatPayload } from '@/components/common/SharedChatView';
 import { toast } from '@/components/ui/toast';
@@ -33,6 +34,7 @@ interface ChatSession {
   time: string;                  // เวลาข้อความล่าสุด
   unreadCount?: number;          // จำนวนข้อความที่ยังไม่ได้อ่าน
   hasMoreMessages?: boolean;     // มีข้อความเก่ากว่านี้ให้โหลดหรือไม่
+  propertyId?: string;           // รหัสอสังหาริมทรัพย์ที่สนใจ
   propertyTitle: string;         // ชื่ออสังหาริมทรัพย์ที่สนใจ
   propertyPrice: string;         // ราคาอสังหาริมทรัพย์
   propertyImage: string;         // รูปภาพอสังหาริมทรัพย์
@@ -207,9 +209,7 @@ function ChatContent() {
         <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm text-center space-y-5">
           {/* ไอคอนกล่องข้อความ */}
           <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
+            <MessageSquare className="w-8 h-8 shrink-0" />
           </div>
 
           {/* หัวข้อและคำแนะนำ */}
@@ -226,18 +226,14 @@ function ChatContent() {
               href="/search"
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition shadow-sm flex items-center justify-center gap-1.5"
             >
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <Search className="w-4 h-4 shrink-0" />
               <span>ค้นหาอสังหาริมทรัพย์</span>
             </Link>
             <Link
               href="/agents"
               className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
             >
-              <svg className="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+              <Users className="w-4 h-4 text-slate-500 shrink-0" />
               <span>นายหน้าของเรา</span>
             </Link>
           </div>
@@ -257,6 +253,7 @@ function ChatContent() {
     time: s.time,
     unreadCount: s.unreadCount,
     hasMoreMessages: s.hasMoreMessages,
+    propertyId: s.propertyId,
     propertyTitle: s.propertyTitle,
     propertyPrice: s.propertyPrice,
     messages: s.messages.map(m => ({

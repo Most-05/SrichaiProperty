@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image'; // ใช้แสดงรูปแนบและรูปโปรไฟล์ในหน้าจอแชท
+import Link from 'next/link';
+import { Calendar } from 'lucide-react';
 import { Message, MessageAvatar, MessageContent, MessageFooter } from '@/components/ui/message'; // ใช้แสดงแต่ละแถวข้อความ พร้อมรูปโปรไฟล์ กรอบข้อความ และเวลา
 import { Bubble, BubbleContent } from '@/components/ui/bubble'; // ใช้จัดสไตล์กรอบข้อความแชท (แยกฝั่งผู้ใช้กับคู่สนทนา)
 import { toast } from '@/components/ui/toast';
@@ -33,6 +35,7 @@ export interface SharedChatSession {
   time: string;                                // เวลาข้อความล่าสุด
   unreadCount?: number;                        // จำนวนข้อความที่ยังไม่อ่าน
   hasMoreMessages?: boolean;                   // มีข้อความประวัติเก่าให้โหลดหรือไม่
+  propertyId?: string;                         // รหัสทรัพย์สิน (สำหรับสร้างทางลัดนัดหมายเข้าชม)
   propertyTitle?: string;                      // ชื่อทรัพย์อสังหาริมทรัพย์ที่สนใจ
   propertyPrice?: string;                      // ราคาขาย/เช่า
   propertyCode?: string;                       // รหัสทรัพย์สิน
@@ -442,14 +445,25 @@ export default function SharedChatView({
 
                 {/* การ์ดสรุปข้อมูลทรัพย์สินที่กำลังสอบถาม */}
                 {(activeSession.propertyTitle || activeSession.propertyCode) && (
-                  <div className="px-4 py-2 bg-[#f8fafc] border-t border-slate-100 flex items-center justify-between text-xs">
+                  <div className="px-4 py-2 bg-[#f8fafc] border-t border-slate-100 flex items-center justify-between text-xs gap-3">
                     <div className="truncate pr-2">
                       <span className="text-[9px] text-slate-400 font-bold block">ทรัพย์ที่สนใจ</span>
                       <h5 className="font-extrabold text-slate-800 text-[11px] truncate flex items-center gap-1">
                         <Icon path={ICONS.home} className="w-3 h-3 shrink-0" /> {activeSession.propertyTitle || activeSession.propertyCode}
                       </h5>
                     </div>
-                    {activeSession.propertyPrice && <strong className="text-blue-600 font-extrabold text-xs block">{activeSession.propertyPrice}</strong>}
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      {activeSession.propertyPrice && <strong className="text-blue-600 font-extrabold text-xs block">{activeSession.propertyPrice}</strong>}
+                      {role === 'customer' && activeSession.propertyId && (
+                        <Link
+                          href={`/book-appointment?propertyId=${activeSession.propertyId}`}
+                          className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black rounded-lg text-[11px] transition shadow-xs flex items-center gap-1 shrink-0"
+                        >
+                          <Calendar className="w-3 h-3 shrink-0" />
+                          <span>นัดหมายเข้าชม</span>
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
