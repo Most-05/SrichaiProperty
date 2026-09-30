@@ -14,11 +14,14 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { useApp } from '@/context/AppContext';
 import BookingSidebar from '@/components/customer/BookingSidebar';
 import BookingCalendar from '@/components/customer/BookingCalendar';
 import { NO_SHOW_LIMIT } from '@/lib/constants';
 import { toast } from '@/components/ui/toast';
+import { Bell, Check, Loader2, LogIn, AlertCircle, ArrowLeft } from 'lucide-react';
 
 // รายชื่อเดือนภาษาไทยสำหรับแสดงผลวันที่แบบข้อความอ่านง่าย
 const MONTH_NAMES_TH = [
@@ -34,6 +37,11 @@ function BookAppointmentForm() {
   const router = useRouter();
   const propertyId = searchParams.get('propertyId'); // รหัสอสังหาฯ ที่ส่งมาจากหน้าก่อนหน้า (?propertyId=uuid)
   const today = new Date();
+
+  // ตรวจสอบสถานะการเข้าสู่ระบบ
+  const { status: authStatus } = useSession();
+  const isGuest = authStatus === 'unauthenticated';
+  const returnUrl = propertyId ? `/book-appointment?propertyId=${propertyId}` : '/book-appointment';
 
   // ----------------------------------------------------------------------------
   // 2. LOCAL COMPONENT STATE (สถานะภายในฟอร์ม)
@@ -94,6 +102,11 @@ function BookAppointmentForm() {
 
   // 🔑 KEYWORD: ลงคิวรอ / ยกเลิกคิวรอ รอบที่จองไม่ได้
   const toggleWaitlist = async (dateStr: string, timeSlot: string) => {
+    if (isGuest) {
+      toast.error('กรุณาเข้าสู่ระบบก่อนลงคิวรอ');
+      router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
     const key = `${dateStr}|${timeSlot}`;
     const joined = waitlistKeys.includes(key);
     setWaitlistBusy(key);
@@ -165,6 +178,11 @@ function BookAppointmentForm() {
   // ----------------------------------------------------------------------------
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuest) {
+      toast.error('กรุณาเข้าสู่ระบบก่อนทำการจองนัดหมาย');
+      router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
     if (!property || !selectedDateStr || !selectedTimeSlot || isBlockedByNoShow) return;
 
     setSubmitting(true);
@@ -228,8 +246,9 @@ function BookAppointmentForm() {
         
         {/* หัวข้อหน้าและปุ่มย้อนกลับ */}
         <div className="mb-8">
-          <button onClick={() => router.back()} className="text-slate-500 hover:text-blue-600 font-bold text-xs flex items-center gap-1 mb-2 transition">
-            &lt; กลับไปหน้ารายละเอียด
+          <button onClick={() => router.back()} className="text-slate-500 hover:text-blue-600 font-bold text-xs flex items-center gap-1.5 mb-2 transition cursor-pointer">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>กลับไปหน้ารายละเอียด</span>
           </button>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">ทำการนัดหมาย</h1>
           <p className="text-slate-500 text-xs mt-0.5">เลือกวันและเวลาที่คุณสะดวก เพื่อเข้าชมสถานที่จริง</p>
@@ -241,6 +260,26 @@ function BookAppointmentForm() {
 
           {/* ฟอร์มการจองนัดหมายฝั่งขวา (3 ขั้นตอน) */}
           <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-sm space-y-8">
+            {/* แจ้งเตือนกรณีเป็น Guest ยังไม่ได้ล็อกอิน */}
+            {isGuest && (
+              <div className="p-4 rounded-2xl bg-blue-50/80 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-900">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="w-5 h-5 text-blue-600 shrink-0" />
+                  <div>
+                    <p className="font-extrabold text-blue-950">คุณกำลังเข้าชมในฐานะผู้เยี่ยมชม</p>
+                    <p className="text-blue-700 text-[11px]">กรุณาเข้าสู่ระบบเพื่อให้ข้อมูลการจองเชื่อมโยงกับบัญชีของคุณ</p>
+                  </div>
+                </div>
+                <Link
+                  href={`/login?callbackUrl=${encodeURIComponent(returnUrl)}`}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-xs shrink-0 cursor-pointer text-xs"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>เข้าสู่ระบบ</span>
+                </Link>
+              </div>
+            )}
+
             {/* แจ้งเตือนก่อนจองว่าถูกจำกัดจากประวัติไม่มาตามนัด */}
             {isBlockedByNoShow && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
@@ -366,11 +405,13 @@ function BookAppointmentForm() {
                               : 'border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-600'
                           }`}
                         >
-                          {waitlistBusy === waitKey
-                            ? 'กำลังบันทึก...'
-                            : isWaiting
-                              ? '✓ รออยู่ — กดอีกครั้งเพื่อยกเลิกคิว'
-                              : '🔔 แจ้งเตือนฉันถ้ารอบนี้ว่าง'}
+                          {waitlistBusy === waitKey ? (
+                            <span className="flex items-center justify-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin shrink-0" /> กำลังบันทึก...</span>
+                          ) : isWaiting ? (
+                            <span className="flex items-center justify-center gap-1.5"><Check className="w-3 h-3 shrink-0 text-blue-600" /> รออยู่ — กดอีกครั้งเพื่อยกเลิกคิว</span>
+                          ) : (
+                            <span className="flex items-center justify-center gap-1.5"><Bell className="w-3 h-3 shrink-0" /> แจ้งเตือนฉันถ้ารอบนี้ว่าง</span>
+                          )}
                         </button>
                       )}
                       </div>
@@ -396,16 +437,18 @@ function BookAppointmentForm() {
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition text-slate-800 font-bold text-xs resize-none placeholder-slate-400"
                 />
 
-                                <button
+                <button
                   type="submit"
                   disabled={submitting || !selectedDateStr || !selectedTimeSlot || isBlockedByNoShow}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition shadow flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed text-xs"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition shadow flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed text-xs cursor-pointer"
                 >
-                  {submitting
-                    ? '⏳ กำลังบันทึกข้อมูลนัดชม...'
-                    : (!selectedDateStr || !selectedTimeSlot)
-                      ? 'กรุณาเลือกวันและช่วงเวลาก่อน'
-                      : 'ยืนยันการนัดหมาย'}
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin shrink-0" /> กำลังบันทึกข้อมูลนัดชม...</span>
+                  ) : (!selectedDateStr || !selectedTimeSlot) ? (
+                    'กรุณาเลือกวันและช่วงเวลาก่อน'
+                  ) : (
+                    'ยืนยันการนัดหมาย'
+                  )}
                 </button>
               </div>
 
