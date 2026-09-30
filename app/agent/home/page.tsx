@@ -29,7 +29,7 @@ import {
 interface AppointmentData {
   id: string;
   status: 'completed' | 'pending';
-  rawStatus?: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show';
+  rawStatus?: 'pending' | 'approved' | 'awaiting_customer' | 'rejected' | 'completed' | 'cancelled' | 'no_show';
   date: string;
   time: string;
   timeSlot?: string;
@@ -67,6 +67,14 @@ interface AgentProfileData {
   avatar: string | null;
   agentCode: string;
 }
+
+// วันนี้แบบ YYYY-MM-DD ตามเวลาไทย (ตรงกับฝั่ง API ที่ใช้ getTodayDateBangkok)
+// เดิมใช้ toISOString() ซึ่งเป็นวันที่ UTC → ช่วง 00:00-07:00 น. จะได้วันที่ของเมื่อวาน
+const getTodayKeyBangkok = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+
+// สถานะที่ยังเป็นนัดที่ต้องไปนำชม (ยังไม่ปิดเคส)
+const ACTIVE_STATUSES = ['pending', 'approved', 'awaiting_customer'];
 
 export default function AgentHomePage() {
   const { data: session, status } = useSession();
@@ -109,7 +117,7 @@ export default function AgentHomePage() {
         .then(data => {
           setDbData(data);
           // หากวันนี้ไม่มีนัดหมาย ให้เลือกแท็บ "รอนัดพบ" เป็นค่าเริ่มต้นโดยอัตโนมัติ เพื่อให้เห็นงานถัดไปทันที
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = getTodayKeyBangkok();
           const hasToday = (data.appointments || []).some((a: AppointmentData) => a.date === todayStr);
           if (!hasToday) {
             setActiveTab('pending');
@@ -132,7 +140,8 @@ export default function AgentHomePage() {
       const res = await fetch('/api/appointments', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appointmentId, action: 'confirm' })
+        // API /api/appointments รับรหัสนัดในชื่อ id (เดิมส่งชื่อ appointmentId ไป → ได้ 400 ทุกครั้ง)
+        body: JSON.stringify({ id: appointmentId, action: 'confirm' })
       });
       const data = await res.json();
       if (res.ok && (data.success || data.data)) {
@@ -144,7 +153,7 @@ export default function AgentHomePage() {
             pendingAptsCount: Math.max(0, prev.pendingAptsCount - 1),
             appointments: prev.appointments.map(apt =>
               apt.id === appointmentId
-                ? { ...apt, rawStatus: 'approved', status: 'completed' }
+                ? { ...apt, rawStatus: 'approved', status: 'pending' } // ยืนยันแล้ว แต่ยังไม่ได้นำชม (ยังไม่ completed)
                 : apt
             )
           };
@@ -193,13 +202,14 @@ export default function AgentHomePage() {
   }
 
   const appointments = dbData?.appointments || [];
-  const todayKey = new Date().toISOString().split('T')[0];
+  const todayKey = getTodayKeyBangkok();
 
-  // จำแนกรายการนัดหมาย
-  const todayAptsList = appointments.filter(a => a.date === todayKey);
+  // จำแนกรายการนัดหมาย (API ส่งมาเฉพาะนัดที่ยังจองอยู่ตั้งแต่วันนี้ + นัดที่เสร็จล่าสุด)
+  const isActive = (a: AppointmentData) => ACTIVE_STATUSES.includes(a.rawStatus || '');
+  const todayAptsList = appointments.filter(a => a.date === todayKey && isActive(a));
   const pendingAptsList = appointments.filter(a => a.rawStatus === 'pending');
-  const upcomingAptsList = appointments.filter(a => a.status === 'pending' || a.rawStatus === 'approved');
-  const completedAptsList = appointments.filter(a => a.status === 'completed' && a.rawStatus !== 'pending');
+  const upcomingAptsList = appointments.filter(a => isActive(a) && a.date >= todayKey);
+  const completedAptsList = appointments.filter(a => a.rawStatus === 'completed');
 
   const filteredApts = (
     activeTab === 'today' ? todayAptsList :
@@ -543,6 +553,8 @@ export default function AgentHomePage() {
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                   : isPendingAction
                                   ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : apt.rawStatus === 'awaiting_customer'
+                                  ? 'bg-violet-50 text-violet-700 border-violet-200'
                                   : 'bg-blue-50 text-blue-700 border-blue-200'
                               }`}
                             >
@@ -550,6 +562,8 @@ export default function AgentHomePage() {
                                 ? 'เสร็จสิ้นแล้ว'
                                 : isPendingAction
                                 ? 'รอยืนยันรับนัด'
+                                : apt.rawStatus === 'awaiting_customer'
+                                ? 'รอลูกค้ายืนยันวันใหม่'
                                 : 'ยืนยันนัดแล้ว'}
                             </span>
                           </div>
