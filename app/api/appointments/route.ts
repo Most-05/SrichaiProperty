@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next"; // ดึงเซสชั�
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
-import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
+import { hasAgentBookingConflict, validateSlotInput } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
 import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow, getCustomerReliability, getTodayDateBangkok } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก + วันนี้ตามเวลาไทย
 import { NO_SHOW_LIMIT, APPOINTMENT_STATUS, timeSlotRange } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
 import { findUpcomingAppointments, findRecentlyRemindedAppointmentIds, buildReminderMessage, REMINDER_TYPE } from "@/lib/services/appointmentReminderService"; // เตือนล่วงหน้าก่อนถึงวันนัด
@@ -216,6 +216,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน" }, { status: 400 });
     }
 
+    // จองนัดดูบ้านได้เฉพาะบัญชีลูกค้า (เดิมนายหน้า/แอดมินก็จองได้ รวมถึงนายหน้าจองบ้านของตัวเอง — BUG-11)
+    if (user.role_id !== "customer") {
+      return NextResponse.json({ error: "การจองนัดเข้าชมใช้ได้เฉพาะบัญชีลูกค้าเท่านั้น" }, { status: 403 });
+    }
+
+    // รหัสบ้านผิดรูปแบบ → 400 แทนการปล่อยให้ Prisma error เป็น 500
+    if (typeof propertyId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId)) {
+      return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
+    }
+
     // 2.3 ค้นหาข้อมูลบ้านหลังนี้ในฐานข้อมูล
     const property = await db.properties.findUnique({ where: { id: propertyId } });
     if (!property) return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์นี้" }, { status: 404 });
@@ -238,7 +248,16 @@ export async function POST(request: Request) {
     }
 
     // 2.5 แปลงข้อความรอบเวลาให้อยู่ในคีย์มาตรฐาน DB ('morning' หรือ 'afternoon')
+    if (typeof timeSlot !== "string") {
+      return NextResponse.json({ error: "รอบเวลาไม่ถูกต้อง" }, { status: 400 });
+    }
     const dbTimeSlot = timeSlot.includes("13:") || timeSlot.includes("15:") || timeSlot.includes("บ่าย") || timeSlot.toLowerCase().includes("afternoon") ? "afternoon" : "morning";
+
+    // ห้ามจองวันที่ผ่านไปแล้ว / วันที่ผิดรูปแบบ (หน้าเว็บกันไว้แล้ว แต่ยิง API ตรงได้ — BUG-12)
+    const slotError = validateSlotInput(date, dbTimeSlot);
+    if (slotError) {
+      return NextResponse.json({ error: slotError }, { status: 400 });
+    }
 
     // 2.6 เช็คว่านายหน้าคนนี้มีนัดจริงกับ "บ้านหลังอื่น" ชนวัน+เวลานี้อยู่แล้วหรือไม่
     if (property.agent_id && await hasAgentBookingConflict(property.agent_id, property.id, new Date(date), dbTimeSlot)) {
@@ -615,6 +634,10 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "แก้ไขได้เฉพาะนัดหมายของคุณที่ยังไม่ถูกยืนยันเท่านั้น" }, { status: 400 });
       }
       if (!appointment.property_id) return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์" }, { status: 400 });
+
+      // ห้ามเลื่อนไปวันที่ผ่านแล้ว / รอบหรือวันที่ผิดรูปแบบ (กฎเดียวกับตอนจองครั้งแรก)
+      const editSlotError = validateSlotInput(date, timeSlot);
+      if (editSlotError) return NextResponse.json({ error: editSlotError }, { status: 400 });
 
       const isSameSlot = toDateKey(appointment.appointment_date) === date && appointment.time_slot === timeSlot;
       if (!isSameSlot) {
