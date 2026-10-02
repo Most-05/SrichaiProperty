@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/authOptions'; // ค่าคอนฟิก 
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับดึงข้อมูลของนายหน้าในหน้าพอร์ทัล
 import { findPropertiesWithLowSlots, findRecentlyAlertedPropertyIds, SLOT_ALERT_TYPE, SLOT_LOOKAHEAD_DAYS } from '@/lib/services/slotAvailabilityService'; // หาบ้านที่วันว่างใกล้หมด ไว้เตือนนายหน้า
 import { notifyUser } from '@/lib/notify'; // สร้างการแจ้งเตือน + ยิง Pusher ให้เห็นทันที
+import { timeSlotRange, timeSlotStart } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
 import { getTodayDateBangkok } from '@/lib/services/noShowService'; // วันนี้ตามเวลาไทย ใช้แยกนัดที่ยังไม่ถึง/ผ่านไปแล้ว
 import { ACTIVE_APPOINTMENT_STATUSES } from '@/lib/services/viewingSlotService'; // สถานะนัดที่ยังจองอยู่จริง (pending/approved/awaiting_customer)
 
@@ -169,8 +170,8 @@ export async function GET(request: Request) {
           rawStatus: apt.status,
           date: aptDateStr,
           timeSlot: apt.time_slot || 'ไม่ระบุเวลา',
-          // แสดงข้อความเวลาแบบอ่านง่าย เช่น ช่วงเช้า 10:00 น., ช่วงบ่าย 14:00 น.
-          time: apt.time_slot === 'morning' ? '10:00 น.' : apt.time_slot === 'afternoon' ? '14:00 น.' : (apt.time_slot || 'ไม่ระบุเวลา'),
+          // แสดงข้อความเวลาแบบอ่านง่าย เช่น 09:00 น. / 13:00 น. (ดึงจากค่ากลางใน lib/constants.ts)
+          time: apt.time_slot === 'morning' || apt.time_slot === 'afternoon' ? `${timeSlotStart(apt.time_slot)} น.` : (apt.time_slot || 'ไม่ระบุเวลา'),
           title: apt.status === 'completed' ? '✓ นัดหมายสำเร็จแล้ว' : apt.status === 'approved' ? 'ยืนยันนัดแล้ว' : 'นัดชมสถานที่จริง',
           detail: `${customerName} (📞 ${customerPhone}) - สนใจ ${apt.properties?.title || 'อสังหาฯ'}`,
           note: apt.note ? apt.note.trim() : '',
@@ -420,8 +421,8 @@ export async function GET(request: Request) {
           id: apt.id,
           status: apt.status,
           date: apt.appointment_date,
-          timeSlot: apt.time_slot === 'morning' ? '10:00 - 12:00 น. (ช่วงเช้า)'
-            : apt.time_slot === 'afternoon' ? '14:00 - 16:00 น. (ช่วงบ่าย)'
+          timeSlot: apt.time_slot === 'morning' ? `${timeSlotRange('morning')} น. (ช่วงเช้า)`
+            : apt.time_slot === 'afternoon' ? `${timeSlotRange('afternoon')} น. (ช่วงบ่าย)`
             : (apt.time_slot || 'ไม่ระบุเวลา'),
           propertyTitle: apt.properties?.title || 'อสังหาริมทรัพย์',
           customerName,
