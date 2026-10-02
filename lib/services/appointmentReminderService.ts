@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { notifyUser } from '@/lib/notify';
 import { getTodayDateBangkok } from './noShowService';
-import { APPOINTMENT_STATUS } from '@/lib/constants';
+import { APPOINTMENT_STATUS, timeSlotRange, timeSlotStart } from '@/lib/constants';
 
 /**
  * ==============================================================================
@@ -50,13 +50,13 @@ function startOfTodayBangkok(now: Date = new Date()): Date {
   return new Date(Date.UTC(bangkok.getUTCFullYear(), bangkok.getUTCMonth(), bangkok.getUTCDate()));
 }
 
-const timeLabel = (slot: string) => (slot === 'afternoon' ? '13:00 น.' : '10:00 น.');
+const timeLabel = (slot: string) => `${timeSlotStart(slot)} น.`;
 
 /** แปลงรอบเวลาเป็นภาษาไทยที่อ่านง่าย */
 function formatTimeSlot(slot: string | null): string {
   if (!slot) return 'ไม่ระบุเวลา';
-  if (slot === 'morning' || slot.includes('เช้า')) return 'ช่วงเช้า (10:00 - 12:00 น.)';
-  if (slot === 'afternoon' || slot.includes('บ่าย')) return 'ช่วงบ่าย (14:00 - 16:00 น.)';
+  if (slot === 'morning' || slot.includes('เช้า')) return `ช่วงเช้า (${timeSlotRange('morning')} น.)`;
+  if (slot === 'afternoon' || slot.includes('บ่าย')) return `ช่วงบ่าย (${timeSlotRange('afternoon')} น.)`;
   return slot;
 }
 
