@@ -317,7 +317,7 @@ export async function POST(request: Request) {
       sendNotification(
         property.agent_id,
         "คำขอนัดหมายเข้าชมโครงการ",
-        `คุณ ${customerName} ได้ยื่นคำขอนัดหมายเข้าชม "${property.title}" สำหรับวันที่ ${date} (${timeLabel})`,
+        `คุณ ${customerName} ได้ยื่นคำขอนัดหมายเข้าชม "${property.title}" สำหรับวันที่ ${date} ${timeLabel}`,
         "appointment",
         "/agent/appointments"
       );
@@ -684,7 +684,7 @@ export async function PATCH(request: Request) {
         sendNotification(
           appointment.agent_id,
           "ลูกค้าขอเปลี่ยนวันเวลานัดหมาย",
-          `คุณ ${customerName} ได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} (${timeLabel})`,
+          `คุณ ${customerName} ได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} ${timeLabel}`,
           "appointment",
           "/agent/appointments"
         );
