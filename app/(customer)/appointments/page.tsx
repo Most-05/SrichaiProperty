@@ -20,7 +20,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import ReviewModal from '@/components/customer/ReviewModal';
-import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { NO_SHOW_LIMIT, timeSlotStart } from '@/lib/constants';
 import { toast } from '@/components/ui/toast';
 import { Calendar, CalendarDays, MessageSquare, Star, AlertTriangle, X, Check, Loader2, Bell, Clock, Trash2 } from 'lucide-react';
 
@@ -430,7 +430,7 @@ export default function AppointmentsPage() {
                   <span className={`inline-block px-1.5 py-0.5 rounded mr-1.5 text-[9px] font-black ${r.isToday ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
                     {r.isToday ? 'วันนี้' : 'พรุ่งนี้'}
                   </span>
-                  {r.timeSlot === 'afternoon' ? '13:00 น.' : '10:00 น.'} — {r.propertyTitle} (นายหน้า: {r.counterpartName})
+                  {timeSlotStart(r.timeSlot)} น. — {r.propertyTitle} (นายหน้า: {r.counterpartName})
                 </li>
               ))}
             </ul>
