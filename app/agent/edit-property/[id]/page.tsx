@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic';
 import { useRouter, useParams } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
 import { toast } from '@/components/ui/toast';
+import { timeSlotRange } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
@@ -644,7 +645,7 @@ export default function AgentEditPropertyPage() {
                           }`}
                         >
                           <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
-                          <p className="text-[9px] text-slate-500 font-bold">{slot === 'morning' ? '09:00 - 12:00' : '13:00 - 17:00'}</p>
+                          <p className="text-[9px] text-slate-500 font-bold">{timeSlotRange(slot)}</p>
                           {busy ? (
                             <p className="text-[9px] font-black mt-1 text-amber-600 leading-tight">
                               ติดนัดที่ &quot;{busy.propertyTitle}&quot; แล้ว
