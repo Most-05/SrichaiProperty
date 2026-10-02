@@ -106,6 +106,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "กรุณาระบุรหัสนัดหมายและคะแนนดาว" }, { status: 400 });
     }
 
+    // คะแนนต้องเป็นจำนวนเต็ม 1-5 เท่านั้น (เดิมรับค่าอะไรก็ได้ เช่น 999 หรือ -5 → คะแนนเฉลี่ยนายหน้าเพี้ยน)
+    const ratingNum = Number(rating);
+    if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return NextResponse.json({ error: "คะแนนต้องเป็นตัวเลข 1 ถึง 5 ดาว" }, { status: 400 });
+    }
+
+    // รหัสนัดผิดรูปแบบ (ไม่ใช่ UUID) → ตอบ 400 แทนการปล่อยให้ Prisma error เป็น 500
+    if (typeof appointmentId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentId)) {
+      return NextResponse.json({ error: "รหัสนัดหมายไม่ถูกต้อง" }, { status: 400 });
+    }
+
     const appointment = await db.appointments.findUnique({
       where: { id: appointmentId }
     });
@@ -118,16 +129,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "คุณไม่มีสิทธิ์รีวิวการนัดหมายนี้" }, { status: 403 });
     }
 
+    // รีวิวได้เฉพาะนัดที่นายหน้ายืนยันแล้วว่าเข้าชมจริง (completed) — ตรงกับหน้าเว็บที่โชว์ปุ่มรีวิวเฉพาะนัดที่เสร็จแล้ว
+    // (เดิม API ไม่เช็ค ทำให้รีวิวนัดที่ยังไม่ได้ไปดูบ้าน / ถูกยกเลิก / ไม่มาตามนัด ได้)
+    if (appointment.status !== "completed") {
+      return NextResponse.json({ error: "รีวิวได้เฉพาะนัดหมายที่เข้าชมเสร็จแล้วเท่านั้น" }, { status: 400 });
+    }
+
     // บันทึก หรือ อัปเดตรีวิวกรณีเคยรีวิวไปแล้ว (Upsert)
     const newReview = await db.reviews.upsert({
       where: { appointment_id: appointmentId },
       update: {
-        rating: parseInt(rating),
+        rating: ratingNum,
         comment: comment || ""
       },
       create: {
         appointment_id: appointmentId,
-        rating: parseInt(rating),
+        rating: ratingNum,
         comment: comment || ""
       }
     });
