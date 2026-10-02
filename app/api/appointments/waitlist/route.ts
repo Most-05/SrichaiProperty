@@ -9,7 +9,7 @@ import {
   findCustomerWaitlistForProperty,
   purgeExpiredWaitlist
 } from "@/lib/services/waitlistService";
-import { NO_SHOW_LIMIT } from "@/lib/constants";
+import { NO_SHOW_LIMIT, timeSlotRange } from "@/lib/constants";
 
 // ==============================================================================
 // API คิวรอรอบเข้าชม (Waitlist)
@@ -90,7 +90,7 @@ export async function GET(req: Request) {
         agentPhone: item.properties?.users?.phone || "-",
         date: dateStr,
         timeSlot: item.time_slot,
-        timeSlotText: item.time_slot === "afternoon" ? "ช่วงบ่าย (13:00 - 16:00)" : "ช่วงเช้า (09:00 - 12:00)",
+        timeSlotText: item.time_slot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")})` : `ช่วงเช้า (${timeSlotRange("morning")})`,
         notifiedAt: item.notified_at ? item.notified_at.toISOString() : null,
         createdAt: item.created_at.toISOString()
       };

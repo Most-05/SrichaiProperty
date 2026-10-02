@@ -19,7 +19,7 @@ import { useSession } from 'next-auth/react';
 import { useApp } from '@/context/AppContext';
 import BookingSidebar from '@/components/customer/BookingSidebar';
 import BookingCalendar from '@/components/customer/BookingCalendar';
-import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { NO_SHOW_LIMIT, timeSlotRange } from '@/lib/constants';
 import { toast } from '@/components/ui/toast';
 import { Bell, Check, Loader2, LogIn, AlertCircle, ArrowLeft } from 'lucide-react';
 
@@ -385,8 +385,8 @@ function BookAppointmentForm() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    { key: 'morning', title: 'รอบเช้า', time: '09:00 - 12:00', fullText: 'รอบเช้า (09:00 - 12:00 น.)', slot: morningSlot },
-                    { key: 'afternoon', title: 'รอบบ่าย', time: '13:00 - 17:00', fullText: 'รอบบ่าย (13:00 - 17:00 น.)', slot: afternoonSlot },
+                    { key: 'morning', title: 'รอบเช้า', time: timeSlotRange('morning'), fullText: `รอบเช้า (${timeSlotRange('morning')} น.)`, slot: morningSlot },
+                    { key: 'afternoon', title: 'รอบบ่าย', time: timeSlotRange('afternoon'), fullText: `รอบบ่าย (${timeSlotRange('afternoon')} น.)`, slot: afternoonSlot },
                   ].map(({ key, title, time, fullText, slot }) => {
                     const isSelected = selectedTimeSlot.includes(title);
                     

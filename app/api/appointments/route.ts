@@ -5,7 +5,7 @@ import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหร�
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
 import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow, getCustomerReliability, getTodayDateBangkok } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก + วันนี้ตามเวลาไทย
-import { NO_SHOW_LIMIT, APPOINTMENT_STATUS } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
+import { NO_SHOW_LIMIT, APPOINTMENT_STATUS, timeSlotRange } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
 import { findUpcomingAppointments, findRecentlyRemindedAppointmentIds, buildReminderMessage, REMINDER_TYPE } from "@/lib/services/appointmentReminderService"; // เตือนล่วงหน้าก่อนถึงวันนัด
 import { collectWaitlistToNotify, buildWaitlistAlert, removeFromWaitlist, purgeExpiredWaitlist } from "@/lib/services/waitlistService"; // คิวรอรอบเข้าชม
 import { notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนหลายคนพร้อมกัน
@@ -139,9 +139,9 @@ export async function GET(request: Request) {
       
       // แปลงคีย์รอบเวลาให้เป็นข้อความภาษาไทยสำหรับแสดงผล
       const timeSlotText = apt.time_slot === "morning"
-        ? "10:00 - 12:00 น. (ช่วงเช้า)"
+        ? `${timeSlotRange("morning")} น. (ช่วงเช้า)`
         : apt.time_slot === "afternoon"
-          ? "14:00 - 16:00 น. (ช่วงบ่าย)"
+          ? `${timeSlotRange("afternoon")} น. (ช่วงบ่าย)`
           : apt.time_slot || "ไม่ระบุเวลา";
 
       return {
@@ -311,13 +311,13 @@ export async function POST(request: Request) {
 
     // 2.8 ส่งการแจ้งเตือนไปยังนายหน้าผู้ดูแลและลูกค้าที่ทำรายการ
     const customerName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "ลูกค้า";
-    const timeLabel = dbTimeSlot === "morning" ? "ช่วงเช้า (10:00 - 12:00 น.)" : "ช่วงบ่าย (14:00 - 16:00 น.)";
+    const timeLabel = dbTimeSlot === "morning" ? `ช่วงเช้า (${timeSlotRange("morning")} น.)` : `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)`;
 
     if (property.agent_id) {
       sendNotification(
         property.agent_id,
         "คำขอนัดหมายเข้าชมโครงการ",
-        `คุณ ${customerName} ได้ยื่นคำขอนัดหมายเข้าชม "${property.title}" สำหรับวันที่ ${date} (${timeLabel})`,
+        `คุณ ${customerName} ได้ยื่นคำขอนัดหมายเข้าชม "${property.title}" สำหรับวันที่ ${date} ${timeLabel}`,
         "appointment",
         "/agent/appointments"
       );
@@ -680,11 +680,11 @@ export async function PATCH(request: Request) {
       if (appointment.agent_id) {
         const prop = await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } });
         const customerName = `${user.first_name || ""}`.trim() + (user.last_name ? ` ${user.last_name}` : "") || "ลูกค้า";
-        const timeLabel = timeSlot === "morning" ? "ช่วงเช้า (10:00 - 12:00 น.)" : timeSlot === "afternoon" ? "ช่วงบ่าย (14:00 - 16:00 น.)" : timeSlot;
+        const timeLabel = timeSlot === "morning" ? `ช่วงเช้า (${timeSlotRange("morning")} น.)` : timeSlot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : timeSlot;
         sendNotification(
           appointment.agent_id,
           "ลูกค้าขอเปลี่ยนวันเวลานัดหมาย",
-          `คุณ ${customerName} ได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} (${timeLabel})`,
+          `คุณ ${customerName} ได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} ${timeLabel}`,
           "appointment",
           "/agent/appointments"
         );

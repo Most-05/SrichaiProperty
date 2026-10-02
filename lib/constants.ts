@@ -18,3 +18,24 @@ export const APPOINTMENT_STATUS = {
   CANCELLED: 'cancelled',
   NO_SHOW: 'no_show',
 } as const;
+
+// 🔑 KEYWORD: เวลาของรอบเข้าชม (รอบเช้า / รอบบ่าย)
+// รวมไว้ที่เดียว — เดิมแต่ละหน้าเขียนเวลาเองจนมี 6 แบบไม่ตรงกัน (BUG-18)
+// ถ้าจะเปลี่ยนเวลารอบ แก้ตรงนี้ที่เดียว ทุกหน้า + ข้อความแจ้งเตือนจะเปลี่ยนตาม
+export const TIME_SLOT_INFO = {
+  morning: { name: 'รอบเช้า', start: '09:00', end: '12:00' },
+  afternoon: { name: 'รอบบ่าย', start: '13:00', end: '17:00' },
+} as const;
+
+type SlotKey = keyof typeof TIME_SLOT_INFO;
+const slotInfo = (slot: string | null | undefined) =>
+  TIME_SLOT_INFO[(slot === 'afternoon' ? 'afternoon' : 'morning') as SlotKey];
+
+/** ช่วงเวลาของรอบ เช่น "09:00 - 12:00" */
+export const timeSlotRange = (slot: string | null | undefined) => {
+  const s = slotInfo(slot);
+  return `${s.start} - ${s.end}`;
+};
+
+/** เวลาเริ่มของรอบ เช่น "09:00" */
+export const timeSlotStart = (slot: string | null | undefined) => slotInfo(slot).start;
