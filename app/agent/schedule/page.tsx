@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { timeSlotStart } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
 import { 
   Plus, 
   ChevronLeft, 
@@ -482,7 +483,7 @@ function ScheduleContent() {
                           : 'bg-white/80 border-slate-200 text-slate-500'
                       }`}>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-bold text-slate-800">รอบเช้า (10:00 น.)</span>
+                          <span className="font-bold text-slate-800">รอบเช้า ({timeSlotStart('morning')} น.)</span>
                           {mSlot?.isBooked ? (
                             <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded">จองแล้ว</span>
                           ) : (
@@ -526,7 +527,7 @@ function ScheduleContent() {
                           : 'bg-white/80 border-slate-200 text-slate-500'
                       }`}>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-bold text-slate-800">รอบบ่าย (13:00 น.)</span>
+                          <span className="font-bold text-slate-800">รอบบ่าย ({timeSlotStart('afternoon')} น.)</span>
                           {aSlot?.isBooked ? (
                             <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded">จองแล้ว</span>
                           ) : (
@@ -724,7 +725,7 @@ function ScheduleContent() {
                     }}
                     className="accent-amber-500 rounded"
                   />
-                  <span className="font-semibold text-slate-800">รอบเช้า (10:00 น.)</span>
+                  <span className="font-semibold text-slate-800">รอบเช้า ({timeSlotStart('morning')} น.)</span>
                 </label>
                 <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100/70 transition">
                   <input
@@ -738,7 +739,7 @@ function ScheduleContent() {
                     }}
                     className="accent-amber-500 rounded"
                   />
-                  <span className="font-semibold text-slate-800">รอบบ่าย (13:00 น.)</span>
+                  <span className="font-semibold text-slate-800">รอบบ่าย ({timeSlotStart('afternoon')} น.)</span>
                 </label>
               </div>
             </div>

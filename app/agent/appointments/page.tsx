@@ -21,7 +21,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { NO_SHOW_LIMIT, timeSlotRange, timeSlotStart } from '@/lib/constants';
 
 interface AgentAppointment {
   id: string;
@@ -70,7 +70,7 @@ function toDateKey(d: Date): string {
 }
 
 function timeSlotLabel(slot: string): string {
-  return slot === 'afternoon' ? 'ช่วงบ่าย (13:00 น.)' : 'ช่วงเช้า (10:00 น.)';
+  return slot === 'afternoon' ? `ช่วงบ่าย (${timeSlotStart('afternoon')} น.)` : `ช่วงเช้า (${timeSlotStart('morning')} น.)`;
 }
 
 export default function AgentAppointmentsPage() {
@@ -486,7 +486,7 @@ export default function AgentAppointmentsPage() {
                   <span className={`inline-block px-1.5 py-0.5 rounded mr-1.5 text-[9px] font-black ${r.isToday ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
                     {r.isToday ? 'วันนี้' : 'พรุ่งนี้'}
                   </span>
-                  {r.timeSlot === 'afternoon' ? '13:00 น.' : '10:00 น.'} — คุณ {r.counterpartName} ที่ {r.propertyTitle}
+                  {timeSlotStart(r.timeSlot)} น. — คุณ {r.counterpartName} ที่ {r.propertyTitle}
                 </li>
               ))}
             </ul>
@@ -1156,7 +1156,7 @@ export default function AgentAppointmentsPage() {
                     }`}
                   >
                     <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
-                    <p className="text-[9px] text-slate-500 font-bold">{slot === 'morning' ? '10:00 - 12:00' : '13:00 - 15:00'}</p>
+                    <p className="text-[9px] text-slate-500 font-bold">{timeSlotRange(slot)}</p>
                   </button>
                 ))}
               </div>
