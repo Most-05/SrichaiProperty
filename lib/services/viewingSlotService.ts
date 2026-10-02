@@ -31,3 +31,24 @@ export async function hasAgentBookingConflict(
   });
   return !!conflict;
 }
+
+/** วันนี้ (เวลาไทย) เป็น Date เที่ยงคืน UTC — รูปแบบเดียวกับ available_date / appointment_date ใน DB */
+function todayKeyBangkok(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+}
+
+/**
+ * ตรวจวัน + รอบที่ผู้ใช้ส่งมา ก่อนเอาไปจอง / เปิดรอบว่าง
+ * คืนข้อความ error ภาษาไทย ถ้าไม่ผ่าน · คืน null ถ้าผ่าน
+ * - รอบต้องเป็น morning / afternoon
+ * - วันที่ต้องอยู่ในรูปแบบ YYYY-MM-DD และไม่ใช่วันที่ผ่านไปแล้ว (วันนี้ยังได้)
+ * (หน้าเว็บกันวันในอดีตไว้แล้ว แต่ API ต้องกันเองด้วย เพราะยิง API ตรงได้ — BUG-12)
+ */
+export function validateSlotInput(date: unknown, timeSlot: unknown): string | null {
+  if (timeSlot !== 'morning' && timeSlot !== 'afternoon') return 'รอบเวลาไม่ถูกต้อง';
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(date).getTime())) {
+    return 'รูปแบบวันที่ไม่ถูกต้อง';
+  }
+  if (date < todayKeyBangkok()) return 'ไม่สามารถเลือกวันที่ผ่านมาแล้วได้';
+  return null;
+}
