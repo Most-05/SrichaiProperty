@@ -608,9 +608,10 @@ export default function AgentAppointmentsPage() {
         </div>
 
         {/* ===== Right Column: แท็บ + รายการคำขอ ===== */}
-        <div className="space-y-4">
+        {/* min-w-0 + overflow-x-auto: แท็บ 4 อันกว้างกว่าจอมือถือ → ให้เลื่อนแท็บแนวนอนได้ แทนการดันทั้งหน้าล้นจอ (BUG-22) */}
+        <div className="space-y-4 min-w-0">
           <div className="flex items-center justify-between border-b border-slate-200">
-            <div className="flex gap-1">
+            <div className="flex gap-1 overflow-x-auto">
               <button
                 onClick={() => setActiveTab('new')}
                 className={`px-4 py-2.5 border-b-2 font-black text-xs whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'new' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
@@ -624,7 +625,7 @@ export default function AgentAppointmentsPage() {
               >
                 นัดหมายเร็วๆ นี้ (Upcoming)
               </button>
-                            <button
+              <button
                 onClick={() => setActiveTab('needsResult')}
                 className={`px-4 py-2.5 border-b-2 font-black text-xs whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'needsResult' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
               >
