@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/authOptions'; // ค่าคอนฟิก 
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับดึงข้อมูลของนายหน้าในหน้าพอร์ทัล
 import { findPropertiesWithLowSlots, findRecentlyAlertedPropertyIds, SLOT_ALERT_TYPE, SLOT_LOOKAHEAD_DAYS } from '@/lib/services/slotAvailabilityService'; // หาบ้านที่วันว่างใกล้หมด ไว้เตือนนายหน้า
 import { notifyUser } from '@/lib/notify'; // สร้างการแจ้งเตือน + ยิง Pusher ให้เห็นทันที
-import { timeSlotRange, timeSlotStart } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
+import { timeSlotRange, timeSlotStart, PROPERTY_STATUS_CLOSED } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว) + สถานะประกาศที่ปิดแล้ว
 import { getTodayDateBangkok } from '@/lib/services/noShowService'; // วันนี้ตามเวลาไทย ใช้แยกนัดที่ยังไม่ถึง/ผ่านไปแล้ว
 import { ACTIVE_APPOINTMENT_STATUSES } from '@/lib/services/viewingSlotService'; // สถานะนัดที่ยังจองอยู่จริง (pending/approved/awaiting_customer)
 
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
     if (type === 'home') {
       // 2.1 นับจำนวนอสังหาริมทรัพย์ทั้งหมดที่เป็นของนายหน้ารายนี้
       const propertiesCount = await db.properties.count({
-        where: { agent_id: agent.id }
+        where: { agent_id: agent.id, status: { not: PROPERTY_STATUS_CLOSED } } // ไม่นับประกาศที่ปิดแล้ว
       });
 
       // 2.2 นับจำนวนนัดหมายชมสถานที่ ที่รอการตอบรับ/อนุมัติ (status = 'pending')
@@ -190,7 +190,7 @@ export async function GET(request: Request) {
 
       // 2.8 ดึงรายการอสังหาริมทรัพย์ล่าสุด 3 รายการของนายหน้า เพื่อแสดงพรีวิวพอร์ตล่าสุด
       const recentProperties = await db.properties.findMany({
-        where: { agent_id: agent.id },
+        where: { agent_id: agent.id, status: { not: PROPERTY_STATUS_CLOSED } }, // ไม่นับประกาศที่ปิดแล้ว
         include: {
           property_images: { orderBy: { order_index: 'asc' }, take: 1 }
         },
@@ -275,7 +275,7 @@ export async function GET(request: Request) {
     if (type === 'dashboard') {
       // 3.1 ดึงรายการอสังหาริมทรัพย์ทั้งหมดของนายหน้า พร้อมข้อมูลที่เกี่ยวข้อง
       const properties = await db.properties.findMany({
-        where: { agent_id: agent.id },
+        where: { agent_id: agent.id, status: { not: PROPERTY_STATUS_CLOSED } }, // ไม่นับประกาศที่ปิดแล้ว
         include: {
           property_types: true, // ประเภทอสังหาฯ (เช่น บ้านเดี่ยว, คอนโด)
           property_images: {    // ดึงรูปภาพแรกสุด 1 รูปมาทำเป็นภาพหน้าปก

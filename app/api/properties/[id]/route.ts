@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth/next"; // ดึงเซสชั�
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับดึง/แก้ไข/ลบข้อมูลอสังหาริมทรัพย์
 import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนผู้ใช้ในระบบ
-import { validateSlotInput } from "@/lib/services/viewingSlotService"; // ตรวจวัน+รอบของรอบว่างที่เพิ่มใหม่ (ห้ามย้อนหลัง)
+import { validateSlotInput, ACTIVE_APPOINTMENT_STATUSES } from "@/lib/services/viewingSlotService"; // ตรวจวัน+รอบของรอบว่างที่เพิ่มใหม่ (ห้ามย้อนหลัง) + สถานะนัดที่ยังค้างอยู่
+import { PROPERTY_STATUS_CLOSED } from "@/lib/constants"; // สถานะประกาศที่นายหน้าปิดแล้ว (แทนการลบจริง)
 import { findUsersToAlertForNewSlots, buildSavedPropertyAlert } from "@/lib/services/savedPropertyAlertService"; // แจ้งลูกค้าที่บันทึกบ้านไว้เมื่อมีรอบเข้าชมเพิ่ม
 
 /**
@@ -13,7 +14,7 @@ import { findUsersToAlertForNewSlots, buildSavedPropertyAlert } from "@/lib/serv
  * วัตถุประสงค์หลัก:
  * 1. GET    - ดึงข้อมูลบ้าน 1 หลัง พร้อมรูปภาพและรอบเวลานัดหมาย (สำหรับโหลดใส่ฟอร์มหน้าแก้ไข)
  * 2. PATCH  - อัปเดตรายละเอียดบ้าน รูปภาพชุดใหม่ และเพิ่ม/ลบรอบเวลานัดหมายเข้าชม
- * 3. DELETE - ลบประกาศอสังหาริมทรัพย์หลังนี้ออกจากระบบ
+ * 3. DELETE - ปิดประกาศ (เปลี่ยนสถานะเป็น closed ไม่ลบจริง เพื่อเก็บนัด/รีวิว/ประวัติไม่มาตามนัด/แชทไว้)
  * *หมายเหตุ: ทุกวิธี (GET, PATCH, DELETE) ต้องผ่านการยืนยันสิทธิ์ว่าเป็นนายหน้าเจ้าของบ้านจริงเท่านั้น
  * ==============================================================================
  */
@@ -31,7 +32,8 @@ async function requireOwnerAgent(propertyId: string) {
 
   // 2. ตรวจสอบว่ามีประกาศรหัสนี้ในฐานข้อมูลหรือไม่
   const property = await db.properties.findUnique({ where: { id: propertyId } });
-  if (!property) {
+  // ประกาศที่ปิดแล้วถือว่าไม่มีให้แก้ไข/ปิดซ้ำ
+  if (!property || property.status === PROPERTY_STATUS_CLOSED) {
     return { error: NextResponse.json({ error: "ไม่พบประกาศอสังหาริมทรัพย์หลังนี้" }, { status: 404 }) };
   }
 
@@ -305,7 +307,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 }
 
 // ==============================================================================
-// 3. DELETE: ลบประกาศอสังหาริมทรัพย์ออกจากระบบ
+// 3. DELETE: ปิดประกาศ (ไม่ลบจริง เก็บประวัติไว้)
 // ==============================================================================
 export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -315,7 +317,20 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     const { error } = await requireOwnerAgent(id);
     if (error) return error;
 
-    await db.properties.delete({ where: { id } });
+    // ยังมีนัดค้าง (รอยืนยัน/ยืนยันแล้ว/รอลูกค้ารับวันใหม่) → ห้ามปิด ให้นายหน้าจัดการนัดก่อน
+    const activeCount = await db.appointments.count({
+      where: { property_id: id, status: { in: ACTIVE_APPOINTMENT_STATUSES } }
+    });
+    if (activeCount > 0) {
+      return NextResponse.json(
+        { error: `ยังมีนัดหมายที่ค้างอยู่ ${activeCount} รายการ กรุณายกเลิกหรือปิดนัดเหล่านั้นก่อนลบประกาศ` },
+        { status: 409 }
+      );
+    }
+
+    // ไม่ลบจริง (ถ้าลบ ฐานข้อมูลจะลบนัด/รีวิว/ประวัติไม่มาตามนัด/แชทตามไปด้วย — BUG-05)
+    // เปลี่ยนเป็น closed แทน → หายจากหน้าลูกค้าและรายการของนายหน้า แต่ประวัติยังอยู่ครบ
+    await db.properties.update({ where: { id }, data: { status: PROPERTY_STATUS_CLOSED } });
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: "ลบประกาศล้มเหลว: " + (error as Error).message }, { status: 500 });

@@ -109,7 +109,7 @@ export default function AgentDashboardPage() {
   const toTelHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
 
   const handleDelete = async (propertyId: string) => {
-    if (!confirm('ยืนยันลบประกาศนี้หรือไม่? การลบจะไม่สามารถย้อนกลับได้')) return;
+    if (!confirm('ยืนยันลบประกาศนี้หรือไม่? ประกาศจะหายจากหน้าเว็บและรายการของคุณ (ประวัตินัดหมายและรีวิวยังเก็บไว้) และไม่สามารถย้อนกลับได้')) return;
     setDeletingId(propertyId);
     try {
       const res = await fetch(`/api/properties/${propertyId}`, { method: 'DELETE' });
@@ -118,7 +118,9 @@ export default function AgentDashboardPage() {
         toast.success('ลบประกาศเรียบร้อยแล้ว');
         loadDashboard();
       } else {
-        toast.error('ลบประกาศไม่สำเร็จ');
+        // เช่น ยังมีนัดค้าง (409) → แสดงข้อความจาก API ให้นายหน้ารู้ว่าต้องทำอะไรก่อน
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'ลบประกาศไม่สำเร็จ');
       }
     } catch {
       toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
