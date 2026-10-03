@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import StatCards from '@/components/admin/StatCards';
 import ModerationList from '@/components/admin/ModerationList';
-import NotificationBell from '@/components/common/NotificationBell';
 import {
   Search,
   Loader2,
@@ -311,8 +310,6 @@ export default function AdminDashboardPage() {
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-slate-800' : 'text-slate-500'}`} />
             <span className="hidden sm:inline">รีเฟรช</span>
           </button>
-
-          <NotificationBell />
         </div>
       </header>
 

@@ -105,13 +105,20 @@ export default function AdminUsersPage() {
   };
 
   const handleStatusChange = async (userId: string, newStatus: string) => {
-    if (!confirm(`ยืนยันการ${newStatus === 'approved' ? 'อนุมัติ' : 'ไม่อนุมัติ'} บัญชีนี้ในฐานข้อมูล?`)) return;
+    let reason = "";
+    if (newStatus === 'rejected' || newStatus === 'banned') {
+      const input = prompt("กรุณาระบุเหตุผลในการไม่อนุมัติหรือระงับบัญชี (ระบุหรือไม่ก็ได้ เพื่อส่งแจ้งเตือนไปยังผู้ใช้):");
+      if (input === null) return; // กดยกเลิก
+      reason = input.trim();
+    } else {
+      if (!confirm(`ยืนยันการอนุมัติบัญชีนี้ในฐานข้อมูล?`)) return;
+    }
 
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, status: newStatus })
+        body: JSON.stringify({ userId, status: newStatus, reason })
       });
       const data = await res.json();
       if (data.success) {

@@ -178,12 +178,20 @@ export default function AgentDashboardPage() {
           <p className="text-xs text-slate-500 leading-relaxed">
             เจ้าหน้าที่จะดำเนินการตรวจสอบข้อมูลยืนยันตัวตนของท่าน เมื่ออนุมัติแล้วจะสามารถจัดการพอร์ตได้เต็มรูปแบบ
           </p>
-          <button
-            onClick={() => signOut({ callbackUrl: '/login/agent' })}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
-          >
-            ออกจากระบบ
-          </button>
+          <div className="flex flex-col gap-2 pt-2">
+            <Link
+              href="/agent/profile"
+              className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition text-center block cursor-pointer"
+            >
+              ตรวจสอบหรืออัปเดตเอกสาร KYC
+            </Link>
+            <button
+              onClick={() => signOut({ callbackUrl: '/login/agent' })}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
+            >
+              ออกจากระบบ
+            </button>
+          </div>
         </div>
       </div>
     );

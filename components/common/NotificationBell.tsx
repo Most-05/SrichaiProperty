@@ -16,7 +16,11 @@ import {
   Info,
   Trash2,
   CheckCheck,
-  X
+  X,
+  ShieldCheck,
+  AlertCircle,
+  XCircle,
+  CheckCircle2
 } from 'lucide-react';
 
 // ==============================================================================
@@ -29,7 +33,7 @@ interface NotificationItem {
   title: string;       // หัวข้อการแจ้งเตือนสไตล์ทางการ
   content: string;     // เนื้อหารายละเอียดการแจ้งเตือน
   isRead: boolean;     // สถานะอ่านแล้วหรือยัง
-  type: string;        // ประเภทการแจ้งเตือน (appointment, chat, property, payment, review, default)
+  type: string;        // ประเภทการแจ้งเตือน (appointment, chat, property, payment, review, kyc, report, reject, default)
   linkUrl: string | null; // ลิงก์นำทางเมื่อคลิก (เช่น /chat?sessionId=...)
   createdAt: string;   // เวลาที่สร้างรายการ
 }
@@ -92,6 +96,37 @@ function getCategoryMeta(type: string) {
         bg: 'bg-indigo-100 text-indigo-600',
         icon: <Star className="w-3.5 h-3.5 shrink-0" />
       };
+    case 'kyc':
+    case 'agent_register':
+      return {
+        label: 'KYC',
+        badge: 'bg-teal-50 text-teal-800 border-teal-200',
+        bg: 'bg-teal-100 text-teal-700',
+        icon: <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+      };
+    case 'report':
+      return {
+        label: 'ร้องเรียน',
+        badge: 'bg-rose-50 text-rose-800 border-rose-200',
+        bg: 'bg-rose-100 text-rose-600',
+        icon: <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+      };
+    case 'reject':
+    case 'cancel':
+      return {
+        label: 'ยกเลิก/ปฏิเสธ',
+        badge: 'bg-red-50 text-red-800 border-red-200',
+        bg: 'bg-red-100 text-red-600',
+        icon: <XCircle className="w-3.5 h-3.5 shrink-0" />
+      };
+    case 'approved':
+    case 'confirm':
+      return {
+        label: 'อนุมัติแล้ว',
+        badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        bg: 'bg-emerald-100 text-emerald-600',
+        icon: <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+      };
     default:
       return {
         label: 'ระบบ',
@@ -102,10 +137,16 @@ function getCategoryMeta(type: string) {
   }
 }
 
+interface NotificationBellProps {
+  theme?: 'light' | 'dark' | 'auto';
+  align?: 'left' | 'right';
+  className?: string;
+}
+
 // ==============================================================================
 // 2. MAIN NOTIFICATION BELL COMPONENT (ปุ่มกระดิ่งและศูนย์แจ้งเตือน)
 // ==============================================================================
-export default function NotificationBell() {
+export default function NotificationBell({ theme = 'auto', align = 'right', className = '' }: NotificationBellProps) {
   const { data: sessionData, status } = useSession();
   const userId = (sessionData?.user as { id?: string })?.id;
   const router = useRouter();
@@ -225,12 +266,18 @@ export default function NotificationBell() {
   // ==============================================================================
   // 3. RENDER UI LAYOUT (ปุ่มกระดิ่งและ Popover ศูนย์การแจ้งเตือน)
   // ==============================================================================
+  const buttonThemeClass = theme === 'dark'
+    ? 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+    : theme === 'light'
+      ? 'text-slate-600 hover:text-blue-700 hover:bg-slate-100/80'
+      : 'text-slate-500 hover:text-blue-700 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80';
+
   return (
-    <div className="relative font-sans" ref={ref}>
+    <div className={`relative font-sans ${className}`} ref={ref}>
       {/* ปุ่มกระดิ่งการแจ้งเตือน พร้อมตัวเลขแจ้งเตือนแบบ Pulse Animation */}
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2.5 rounded-xl text-slate-600 hover:text-blue-700 hover:bg-slate-100/80 active:scale-95 transition cursor-pointer flex items-center justify-center focus:outline-none"
+        className={`relative p-2.5 rounded-xl active:scale-95 transition cursor-pointer flex items-center justify-center focus:outline-none ${buttonThemeClass}`}
         aria-label="การแจ้งเตือน"
       >
         <Bell className="w-5 h-5 shrink-0" />
@@ -246,7 +293,7 @@ export default function NotificationBell() {
 
       {/* กล่องแสดงผลศูนย์การแจ้งเตือน Popover */}
       {open && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200/80 z-50 overflow-hidden text-left">
+        <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200/80 z-50 overflow-hidden text-left`}>
           {/* Header แสดงชื่อระบบและปุ่ม "อ่านทั้งหมด" */}
           <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -296,6 +343,24 @@ export default function NotificationBell() {
             )}
           </div>
 
+          {/* แถบเตือนค้างอ่าน (กันลืม) */}
+          {unreadCount > 0 && (
+            <div className="px-3.5 py-1.5 bg-blue-50/90 border-b border-blue-100 flex items-center justify-between text-[11px] text-blue-900">
+              <span className="font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
+                <span>คุณมี <strong>{unreadCount}</strong> การแจ้งเตือนที่ยังไม่ได้อ่าน</span>
+              </span>
+              {tab !== 'unread' && (
+                <button
+                  onClick={() => setTab('unread')}
+                  className="text-[10px] text-blue-700 hover:text-blue-900 font-bold hover:underline cursor-pointer"
+                >
+                  กรองเฉพาะยังไม่อ่าน
+                </button>
+              )}
+            </div>
+          )}
+
           {/* ป๊อบอัพแถบยืนยันการลบการแจ้งเตือนทั้งหมด */}
           {confirmId === 'all' && (
             <div className="px-3.5 py-2 bg-rose-50 border-b border-rose-200 flex items-center justify-between text-[11px]">
@@ -341,7 +406,12 @@ export default function NotificationBell() {
                           className="flex-1 min-w-0 cursor-pointer"
                         >
                           <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${cat.badge}`}>{cat.label}</span>
+                            <div className="flex items-center gap-1.5">
+                              {!n.isRead && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" title="ยังไม่ได้อ่าน" />
+                              )}
+                              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${cat.badge}`}>{cat.label}</span>
+                            </div>
                             <span className="text-[9px] text-slate-400 font-medium">{formatTime(n.createdAt)}</span>
                           </div>
                           <h4 className={`text-xs ${!n.isRead ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>{n.title}</h4>

@@ -13,16 +13,24 @@ import {
   ChevronLeft,
   Check,
   Phone,
-  MessageCircle
+  MessageCircle,
+  FileText,
+  ShieldCheck,
+  AlertCircle,
+  UploadCloud,
+  ExternalLink,
+  Clock
 } from 'lucide-react';
 
 export default function AgentProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingKyc, setUploadingKyc] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const kycInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     id: '',
@@ -35,6 +43,8 @@ export default function AgentProfilePage() {
     experience: '',
     specialtyZone: '',
     specialtyType: '',
+    kycDoc: '',
+    status: 'pending',
     newPassword: '',
     confirmPassword: '',
     currentPassword: '',
@@ -61,6 +71,8 @@ export default function AgentProfilePage() {
           experience: u.experience || '3 ปีในวงการอสังหาฯ',
           specialtyZone: u.specialtyZone || 'หาดใหญ่, คอหงส์, สงขลา',
           specialtyType: u.specialtyType || 'บ้านเดี่ยว, ทาวน์โฮม, คอนโด',
+          kycDoc: u.kycDoc || '',
+          status: u.status || 'pending',
           isPro: Boolean(u.isPro),
           isVerified: Boolean(u.isVerified),
           planExpiredAt: u.planExpiredAt || null
@@ -72,6 +84,39 @@ export default function AgentProfilePage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  // อัปโหลดเอกสาร KYC ผ่าน /api/upload
+  const handleKycUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('ไฟล์เอกสารต้องมีขนาดไม่เกิน 5MB');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      setUploadingKyc(true);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setForm(prev => ({ ...prev, kycDoc: data.url }));
+        toast.success('อัปโหลดเอกสาร KYC เรียบร้อย (กด "บันทึก" เพื่อส่งให้ผู้ดูแลระบบตรวจสอบ)');
+      } else {
+        toast.error(data.error || 'อัปโหลดเอกสารไม่สำเร็จ');
+      }
+    } catch {
+      toast.error('เกิดข้อผิดพลาดในการอัปโหลดเอกสาร');
+    } finally {
+      setUploadingKyc(false);
+    }
+  };
 
   // อัปโหลดรูปภาพโปรไฟล์ผ่าน /api/upload
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,6 +182,7 @@ export default function AgentProfilePage() {
           experience: form.experience,
           specialtyZone: form.specialtyZone,
           specialtyType: form.specialtyType,
+          kycDoc: form.kycDoc,
           ...(form.newPassword ? { newPassword: form.newPassword, currentPassword: form.currentPassword } : {})
         })
       });
@@ -145,6 +191,8 @@ export default function AgentProfilePage() {
         toast.success('บันทึกข้อมูลโปรไฟล์สำเร็จเรียบร้อยแล้ว');
         setForm(prev => ({
           ...prev,
+          kycDoc: data.user?.kycDoc ?? prev.kycDoc,
+          status: data.user?.status ?? prev.status,
           newPassword: '',
           confirmPassword: '',
           currentPassword: ''
@@ -396,7 +444,98 @@ export default function AgentProfilePage() {
               </div>
             </div>
 
-            {/* ส่วนที่ 4: เปลี่ยนรหัสผ่าน (Optional) */}
+            {/* ส่วนที่ 4: เอกสารยืนยันตัวตน (KYC Verification Document) */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
+                  เอกสารยืนยันตัวตน (KYC Verification)
+                </span>
+                {form.status === 'approved' ? (
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>อนุมัติแล้ว</span>
+                  </span>
+                ) : form.status === 'banned' ? (
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    <span>ไม่ผ่านการอนุมัติ (ต้องแก้ไข)</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>อยู่ระหว่างตรวจสอบ</span>
+                  </span>
+                )}
+              </div>
+
+              {form.status === 'banned' && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl space-y-1">
+                  <p className="text-xs font-bold text-red-800 flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>เอกสาร KYC ถูกปฏิเสธ กรุณาอัปโหลดเอกสารใหม่</span>
+                  </p>
+                  <p className="text-[11px] text-red-600 leading-relaxed">
+                    โปรดถ่ายภาพบัตรประชาชนหรือใบอนุญาตนายหน้าให้ชัดเจน ไม่มีเงาสะท้อน แล้วอัปโหลดและกด &quot;บันทึกข้อมูล&quot; ระบบจะส่งแจ้งเตือนกลับไปยังผู้ดูแลระบบเพื่อตรวจสอบใหม่อัตโนมัติ
+                  </p>
+                </div>
+              )}
+
+              {form.kycDoc && (
+                <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+                      <FileText className="w-4 h-4 shrink-0" />
+                    </div>
+                    <div className="truncate">
+                      <p className="font-bold text-slate-800 truncate">เอกสารที่ส่งไว้ในระบบ</p>
+                      <p className="text-[10px] text-slate-400 truncate">{form.kycDoc.split('/').pop()}</p>
+                    </div>
+                  </div>
+                  <a
+                    href={form.kycDoc}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-600 hover:underline font-bold shrink-0 flex items-center gap-1"
+                  >
+                    <span>ดูเอกสาร</span>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <input
+                  ref={kycInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleKycUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => kycInputRef.current?.click()}
+                  disabled={uploadingKyc}
+                  className="w-full py-2.5 px-4 border border-dashed border-slate-300 hover:border-amber-500 bg-slate-50 hover:bg-amber-50/50 rounded-xl text-xs font-bold text-slate-700 hover:text-amber-800 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {uploadingKyc ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-500 shrink-0" />
+                      <span>กำลังอัปโหลดเอกสาร...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-4 h-4 text-slate-500 shrink-0" />
+                      <span>{form.kycDoc ? 'คลิกเพื่อเปลี่ยนหรืออัปโหลดเอกสารใหม่' : 'คลิกเพื่ออัปโหลดเอกสารยืนยันตัวตน (รูปภาพหรือ PDF)'}</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[10px] text-slate-400">
+                  รองรับไฟล์ภาพ JPEG, PNG หรือ PDF ขนาดไม่เกิน 5MB (เมื่อบันทึก ระบบจะส่งการแจ้งเตือนกลับไปยังผู้ดูแลระบบทันที)
+                </p>
+              </div>
+            </div>
+
+            {/* ส่วนที่ 5: เปลี่ยนรหัสผ่าน (Optional) */}
             <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
               <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
                 เปลี่ยนรหัสผ่าน (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)

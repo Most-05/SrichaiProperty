@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next"; // ดึงเซสชันเพื่อยืนยันว่าเป็นนายหน้าเจ้าของประกาศ
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับดึง/แก้ไข/ลบข้อมูลอสังหาริมทรัพย์
-import { notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนหลายคนพร้อมกัน
+import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนผู้ใช้ในระบบ
 import { findUsersToAlertForNewSlots, buildSavedPropertyAlert } from "@/lib/services/savedPropertyAlertService"; // แจ้งลูกค้าที่บันทึกบ้านไว้เมื่อมีรอบเข้าชมเพิ่ม
 
 /**
@@ -23,7 +23,7 @@ const toDateKey = (d: Date) => d.toISOString().split("T")[0];
 // Helper 2: ฟังก์ชันตรวจสอบสิทธิ์นายหน้าและยืนยันว่าเป็นเจ้าของประกาศหลังนี้จริง
 async function requireOwnerAgent(propertyId: string) {
   // 1. ตรวจสอบการเข้าสู่ระบบและสิทธิ์การใช้งาน (ต้องเป็นบทบาท 'agent')
-  const session = await getServerSession(authOptions) as { user?: { id?: string; role?: string } } | null;
+  const session = await getServerSession(authOptions) as { user?: { id?: string; name?: string; role?: string; email?: string } } | null;
   if (!session?.user?.id || session.user.role !== "agent") {
     return { error: NextResponse.json({ error: "อนุญาตเฉพาะบัญชีนายหน้าเท่านั้น" }, { status: 401 }) };
   }
@@ -39,7 +39,7 @@ async function requireOwnerAgent(propertyId: string) {
     return { error: NextResponse.json({ error: "คุณไม่มีสิทธิ์แก้ไขประกาศหลังนี้" }, { status: 403 }) };
   }
 
-  return { property, error: null };
+  return { property, user: session.user, error: null };
 }
 
 // ==============================================================================
@@ -119,9 +119,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   try {
     const { id } = await context.params;
     
-    // ตรวจสอบสิทธิ์ความเป็นเจ้าของก่อนอนุญาตให้แก้ไข
-    const { property, error } = await requireOwnerAgent(id);
-    if (error || !property) return error;
+    const { property, user, error } = await requireOwnerAgent(id);
+    if (error) return error;
+    if (!property || !user?.id) {
+      return NextResponse.json({ error: "ไม่พบข้อมูลหรือไม่มีสิทธิ์" }, { status: 403 });
+    }
 
     const body = await req.json();
     const {
@@ -182,9 +184,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (floors !== undefined && floors !== null && floors !== "") updateData.floors = parseInt(String(floors));
     if (ownership !== undefined && ownership !== null && ownership !== "") updateData.ownership_type = ownership;
     if (newStatus) updateData.status = newStatus;
+    const wasRejected = property.status === "rejected";
+    const wasPending = property.status === "pending";
 
     // กฎพิเศษ: กรณีประกาศเคยถูกตีกลับ (rejected) เมื่อนายหน้าแก้ไขและกดบันทึก ให้เปลี่ยนเป็น 'pending' เพื่อส่งกลับเข้าคิวอนุมัติใหม่อัตโนมัติ
-    if (property.status === "rejected") {
+    if (wasRejected) {
       updateData.status = "pending";
       updateData.reject_reason = null; // ล้างเหตุผลการตีกลับเดิมออก
     }
@@ -193,6 +197,34 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       where: { id },
       data: updateData
     });
+
+    // 🔔 ส่งแจ้งเตือนเมื่อมีการแก้ไขและส่งประกาศให้ตรวจสอบใหม่
+    const admins = await db.users.findMany({ where: { role_id: "admin" }, select: { id: true } });
+    const agentName = user.name || (user.email ? user.email.split("@")[0] : "นายหน้า");
+
+    if (wasRejected && admins.length > 0) {
+      notifyUsers(admins.map((a) => a.id), {
+        title: "นายหน้าแก้ไขประกาศและส่งตรวจใหม่",
+        content: `นายหน้า ${agentName} ได้แก้ไขประกาศ "${updated.title}" ตามข้อแนะนำและส่งให้ตรวจสอบใหม่อีกครั้ง`,
+        type: "property",
+        linkUrl: "/admin/moderation"
+      }).catch((e) => console.error("แจ้งเตือนแอดมินหลังแก้ไขประกาศไม่สำเร็จ:", e));
+
+      notifyUser({
+        userId: user.id,
+        title: "ส่งประกาศที่แก้ไขเรียบร้อยแล้ว",
+        content: `ประกาศ "${updated.title}" ได้รับการแก้ไขและส่งเข้าคิวรอผู้ดูแลระบบตรวจสอบใหม่อีกครั้งแล้ว`,
+        type: "property",
+        linkUrl: "/agent/dashboard"
+      }).catch((e) => console.error("แจ้งเตือนนายหน้าหลังแก้ไขประกาศไม่สำเร็จ:", e));
+    } else if (wasPending && admins.length > 0) {
+      notifyUsers(admins.map((a) => a.id), {
+        title: "นายหน้าอัปเดตข้อมูลประกาศ",
+        content: `นายหน้า ${agentName} ได้ปรับปรุงข้อมูลประกาศ "${updated.title}" (สถานะ: รอการตรวจสอบ)`,
+        type: "property",
+        linkUrl: "/admin/moderation"
+      }).catch((e) => console.error("แจ้งเตือนแอดมินหลังอัปเดตประกาศไม่สำเร็จ:", e));
+    }
 
     // 2.2 อัปเดตรูปภาพ: ลบรูปเดิมทั้งหมดของประกาศนี้ออก แล้วบันทึกชุดรูปภาพใหม่ตามลำดับ
     if (Array.isArray(images)) {

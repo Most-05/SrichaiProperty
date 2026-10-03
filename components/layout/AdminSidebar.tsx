@@ -20,6 +20,7 @@ import {
   Shield,
   Settings
 } from 'lucide-react';
+import NotificationBell from '@/components/common/NotificationBell';
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -71,18 +72,21 @@ export default function AdminSidebar() {
           </div>
         </div>
 
-        <button 
-          type="button"
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-2 rounded-xl bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700 transition cursor-pointer"
-          aria-label="สลับเมนูแอดมิน"
-        >
-          {isMobileOpen ? (
-            <X className="w-5 h-5" />
-          ) : (
-            <Menu className="w-5 h-5" />
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell theme="dark" align="right" />
+          <button 
+            type="button"
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            className="p-2 rounded-xl bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+            aria-label="สลับเมนูแอดมิน"
+          >
+            {isMobileOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Backdrop */}
@@ -114,14 +118,17 @@ export default function AdminSidebar() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsMobileOpen(false)}
-              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              aria-label="ปิดเมนู"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <NotificationBell theme="dark" align="left" />
+              <button
+                type="button"
+                onClick={() => setIsMobileOpen(false)}
+                className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                aria-label="ปิดเมนู"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <Link 

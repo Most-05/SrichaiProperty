@@ -339,9 +339,11 @@ export async function PATCH(request: Request) {
           return notifyUser({
             userId: p.agent_id,
             title: isApproved ? "ประกาศอสังหาริมทรัพย์ได้รับการอนุมัติ" : "แจ้งผลการตรวจสอบประกาศอสังหาริมทรัพย์",
-            content: `รายการ "${p.title}" ผ่านการตรวจสอบเรียบร้อยแล้ว และเปิดแสดงผลบนระบบศรีชัย พร็อพเพอร์ตี้`,
-            type: "property",
-            linkUrl: `/property/${p.id}`
+            content: isApproved
+              ? `รายการ "${p.title}" ผ่านการตรวจสอบเรียบร้อยแล้ว และเปิดแสดงผลบนระบบศรีชัย พร็อพเพอร์ตี้`
+              : `รายการ "${p.title}" ไม่ผ่านการอนุมัติและจำเป็นต้องปรับปรุงข้อมูล กรุณาเข้าตรวจสอบและแก้ไข`,
+            type: isApproved ? "approved" : "reject",
+            linkUrl: isApproved ? `/property/${p.id}` : `/agent/edit-property/${p.id}`
           }).catch(() => {});
         })
       );
@@ -363,15 +365,15 @@ export async function PATCH(request: Request) {
 
     // 3.4 ส่งการแจ้งเตือนไปยังนายหน้าเจ้าของประกาศเพื่อแจ้งผลการตรวจสอบ
     if (updatedProperty.agent_id) {
-      const reasonText = isRejected && reason ? ` (เหตุผล: ${reason})` : "";
+      const reasonText = isRejected && reason ? ` (สาเหตุ: ${reason})` : "";
       await notifyUser({
         userId: updatedProperty.agent_id,
         title: isApproved ? "ประกาศอสังหาริมทรัพย์ได้รับการอนุมัติ" : "แจ้งผลการตรวจสอบประกาศอสังหาริมทรัพย์",
         content: isApproved
           ? `รายการ "${updatedProperty.title}" ผ่านการตรวจสอบเรียบร้อยแล้ว และเปิดแสดงผลบนระบบศรีชัย พร็อพเพอร์ตี้`
-          : `รายการ "${updatedProperty.title}" จำเป็นต้องได้รับการปรับปรุงข้อมูลเพิ่มเติม${reasonText}`,
-        type: "property",
-        linkUrl: isApproved ? `/property/${updatedProperty.id}` : `/agent/properties`
+          : `รายการ "${updatedProperty.title}" ไม่ผ่านการอนุมัติ${reasonText} กรุณาเข้าตรวจสอบแก้ไขข้อมูลและส่งใหม่`,
+        type: isApproved ? "approved" : "reject",
+        linkUrl: isApproved ? `/property/${updatedProperty.id}` : `/agent/edit-property/${updatedProperty.id}`
       }).catch(() => {});
     }
 

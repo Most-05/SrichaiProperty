@@ -575,6 +575,13 @@ export async function PATCH(request: Request) {
           "appointment",
           "/agent/appointments"
         );
+        sendNotification(
+          user.id,
+          "ยืนยันรับวันนัดใหม่สำเร็จ",
+          `คุณได้ยืนยันรับวันนัดเข้าชมใหม่สำหรับ "${prop?.title || "อสังหาริมทรัพย์"}" ในวันที่ ${toDateKey(appointment.appointment_date)} เรียบร้อยแล้ว`,
+          "appointment",
+          "/appointments"
+        );
       }
 
       return NextResponse.json({ success: true, data: updated });
@@ -661,6 +668,13 @@ export async function PATCH(request: Request) {
           "appointment",
           "/agent/appointments"
         );
+        sendNotification(
+          user.id,
+          "ส่งคำขอเปลี่ยนวันเวลานัดหมายแล้ว",
+          `คุณได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} (${timeLabel}) เรียบร้อยแล้ว อยู่ระหว่างรอนายหน้ายืนยัน`,
+          "appointment",
+          "/appointments"
+        );
       }
 
       if (freedSlotFromCustomerEdit) {
@@ -730,27 +744,45 @@ export async function DELETE(request: Request) {
       data: { status: "cancelled", cancel_reason: reason || null }
     });
 
-    // 4.8 ส่งการแจ้งเตือนการยกเลิกพร้อมเหตุผลไปยังคู่สัญญาอีกฝ่าย
+    // 4.8 ส่งการแจ้งเตือนการยกเลิกพร้อมเหตุผลไปยังคู่สัญญาอีกฝ่าย และแจ้งยืนยันผู้ยกเลิก
     const propertyTitle = appointment.properties?.title || "อสังหาริมทรัพย์";
     const customerName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "ผู้ใช้";
     const dateStr = toDateKey(appointment.appointment_date);
     const reasonText = reason ? ` (เหตุผล: ${reason})` : "";
 
-    if (isCustomer && appointment.agent_id) {
+    if (isCustomer) {
+      if (appointment.agent_id) {
+        sendNotification(
+          appointment.agent_id,
+          "แจ้งยกเลิกรายการนัดหมาย",
+          `ผู้ใช้ (${customerName}) ได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr}${reasonText}`,
+          "appointment",
+          "/agent/appointments"
+        );
+      }
       sendNotification(
-        appointment.agent_id,
-        "แจ้งยกเลิกรายการนัดหมาย",
-        `ผู้ใช้ (${customerName}) ได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr}${reasonText}`,
-        "appointment",
-        "/agent/appointments"
-      );
-    } else if (isAgent && appointment.customer_id) {
-      sendNotification(
-        appointment.customer_id,
-        "แจ้งยกเลิกรายการนัดหมาย",
-        `นายหน้าผู้ดูแลโครงการได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr}${reasonText}`,
+        user.id,
+        "ยกเลิกนัดหมายสำเร็จ",
+        `คุณได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr} เรียบร้อยแล้ว${reasonText}`,
         "appointment",
         "/appointments"
+      );
+    } else if (isAgent) {
+      if (appointment.customer_id) {
+        sendNotification(
+          appointment.customer_id,
+          "แจ้งยกเลิกรายการนัดหมาย",
+          `นายหน้าผู้ดูแลโครงการได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr}${reasonText}`,
+          "appointment",
+          "/appointments"
+        );
+      }
+      sendNotification(
+        user.id,
+        "ยกเลิกนัดหมายสำเร็จ",
+        `คุณได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr} เรียบร้อยแล้ว${reasonText}`,
+        "appointment",
+        "/agent/appointments"
       );
     }
 

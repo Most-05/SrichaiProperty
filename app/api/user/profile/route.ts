@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"; // ดึงเซสชั�
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับดึง/แก้ไขข้อมูลโปรไฟล์ผู้ใช้
 import bcrypt from "bcryptjs"; // ตรวจสอบรหัสผ่านเดิมและเข้ารหัสรหัสผ่านใหม่ตอนเปลี่ยนรหัสผ่าน
+import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนเมื่อมีการอัปเดตโปรไฟล์หรือเอกสาร KYC
 
 /**
  * ==============================================================================
@@ -51,6 +52,8 @@ export async function GET() {
         experience: true,
         specialty_zone: true,
         specialty_type: true,
+        status: true,
+        kyc_doc: true,
         created_at: true,
         login_histories: {
           take: 1,
@@ -80,6 +83,8 @@ export async function GET() {
         lineId: user.line_id || "",
         profileImage: user.profile_image || "",
         role: user.role_id || "buyer",
+        status: user.status || "pending",
+        kycDoc: user.kyc_doc || null,
         isVerified: user.is_verified || false,
         planType: user.plan_type || "basic",
         planExpiredAt: user.plan_expired_at || null,
@@ -114,7 +119,8 @@ export async function PUT(request: Request) {
       specialtyZone,
       specialtyType,
       newPassword, 
-      currentPassword 
+      currentPassword,
+      kycDoc
     } = body;
 
     // 2.1 ตรวจสอบความถูกต้องของข้อมูล (Validation)
@@ -154,6 +160,16 @@ export async function PUT(request: Request) {
     if (specialtyZone !== undefined) updateData.specialty_zone = String(specialtyZone).trim();
     if (specialtyType !== undefined) updateData.specialty_type = String(specialtyType).trim();
 
+    let kycUpdated = false;
+    if (kycDoc !== undefined && typeof kycDoc === 'string' && kycDoc.trim() !== '' && kycDoc !== targetUser.kyc_doc) {
+      updateData.kyc_doc = kycDoc.trim();
+      kycUpdated = true;
+      // หากบัญชีเคยโดนระงับ/ตีกลับ (banned/rejected) ให้ปรับสถานะกลับมาเป็น pending เพื่อส่งเข้าคิวตรวจใหม่
+      if (targetUser.status === 'banned' || targetUser.status === 'pending') {
+        updateData.status = 'pending';
+      }
+    }
+
     if (newPassword && newPassword.trim() !== "") {
       if (newPassword.length < 6) {
         return NextResponse.json({ error: "รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร" }, { status: 400 });
@@ -186,9 +202,34 @@ export async function PUT(request: Request) {
         profile_image: true,
         experience: true,
         specialty_zone: true,
-        specialty_type: true
+        specialty_type: true,
+        status: true,
+        kyc_doc: true
       },
     });
+
+    // 🔔 แจ้งเตือนสองฝั่งเมื่อมีการอัปเดตเอกสารยืนยันตัวตน (KYC)
+    if (kycUpdated && targetUser.role_id === 'agent') {
+      const admins = await db.users.findMany({ where: { role_id: "admin" }, select: { id: true } });
+      const agentFullName = `${updatedUser.first_name} ${updatedUser.last_name}`.trim();
+
+      if (admins.length > 0) {
+        notifyUsers(admins.map((a) => a.id), {
+          title: "นายหน้าอัปเดตเอกสารยืนยันตัวตน (KYC) ใหม่",
+          content: `นายหน้า ${agentFullName} (${updatedUser.email}) ได้ส่งเอกสาร KYC ฉบับแก้ไข กรุณาเข้าตรวจสอบ`,
+          type: "kyc",
+          linkUrl: "/admin/kyc"
+        }).catch((e) => console.error("แจ้งเตือนแอดมิน KYC ไม่สำเร็จ:", e));
+      }
+
+      notifyUser({
+        userId: targetUser.id,
+        title: "ส่งเอกสารยืนยันตัวตนสำเร็จ",
+        content: "ระบบได้รับเอกสารยืนยันตัวตน (KYC) ฉบับแก้ไขของคุณเรียบร้อยแล้ว อยู่ระหว่างรอเจ้าหน้าที่ตรวจสอบ",
+        type: "kyc",
+        linkUrl: "/agent/profile"
+      }).catch((e) => console.error("แจ้งเตือนนายหน้า KYC ไม่สำเร็จ:", e));
+    }
 
     return NextResponse.json({
       success: true,
@@ -204,6 +245,8 @@ export async function PUT(request: Request) {
         experience: updatedUser.experience,
         specialtyZone: updatedUser.specialty_zone,
         specialtyType: updatedUser.specialty_type,
+        status: updatedUser.status || "pending",
+        kycDoc: updatedUser.kyc_doc || null,
       },
     });
   } catch (err) {

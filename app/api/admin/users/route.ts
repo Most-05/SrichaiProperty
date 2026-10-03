@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับดึงและจัดการข้อมูลผู้ใช้
 import { getServerSession } from 'next-auth/next'; // ดึงเซสชันเพื่อตรวจสอบสิทธิ์ admin
 import { authOptions } from '@/lib/authOptions'; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
+import { notifyUser } from '@/lib/notify';
 
 interface AdminSession {
   user?: {
@@ -237,7 +238,7 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { userId, status } = body;
+    const { userId, status, reason } = body;
 
     if (!userId || !status) {
       return NextResponse.json({ error: "Missing userId or status" }, { status: 400 });
@@ -250,6 +251,28 @@ export async function PATCH(req: Request) {
       where: { id: userId },
       data: { status: dbStatus }
     });
+
+    // แจ้งเตือนผู้ใช้ถึงผลการอนุมัติหรือระงับบัญชี
+    if (dbStatus === 'approved') {
+      await notifyUser({
+        userId,
+        title: "สถานะบัญชีได้รับการอนุมัติแล้ว",
+        content: updatedUser.role_id === 'agent'
+          ? "บัญชีนายหน้าของคุณได้รับการอนุมัติเรียบร้อยแล้ว คุณสามารถเข้าจัดการงานและลงประกาศได้ทันที"
+          : "บัญชีของคุณได้รับการอนุมัติการใช้งานจากผู้ดูแลระบบเรียบร้อยแล้ว",
+        type: "system",
+        linkUrl: updatedUser.role_id === 'agent' ? '/agent/dashboard' : '/home'
+      }).catch(() => {});
+    } else if (dbStatus === 'banned') {
+      const reasonDetail = reason ? ` (เหตุผล: ${reason})` : '';
+      await notifyUser({
+        userId,
+        title: "บัญชีของคุณถูกระงับการใช้งาน",
+        content: `บัญชีของคุณถูกระงับการใช้งานโดยผู้ดูแลระบบ${reasonDetail} หากมีข้อสงสัยหรือต้องการสอบถามเพิ่มเติม กรุณาติดต่อทีมงานฝ่ายสนับสนุน`,
+        type: "system",
+        linkUrl: "/support"
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true, user: updatedUser });
   } catch (error) {
