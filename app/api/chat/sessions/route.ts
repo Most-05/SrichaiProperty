@@ -202,7 +202,7 @@ export async function POST(request: Request) {
     // [2] รับและตรวจสอบ Request Body (JSON)
     // --------------------------------------------------------------------------
     const body = await request.json();
-    const { propertyId, agentId } = body;
+    const { propertyId, agentId, customerId } = body;
 
     // ถ้าไม่มีการส่ง propertyId มา ให้ส่ง HTTP 400 Bad Request
     if (!propertyId) {
@@ -220,10 +220,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ไม่พบอสังหาริมทรัพย์นี้' }, { status: 404 });
     }
 
-    // หาก agentId ไม่ได้ถูกส่งมาจาก Body ให้ดึง agent_id ของบ้านหลังนั้นโดยตรง
-    const targetAgentId = agentId || property.agent_id;
-    if (!targetAgentId) {
+    const isAgent = user.role_id === 'agent';
+    const effectiveAgentId = isAgent ? user.id : (agentId || property.agent_id);
+    const effectiveCustomerId = isAgent ? (customerId || body.userId) : user.id;
+
+    if (!effectiveAgentId) {
       return NextResponse.json({ error: 'อสังหาริมทรัพย์นี้ยังไม่มีนายหน้าดูแล' }, { status: 400 });
+    }
+    if (!effectiveCustomerId) {
+      return NextResponse.json({ error: 'ไม่พบข้อมูลลูกค้าสำหรับเริ่มการสนทนา' }, { status: 400 });
     }
 
     // --------------------------------------------------------------------------
@@ -231,8 +236,8 @@ export async function POST(request: Request) {
     // --------------------------------------------------------------------------
     let chatSession = await db.chat_sessions.findFirst({
       where: {
-        customer_id: user.id,
-        agent_id: targetAgentId,
+        customer_id: effectiveCustomerId,
+        agent_id: effectiveAgentId,
         property_id: property.id
       }
     });
@@ -243,8 +248,8 @@ export async function POST(request: Request) {
     if (!chatSession) {
       chatSession = await db.chat_sessions.create({
         data: {
-          customer_id: user.id,
-          agent_id: targetAgentId,
+          customer_id: effectiveCustomerId,
+          agent_id: effectiveAgentId,
           property_id: property.id
         }
       });

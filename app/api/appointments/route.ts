@@ -178,6 +178,7 @@ export async function GET(request: Request) {
         originalDate: apt.original_date ? toDateKey(apt.original_date) : null,
         originalTimeSlot: apt.original_time_slot,
         wasEdited: apt.original_date !== null,
+        customerId: apt.customer_id,
         customerName,
         customerPhone: cust?.phone || "-",
         customerEmail: cust?.email || "-",

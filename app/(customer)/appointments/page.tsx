@@ -19,52 +19,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ReviewModal from '@/components/customer/ReviewModal';
 import { NO_SHOW_LIMIT, timeSlotStart } from '@/lib/constants';
 import { toast } from '@/components/ui/toast';
-import { Calendar, CalendarDays, MessageSquare, Star, AlertTriangle, X, Check, Loader2, Bell, Clock, Trash2 } from 'lucide-react';
-
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
-
-function ChatIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12a8 8 0 1 1-3.4-6.5L21 4l-1 4.5A8 8 0 0 1 21 12Z" />
-    </svg>
-  );
-}
-
-function StarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
-      <path d="M12 2.5l2.9 6 6.6.7-4.9 4.6 1.3 6.5L12 16.9l-5.9 3.4 1.3-6.5-4.9-4.6 6.6-.7L12 2.5Z" />
-    </svg>
-  );
-}
-
-function AlertIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 9v4M12 17h.01" />
-      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-    </svg>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
+import {
+  Calendar,
+  CalendarDays,
+  CalendarClock,
+  MessageSquare,
+  Star,
+  AlertTriangle,
+  X,
+  Check,
+  CheckCircle2,
+  CheckCheck,
+  XCircle,
+  Ban,
+  Loader2,
+  Bell,
+  Clock,
+  Trash2,
+  Phone,
+  ExternalLink,
+  Info
+} from 'lucide-react';
 
 interface AppointmentItem {
   id: string;
@@ -80,14 +59,12 @@ interface AppointmentItem {
   note: string;
   cancelReason?: string;
   noShowNote?: string;
-  // 🔑 KEYWORD: วันนัดเดิมก่อนถูกเลื่อน (API ส่งมาให้อยู่แล้ว แต่หน้านี้ไม่เคยเอามาแสดง)
   originalDate?: string | null;
   originalTimeSlot?: string | null;
   wasEdited?: boolean;
   agentName: string;
   agentPhone: string;
   agentImage?: string;
-  // ข้อมูลรีวิว (ถ้าเคยให้คะแนนไว้แล้ว)
   review?: { id: string; rating: number; comment?: string } | null;
 }
 
@@ -111,27 +88,33 @@ const MONTH_NAMES_TH = [
   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
 ];
 
-// ฟังก์ชันช่วยคืนค่าสีและข้อความตามสถานะการนัดหมาย
-const getStatusDetails = (status: string) => {
+// ฟังก์ชันช่วยคืนค่าสี ข้อความ และไอคอนตามสถานะการนัดหมาย
+const getStatusDetails = (status: string, isPast: boolean) => {
   switch (status) {
     case 'approved':
-      return { text: "ยืนยันแล้ว", bg: "bg-emerald-50 border-emerald-200", color: "text-emerald-700" };
+      if (isPast) {
+        return { text: "รอนายหน้ายืนยันผล", bg: "bg-amber-50 border-amber-200", color: "text-amber-800", Icon: Clock };
+      }
+      return { text: "ยืนยันแล้ว", bg: "bg-emerald-50 border-emerald-200", color: "text-emerald-800", Icon: CheckCircle2 };
     case 'pending':
-      return { text: "รอยืนยันคิว", bg: "bg-amber-50 border-amber-200", color: "text-amber-700" };
-    case 'cancelled':
-      return { text: "ยกเลิกแล้ว", bg: "bg-red-50 border-red-200", color: "text-red-700" };
-    case 'rejected':
-      return { text: "ปฏิเสธแล้ว", bg: "bg-rose-50 border-rose-200", color: "text-rose-700" };
+      return { text: "รอนายหน้ายืนยันคิว", bg: "bg-amber-50 border-amber-200", color: "text-amber-800", Icon: Clock };
     case 'awaiting_customer':
-      return { text: "นายหน้าขอเลื่อนวัน", bg: "bg-purple-50 border-purple-200", color: "text-purple-700" };
+      return { text: "นายหน้าขอเลื่อนวัน", bg: "bg-indigo-50 border-indigo-200", color: "text-indigo-800", Icon: CalendarClock };
+    case 'rejected':
+      return { text: "นายหน้าไม่สะดวกในรอบนี้", bg: "bg-rose-50 border-rose-200", color: "text-rose-800", Icon: XCircle };
+    case 'cancelled':
+      return { text: "ยกเลิกแล้ว", bg: "bg-slate-100 border-slate-200", color: "text-slate-700", Icon: Ban };
     case 'no_show':
-      return { text: "ไม่มาตามนัด", bg: "bg-red-50 border-red-200", color: "text-red-700" };
+      return { text: "ไม่ได้มาตามนัด", bg: "bg-red-50 border-red-200", color: "text-red-700", Icon: AlertTriangle };
+    case 'completed':
+      return { text: "เข้าชมเรียบร้อยแล้ว", bg: "bg-emerald-50 border-emerald-200", color: "text-emerald-800", Icon: CheckCheck };
     default:
-      return { text: "เข้าชมแล้ว", bg: "bg-slate-100 border-slate-200", color: "text-slate-600" };
+      return { text: "ประวัตินัดหมาย", bg: "bg-slate-100 border-slate-200", color: "text-slate-700", Icon: Calendar };
   }
 };
 
 export default function AppointmentsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'cancelled' | 'waitlist'>('upcoming');
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistItem[]>([]);
@@ -143,18 +126,6 @@ export default function AppointmentsPage() {
   // ----------------------------------------------------------------------------
   // 1. ฟังก์ชันโหลด/รีเฟรชข้อมูลคิวนัดหมายและคิวรอจาก API หลังบ้าน
   // ----------------------------------------------------------------------------
-  const loadWaitlist = useCallback(async () => {
-    try {
-      const res = await fetch('/api/appointments/waitlist');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.waitlist)) {
-        setWaitlist(data.waitlist);
-      }
-    } catch (err) {
-      console.error('Error fetching waitlist:', err);
-    }
-  }, []);
-
   const loadAppointments = useCallback(async () => {
     try {
       const [aptRes, waitlistRes] = await Promise.all([
@@ -304,6 +275,7 @@ export default function AppointmentsPage() {
   // ----------------------------------------------------------------------------
   // 3. คำนวณยอดรวมนัดหมายในแต่ละกลุ่ม และกรองรายการตามแท็บที่เลือก
   // ----------------------------------------------------------------------------
+
   // ดึงวันที่ปัจจุบันรูปแบบ YYYY-MM-DD ตามเวลาท้องถิ่น
   const getTodayKey = () => {
     const d = new Date();
@@ -325,12 +297,19 @@ export default function AppointmentsPage() {
   const tomorrowKey = getTomorrowKey();
 
   // จัดกลุ่มนัดหมาย:
-  // - ยกเลิกแล้ว: status เป็น cancelled หรือ rejected
-  // - กำลังจะมาถึง: ยังไม่ยกเลิก, ยังไม่ completed และ วันที่นัด >= วันนี้
-  // - ประวัติที่ผ่านมา: status เป็น completed หรือ วันที่นัด < วันนี้ (ที่ไม่ได้ยกเลิก)
+  // - ยกเลิกแล้ว / ปฏิเสธแล้ว: status เป็น cancelled หรือ rejected
+  // - กำลังจะมาถึง / รอยืนยัน: status เป็น pending หรือ awaiting_customer หรือ (approved ที่ยังไม่เลยวันนัด)
+  // - ประวัติที่ผ่านมา: status เป็น completed หรือ no_show หรือ (approved ที่เลยวันนัดไปแล้ว)
   const isCancelledApt = (apt: AppointmentItem) => apt.status === 'cancelled' || apt.status === 'rejected';
-  const isPastApt = (apt: AppointmentItem) => apt.status === 'completed' || (!isCancelledApt(apt) && apt.date < todayKey);
-  const isUpcomingApt = (apt: AppointmentItem) => !isCancelledApt(apt) && apt.status !== 'completed' && apt.date >= todayKey;
+  const isPastApt = (apt: AppointmentItem) =>
+    apt.status === 'completed' ||
+    apt.status === 'no_show' ||
+    (!isCancelledApt(apt) && apt.status === 'approved' && apt.date < todayKey);
+  const isUpcomingApt = (apt: AppointmentItem) =>
+    !isCancelledApt(apt) &&
+    apt.status !== 'completed' &&
+    apt.status !== 'no_show' &&
+    (apt.status === 'pending' || apt.status === 'awaiting_customer' || (apt.status === 'approved' && apt.date >= todayKey));
 
   const upcomingCount = appointments.filter(isUpcomingApt).length;
   const cancelledCount = appointments.filter(isCancelledApt).length;
@@ -344,6 +323,25 @@ export default function AppointmentsPage() {
     if (activeTab === 'cancelled') return isCancelledApt(apt);
     return false;
   });
+
+  // เปิดแชทสนทนากับนายหน้าประจำทรัพย์สิน
+  const handleOpenChat = async (propertyId: string) => {
+    try {
+      const res = await fetch('/api/chat/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyId })
+      });
+      const data = await res.json();
+      if (data.success && data.sessionId) {
+        router.push(`/chat?sessionId=${data.sessionId}`);
+      } else {
+        router.push('/chat');
+      }
+    } catch {
+      router.push('/chat');
+    }
+  };
 
   // ข้อมูลนัดหมายที่จะเปิดโมดัลรีวิว (เก็บคะแนนและความคิดเห็นเดิมไว้ด้วยถ้ามี)
   const [reviewModalApt, setReviewModalApt] = useState<{
@@ -378,7 +376,7 @@ export default function AppointmentsPage() {
           >
             กำลังจะมาถึง / รอยืนยัน 
             {upcomingCount > 0 && (
-              <span className="bg-red-500 text-white ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black">{upcomingCount}</span>
+              <span className="bg-blue-600 text-white ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black">{upcomingCount}</span>
             )}
           </button>
 
@@ -396,11 +394,12 @@ export default function AppointmentsPage() {
             onClick={() => setActiveTab('cancelled')} 
             className={`px-4 py-2 border-b-2 font-bold text-xs whitespace-nowrap transition cursor-pointer ${activeTab === 'cancelled' ? 'border-slate-900 text-slate-900 font-extrabold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
           >
-            ยกเลิกแล้ว
+            ยกเลิกแล้ว / ถูกปฏิเสธ
             {cancelledCount > 0 && (
               <span className="bg-slate-200 text-slate-700 ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold">{cancelledCount}</span>
             )}
           </button>
+
 
           <button 
             onClick={() => setActiveTab('waitlist')} 
@@ -556,7 +555,7 @@ export default function AppointmentsPage() {
                     {/* ปุ่มการทำงาน */}
                     <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 border-t lg:border-t-0 pt-3 lg:pt-0">
                       <Link
-                        href={`/property/${item.propertyId}`}
+                        href={`/properties/${item.propertyId}`}
                         className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition cursor-pointer"
                       >
                         ดูประกาศ
@@ -588,210 +587,330 @@ export default function AppointmentsPage() {
             filteredAppointments.map((apt) => {
               const pastThisApt = isPastApt(apt);
               const cancelledThisApt = isCancelledApt(apt);
-              let statusDetails = getStatusDetails(apt.status);
-
-              // เดิมนัดที่ผ่านวันไปแล้วและยังไม่ถูกยกเลิก จะโชว์ "เข้าชมแล้ว" ทันที ไม่ว่า status จะเป็นอะไร
-              // (สมเหตุสมผลตอนที่ระบบ auto-complete ทันที เพราะแทบไม่มีช่วงที่ status ยังไม่ใช่ completed)
-              // ตอนนี้นัดที่ผ่านวันแล้วรอนายหน้ายืนยันผลได้นานถึง 7 วัน (ดู VISIT_CONFIRM_GRACE_DAYS)
-              // ต้องแยกให้ชัดว่า "รอผล" กับ "เข้าชมแล้วจริง" ไม่ใช่อันเดียวกัน — no_show ก็มีป้ายของตัวเองแล้ว
-              // (จาก getStatusDetails) จึงไม่ต้อง override ทับ เหลือ override เฉพาะกรณี approved ที่ยังรอผลจริงๆ
-              if (pastThisApt && apt.status === 'approved') {
-                statusDetails = { text: "รอนายหน้ายืนยันผล", bg: "bg-amber-50 border-amber-200", color: "text-amber-700" };
-              }
+              const statusDetails = getStatusDetails(apt.status, pastThisApt);
+              const StatusIcon = statusDetails.Icon;
 
               const dateObj = new Date(apt.date);
               const dayStr = isNaN(dateObj.getTime()) ? apt.date : dateObj.getDate().toString();
               const monthStr = isNaN(dateObj.getTime()) ? 'ส.ค.' : MONTH_NAMES_TH[dateObj.getMonth()];
-              
+              const isToday = apt.status === 'approved' && apt.date === todayKey;
+              const isTomorrow = apt.status === 'approved' && apt.date === tomorrowKey;
+
               return (
                 <div 
                   key={apt.id} 
-                  className={`bg-white rounded-2xl p-4 sm:p-5 border shadow-sm flex flex-col lg:flex-row gap-4 hover:shadow-md transition relative overflow-hidden ${
-                    cancelledThisApt ? 'bg-slate-50/80 border-slate-200 opacity-85' : 'border-slate-200'
+                  className={`bg-white rounded-2xl p-4 sm:p-5 border shadow-sm flex flex-col gap-4 hover:shadow-md transition relative overflow-hidden ${
+                    cancelledThisApt ? 'bg-slate-50/70 border-slate-200' : 'border-slate-200'
                   }`}
                 >
-                  {/* แสดงวันที่และรอบเวลา */}
-                  <div className="flex gap-3 sm:gap-4 items-center w-full lg:w-1/3">
-                    <div className="w-16 h-20 bg-slate-50 rounded-xl border border-slate-100 flex flex-col items-center justify-center flex-shrink-0 shadow-inner">
-                      <span className="text-[10px] font-bold text-red-500 uppercase">{monthStr}</span>
-                      <span className="text-2xl font-extrabold text-slate-900 leading-none my-0.5">{dayStr}</span>
-                      <span className="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded shadow-sm mt-1">{apt.timeSlotText || apt.timeSlot}</span>
-                    </div>
-                    <div className="w-full h-20 rounded-lg overflow-hidden relative border border-slate-100">
-                      <Image 
-                        src={apt.propertyImage || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600"} 
-                        width={120} 
-                        height={80} 
-                        className="w-full h-full object-cover" 
-                        alt={apt.propertyName} 
-                        unoptimized
-                      />
-                    </div>
-                  </div>
-
-                  {/* รายละเอียดทรัพย์สิน ชื่อนายหน้า และเหตุผลการยกเลิก (ถ้ามี) */}
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full border text-[10px] font-black ${statusDetails.bg} ${statusDetails.color}`}>
-                        {statusDetails.text}
-                      </span>
-                      {apt.status === 'approved' && apt.date === todayKey && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-black bg-blue-100 text-blue-800 border-blue-300 animate-pulse">
-                          <Calendar className="w-3 h-3 shrink-0" />
-                          นัดหมายวันนี้
-                        </span>
-                      )}
-                      {apt.status === 'approved' && apt.date === tomorrowKey && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-black bg-indigo-50 text-indigo-700 border-indigo-200">
-                          <Calendar className="w-3 h-3 shrink-0" />
-                          นัดหมายวันพรุ่งนี้
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="font-extrabold text-slate-900 text-sm line-clamp-1">{apt.propertyName}</h3>
-                    <div className="text-blue-700 font-extrabold text-xs">{apt.propertyPrice}</div>
-
-                    {/* 🔑 KEYWORD: โชว์วันนัดเดิมขีดฆ่าเมื่อนัดถูกเลื่อน */}
-                    {/* ข้อมูลนี้ API ส่งมาให้ตั้งแต่แรกแล้ว แต่หน้าลูกค้าไม่เคยเอามาแสดง
-                        ทั้งที่ลูกค้าคือฝ่ายที่ต้องรู้มากที่สุดว่านัดถูกย้ายจากวันไหนมาวันไหน */}
-                    {apt.wasEdited && apt.originalDate && (() => {
-                      const od = new Date(apt.originalDate);
-                      const odLabel = isNaN(od.getTime())
-                        ? apt.originalDate
-                        : `${od.getDate()} ${MONTH_NAMES_TH[od.getMonth()]} ${od.getFullYear() + 543}`;
-                      return (
-                        <p className="text-[11px] font-bold text-slate-400 line-through">
-                          เดิม: {odLabel} ({apt.originalTimeSlot === 'afternoon' ? 'ช่วงบ่าย' : 'ช่วงเช้า'})
-                        </p>
-                      );
-                    })()}
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                      <span>นายหน้า: {apt.agentName} ({apt.agentPhone})</span>
-                    </div>
-                    {apt.cancelReason && (
-                      <div className="mt-1.5 text-xs bg-red-50 text-red-700 p-2 rounded-lg border border-red-100 font-bold flex items-start gap-1">
-                        <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span>
-                          {apt.status === 'rejected' ? 'เหตุผลที่นายหน้าปฏิเสธ' : 'เหตุผลการยกเลิก'}: {apt.cancelReason}
-                        </span>
+                  <div className="flex flex-col lg:flex-row gap-4 items-start">
+                    {/* แสดงวันที่และรูปภาพทรัพย์สิน */}
+                    <div className="flex gap-3 sm:gap-4 items-center w-full lg:w-72 shrink-0">
+                      <div className="w-16 h-20 bg-slate-50 rounded-xl border border-slate-100 flex flex-col items-center justify-center flex-shrink-0 shadow-inner">
+                        <span className="text-[10px] font-bold text-red-500 uppercase">{monthStr}</span>
+                        <span className="text-2xl font-extrabold text-slate-900 leading-none my-0.5">{dayStr}</span>
+                        <span className="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded shadow-sm mt-1">{apt.timeSlotText || apt.timeSlot}</span>
                       </div>
-                    )}
-
-                                        {apt.status === 'no_show' && apt.noShowNote && (
-                      <div className="mt-1.5 text-xs bg-red-50 text-red-700 p-2 rounded-lg border border-red-100 font-bold flex items-start gap-1">
-                        <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span>เหตุผลที่บันทึกว่าไม่มาตามนัด: {apt.noShowNote}</span>
-                      </div>
-                    )}
-
-                                        {/* นายหน้าปฏิเสธแล้วรอบเวลาจะถูกปลดล็อกทันที ลูกค้าจองรอบใหม่ได้เลยจากตรงนี้ */}
-                    {apt.status === 'rejected' && (
-                      <p className="mt-1.5 text-[11px] font-bold text-slate-500">
-                        รอบเวลานี้เปิดให้จองใหม่แล้ว เลือกวันที่สะดวกได้อีกครั้ง
-                      </p>
-                    )}
-                  </div>
-
-                  {/* ปุ่มการทำงาน (แชทกับนายหน้า, ให้คะแนนรีวิว, ยกเลิกนัด) */}
-                  <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 border-t lg:border-t-0 pt-3 lg:pt-0">
-                    <button 
-                      onClick={async () => {
-                        try {
-                          const res = await fetch('/api/chat/sessions', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ propertyId: apt.propertyId })
-                          });
-                          const data = await res.json();
-                          if (data.success && data.sessionId) {
-                            window.location.href = `/chat?sessionId=${data.sessionId}`;
-                          } else {
-                            window.location.href = '/chat';
-                          }
-                        } catch {
-                          window.location.href = '/chat';
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" /> แชทกับนายหน้า
-                    </button>
-
-                    {/* ส่วนการให้คะแนนรีวิวนายหน้า (เฉพาะนัดที่นายหน้ายืนยันแล้วว่าเข้าชมจริง status='completed'):
-                        - กรณีที่ 1: ลูกค้าเคยรีวิวแล้ว -> โชว์คะแนนดาวที่เคยให้ พร้อมปุ่มกด "แก้ไขรีวิว"
-                        - กรณีที่ 2: ยังไม่เคยรีวิว -> โชว์ปุ่มสีเหลือง "ให้คะแนนการบริการ"
-                        ยังไม่ถูกยืนยันผล (needsResult) หรือแม้แต่นัดที่บันทึกว่า 'ไม่มาตามนัด' ก็รีวิวได้
-                        เปลี่ยนมาเช็ค status === 'completed' ตรงๆ ให้รีวิวได้เฉพาะนัดที่เข้าชมจริงเท่านั้น */}
-                    {apt.status === 'completed' && (
-                      apt.review ? (
-                        <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/80 rounded-xl px-2.5 py-1">
-                          <span className="text-amber-800 font-extrabold text-[11px] flex items-center gap-1">
-                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400 text-amber-400" />
-                            ให้คะแนนแล้ว ({apt.review.rating}/5)
-                          </span>
-                          <button
-                            onClick={() => setReviewModalApt({
-                              id: String(apt.id),
-                              agentName: apt.agentName,
-                              propertyName: apt.propertyName,
-                              initialRating: apt.review?.rating || 5,
-                              initialComment: apt.review?.comment || ''
-                            })}
-                            className="text-[10px] font-black text-blue-700 hover:text-blue-800 underline hover:no-underline ml-1 cursor-pointer"
-                          >
-                            แก้ไข
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setReviewModalApt({ 
-                            id: String(apt.id), 
-                            agentName: apt.agentName, 
-                            propertyName: apt.propertyName,
-                            initialRating: 5,
-                            initialComment: ''
-                          })}
-                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-black text-xs transition cursor-pointer flex items-center gap-1"
-                        >
-                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> ให้คะแนนการบริการ
-                        </button>
-                      )
-                    )}
-
-                    {apt.status === 'rejected' && (
-                      <Link
-                        href={`/book-appointment?propertyId=${apt.propertyId}`}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-black text-xs transition cursor-pointer active:scale-95 flex items-center gap-1"
-                      >
-                        จองรอบใหม่
+                      <Link href={`/properties/${apt.propertyId}`} className="w-full h-20 rounded-lg overflow-hidden relative border border-slate-100 block group">
+                        <Image 
+                          src={apt.propertyImage || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600"} 
+                          width={140} 
+                          height={80} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                          alt={apt.propertyName} 
+                          unoptimized
+                        />
                       </Link>
-                    )}
+                    </div>
 
-                    {/* 🔑 KEYWORD: ปุ่มลูกค้ายืนยันวันใหม่ที่นายหน้าขอเลื่อน */}
-                    {/* ลูกค้าเป็นคนตัดสินใจเอง ไม่ใช่นายหน้ายืนยันข้อเสนอตัวเอง */}
-                    {apt.status === 'awaiting_customer' && (
-                      <button
-                        onClick={() => acceptNewDate(apt)}
-                        disabled={acceptingId === String(apt.id)}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-black text-xs transition cursor-pointer active:scale-95 disabled:opacity-60 flex items-center gap-1.5"
-                      >
-                        {acceptingId === String(apt.id) ? (
-                          <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> กำลังบันทึก...</span>
-                        ) : (
-                          <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> ตกลงวันใหม่</span>
+                    {/* รายละเอียดทรัพย์สิน สถานะ และนายหน้า */}
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-black ${statusDetails.bg} ${statusDetails.color}`}>
+                          <StatusIcon className="w-3.5 h-3.5 shrink-0" />
+                          <span>{statusDetails.text}</span>
+                        </span>
+                        {isToday && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-black bg-blue-100 text-blue-800 border-blue-300 animate-pulse">
+                            <Calendar className="w-3 h-3 shrink-0" />
+                            นัดหมายวันนี้
+                          </span>
                         )}
-                      </button>
-                    )}
+                        {isTomorrow && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-black bg-indigo-50 text-indigo-700 border-indigo-200">
+                            <Calendar className="w-3 h-3 shrink-0" />
+                            นัดหมายวันพรุ่งนี้
+                          </span>
+                        )}
+                      </div>
 
-                    {/* ปุ่มยกเลิกนัด: แสดงเฉพาะนัดที่ยังไม่ถึงวันนัดหมายเท่านั้น */}
-                    {!pastThisApt && !cancelledThisApt && (apt.status === 'approved' || apt.status === 'pending' || apt.status === 'awaiting_customer') && (
-                      <button
-                        onClick={() => openCancelModal(apt)}
-                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-bold text-xs transition cursor-pointer active:scale-95"
+                      <div>
+                        <Link href={`/properties/${apt.propertyId}`} className="font-extrabold text-slate-900 text-sm hover:text-blue-600 transition line-clamp-1">
+                          {apt.propertyName}
+                        </Link>
+                        <div className="text-blue-700 font-extrabold text-xs mt-0.5">{apt.propertyPrice}</div>
+                      </div>
+
+                      {/* ข้อมูลนายหน้าผู้ดูแล */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 font-medium pt-0.5">
+                        <span className="font-bold text-slate-800">นายหน้า: {apt.agentName}</span>
+                        {apt.agentPhone && apt.agentPhone !== '-' && (
+                          <a href={`tel:${apt.agentPhone}`} className="text-blue-600 hover:underline flex items-center gap-1">
+                            <Phone className="w-3 h-3 shrink-0" /> {apt.agentPhone}
+                          </a>
+                        )}
+                      </div>
+
+                      {/* หมายเหตุที่ลูกค้าเขียนไว้ตอนขอนัด */}
+                      {apt.note && (
+                        <p className="text-[11px] text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 inline-block">
+                          <span className="font-bold text-slate-600">ข้อความของคุณ:</span> &ldquo;{apt.note}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* กล่องข้อความอธิบายสถานะและการดำเนินการถัดไป (Contextual Explanation & Next Steps) */}
+                  {apt.status === 'rejected' && (
+                    <div className="bg-rose-50/90 border border-rose-200 rounded-xl p-3.5 space-y-2.5 text-xs text-rose-900">
+                      <div className="flex items-start gap-2">
+                        <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                        <div className="space-y-1 flex-1">
+                          <div className="font-black text-rose-800 flex flex-wrap items-center gap-1.5">
+                            <span>นายหน้าไม่สะดวกในรอบเวลานี้</span>
+                            <span className="text-[10px] font-bold bg-white px-2 py-0.5 rounded-full border border-rose-200 text-rose-700">
+                              ระบบคืนรอบเวลาให้แล้ว
+                            </span>
+                          </div>
+                          <p className="text-rose-700 leading-relaxed font-semibold">
+                            <span className="font-black text-rose-900">เหตุผลที่นายหน้าแจ้ง:</span> &ldquo;{apt.cancelReason || 'นายหน้าติดภารกิจด่วนในช่วงเวลาดังกล่าว จึงไม่สามารถเปิดรอบนำชมได้'}&rdquo;
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white/80 border border-rose-200/80 rounded-lg p-3 space-y-1.5 text-[11px]">
+                        <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                          <Info className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span>ขั้นตอนถัดไปที่คุณสามารถทำได้:</span>
+                        </div>
+                        <ul className="space-y-1 text-slate-700 font-medium pl-5 list-disc">
+                          <li>
+                            <span className="font-bold text-blue-800">ทักแชทปรึกษานายหน้า:</span> เพื่อสอบถามช่วงวันและเวลาที่นายหน้าสะดวกตรงกัน และนัดหมายรอบใหม่
+                          </li>
+                          <li>
+                            <span className="font-bold text-indigo-800">จองนัดหมายรอบใหม่:</span> เลือกรอบวัน/เวลาอื่นที่เปิดว่างอยู่ในตารางได้ทันที
+                          </li>
+                          <li>
+                            <span className="font-bold text-slate-800">โทรติดต่อสอบถาม:</span> ติดต่อเบอร์ {apt.agentPhone || 'นายหน้า'} โดยตรงเพื่อความรวดเร็ว
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {apt.status === 'awaiting_customer' && (
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 space-y-2 text-xs text-indigo-900">
+                      <div className="flex items-start gap-2">
+                        <CalendarClock className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                        <div className="space-y-1 flex-1">
+                          <p className="font-extrabold text-indigo-950">
+                            นายหน้าติดภารกิจ จึงเสนอขอปรับเปลี่ยนวัน/เวลาเข้าชมใหม่
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                            {apt.originalDate && (
+                              <span className="text-slate-400 line-through">
+                                เดิม: {apt.originalDate} ({apt.originalTimeSlot === 'afternoon' ? 'ช่วงบ่าย' : 'ช่วงเช้า'})
+                              </span>
+                            )}
+                            <span className="text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200 font-black">
+                              เสนอใหม่: {apt.date} ({apt.timeSlotText || apt.timeSlot})
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-indigo-800 font-medium">
+                            หากท่านสะดวกในวันเวลานี้ สามารถกด &ldquo;ตกลงรับวันใหม่&rdquo; ได้ทันที หรือหากต้องการวันอื่น สามารถกด &ldquo;แชทคุยกับนายหน้า&rdquo; เพื่อเลือกเวลาที่สะดวกตรงกัน
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {apt.status === 'pending' && (
+                    <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 space-y-1 text-xs text-amber-900">
+                      <div className="flex items-center gap-2 font-black text-amber-900">
+                        <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>รอนายหน้าตรวจสอบและยืนยันคิว</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 font-medium pl-5 leading-relaxed">
+                        คำขอนัดหมายส่งถึงนายหน้าแล้ว นายหน้ากำลังตรวจสอบตารางการนำชม หากมีข้อสงสัยหรือต้องการสอบถามรายละเอียดเพิ่มเติม สามารถทักแชทสอบถามนายหน้าได้ล่วงหน้า
+                      </p>
+                    </div>
+                  )}
+
+                  {apt.status === 'approved' && !pastThisApt && (
+                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 space-y-1 text-xs text-emerald-900">
+                      <div className="flex items-center gap-2 font-black text-emerald-900">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>นัดหมายยืนยันแล้ว — พร้อมเข้าชมตามกำหนดการ</span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 font-medium pl-5 leading-relaxed">
+                        กรุณาเดินทางไปถึงจุดนัดหมายตามวันและเวลาที่กำหนด หากติดขัดปัญหาการเดินทาง สามารถโทรหรือแชทแจ้งนายหน้าได้ทันที
+                      </p>
+                    </div>
+                  )}
+
+                  {apt.status === 'approved' && pastThisApt && (
+                    <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 space-y-1 text-xs text-amber-900">
+                      <div className="flex items-center gap-2 font-black text-amber-900">
+                        <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>รอบเวลาเข้าชมผ่านไปแล้ว — รอนายหน้าบันทึกผล</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 font-medium pl-5 leading-relaxed">
+                        ระบบกำลังรอนายหน้ายืนยันผลการเข้าชม เมื่อนายหน้ายืนยันเสร็จสิ้นแล้ว คุณจะสามารถให้คะแนนรีวิวการบริการของนายหน้าได้
+                      </p>
+                    </div>
+                  )}
+
+                  {apt.status === 'cancelled' && (
+                    <div className="bg-slate-100/90 border border-slate-200 rounded-xl p-3 space-y-1 text-xs text-slate-800">
+                      <div className="flex items-center gap-2 font-black text-slate-700">
+                        <Ban className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <span>การนัดหมายถูกยกเลิกแล้ว</span>
+                      </div>
+                      {apt.cancelReason && (
+                        <p className="text-[11px] text-slate-600 pl-5 font-semibold">
+                          เหตุผลการยกเลิก: &ldquo;{apt.cancelReason}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {apt.status === 'no_show' && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-1 text-xs text-red-900">
+                      <div className="flex items-center gap-2 font-black text-red-800">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                        <span>บันทึกสถานะ: ไม่ได้มาตามนัดหมาย</span>
+                      </div>
+                      <p className="text-[11px] text-red-700 pl-5 font-semibold">
+                        เหตุผลที่บันทึก: {apt.noShowNote || 'ไม่ได้เข้าชมตามเวลาที่นัดหมาย'}
+                      </p>
+                    </div>
+                  )}
+
+                  {apt.status === 'completed' && (
+                    <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3 space-y-1 text-xs text-emerald-900">
+                      <div className="flex items-center gap-2 font-black text-emerald-900">
+                        <CheckCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>เข้าชมอสังหาริมทรัพย์เรียบร้อยแล้ว</span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 font-medium pl-5">
+                        ขอบคุณที่ให้ความไว้วางใจในการใช้บริการ สามารถให้คะแนนรีวิวนายหน้าเพื่อเป็นประโยชน์ต่อผู้ใช้บริการท่านอื่นได้ด้านล่าง
+                      </p>
+                    </div>
+                  )}
+
+                  {/* แถบปุ่มดำเนินการ (Actions Bar) */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/properties/${apt.propertyId}`}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
                       >
-                        ยกเลิกนัด
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0" /> ดูประกาศ
+                      </Link>
+
+                      {apt.agentPhone && apt.agentPhone !== '-' && (
+                        <a
+                          href={`tel:${apt.agentPhone}`}
+                          className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Phone className="w-3.5 h-3.5 shrink-0" /> โทรหา ({apt.agentPhone})
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* ปุ่มแชทกับนายหน้า */}
+                      <button 
+                        onClick={() => handleOpenChat(apt.propertyId)}
+                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 active:scale-95"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                        <span>{apt.status === 'rejected' ? 'แชทปรึกษาวันสะดวก' : 'แชทกับนายหน้า'}</span>
                       </button>
-                    )}
+
+                      {/* รีวิวนายหน้า (เฉพาะ status === 'completed') */}
+                      {apt.status === 'completed' && (
+                        apt.review ? (
+                          <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1">
+                            <span className="text-amber-800 font-extrabold text-[11px] flex items-center gap-1">
+                              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                              ให้คะแนนแล้ว ({apt.review.rating}/5)
+                            </span>
+                            <button
+                              onClick={() => setReviewModalApt({
+                                id: String(apt.id),
+                                agentName: apt.agentName,
+                                propertyName: apt.propertyName,
+                                initialRating: apt.review?.rating || 5,
+                                initialComment: apt.review?.comment || ''
+                              })}
+                              className="text-[10px] font-black text-blue-700 hover:text-blue-800 underline ml-1 cursor-pointer"
+                            >
+                              แก้ไข
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setReviewModalApt({ 
+                              id: String(apt.id), 
+                              agentName: apt.agentName, 
+                              propertyName: apt.propertyName,
+                              initialRating: 5,
+                              initialComment: ''
+                            })}
+                            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-black text-xs transition cursor-pointer flex items-center gap-1 active:scale-95"
+                          >
+                            <Star className="w-3.5 h-3.5 fill-amber-400 text-slate-950" /> ให้คะแนนการบริการ
+                          </button>
+                        )
+                      )}
+
+                      {/* กรณี rejected หรือ cancelled: ปุ่มจองรอบใหม่ */}
+                      {(apt.status === 'rejected' || apt.status === 'cancelled') && (
+                        <Link
+                          href={`/book-appointment?propertyId=${apt.propertyId}`}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-black text-xs transition cursor-pointer active:scale-95 flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Calendar className="w-3.5 h-3.5 shrink-0" />
+                          <span>จองนัดหมายรอบใหม่</span>
+                        </Link>
+                      )}
+
+                      {/* กรณีนายหน้าขอเลื่อนวัน: ปุ่มยืนยันรับวันใหม่ */}
+                      {apt.status === 'awaiting_customer' && (
+                        <button
+                          onClick={() => acceptNewDate(apt)}
+                          disabled={acceptingId === String(apt.id)}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-black text-xs transition cursor-pointer active:scale-95 disabled:opacity-60 flex items-center gap-1.5 shadow-sm"
+                        >
+                          {acceptingId === String(apt.id) ? (
+                            <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> กำลังบันทึก...</span>
+                          ) : (
+                            <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> ตกลงรับวันใหม่</span>
+                          )}
+                        </button>
+                      )}
+
+                      {/* ปุ่มยกเลิกนัด: เฉพาะนัดที่ยังไม่ถึงวัน และสถานะยังไม่สิ้นสุด */}
+                      {!pastThisApt && !cancelledThisApt && (apt.status === 'approved' || apt.status === 'pending' || apt.status === 'awaiting_customer') && (
+                        <button
+                          onClick={() => openCancelModal(apt)}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-bold text-xs transition cursor-pointer active:scale-95"
+                        >
+                          ยกเลิกนัด
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
