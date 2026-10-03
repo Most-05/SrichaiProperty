@@ -8,6 +8,9 @@ import { getToken } from 'next-auth/jwt';
 // เพื่อตรวจสอบว่า "ใครเป็นคนเรียก" (login หรือยัง) และ "มีสิทธิ์" เข้าหน้านั้นหรือไม่
 // ถ้าไม่มีสิทธิ์ก็จะ redirect ไปหน้าอื่น หรือตอบ error กลับไปแทน
 // ============================================================================
+// หน้าฝั่งลูกค้าที่ต้อง login ก่อน (ต้องตรงกับ matcher ด้านล่าง)
+const CUSTOMER_PRIVATE_PATHS = ['/appointments', '/book-appointment', '/chat', '/profile', '/saved-properties', '/favorites'];
+
 export default async function proxy(request: NextRequest) {
   // ดึงข้อมูล session/token ของผู้ใช้จากคุกกี้ (next-auth เป็นคนเข้ารหัส/ถอดรหัสให้)
   // ถ้าไม่ได้ login มา token จะเป็น null
@@ -22,6 +25,18 @@ export default async function proxy(request: NextRequest) {
   // ดึง role ของผู้ใช้จาก token ถ้าไม่มีให้ถือว่าเป็น 'customer' (สิทธิ์ต่ำสุด)
   // ระบบมี 3 role: 'customer' (ลูกค้าทั่วไป), 'agent' (นายหน้า), 'admin' (ผู้ดูแลระบบ)
   const userRole = (token?.role as string) || 'customer';
+
+  // ---------------------------------------------------------------------
+  // 0. หน้าส่วนตัวของลูกค้า (นัดหมาย / จอง / แชท / โปรไฟล์ / บ้านที่บันทึก)
+  // ยังไม่ login -> พาไปหน้า login พร้อมจำหน้าเดิมไว้ใน callbackUrl (login เสร็จกลับมาหน้าเดิม)
+  // เดิมไม่ได้กันไว้ คนไม่ login เข้าได้แต่เห็นหน้าเปล่า (BUG-24)
+  // ---------------------------------------------------------------------
+  if (CUSTOMER_PRIVATE_PATHS.some((p) => url.pathname === p || url.pathname.startsWith(p + '/')) && !isLoggedIn) {
+    const callbackUrl = url.pathname + url.search;
+    url.pathname = '/login';
+    url.search = `?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+    return NextResponse.redirect(url);
+  }
 
   // ---------------------------------------------------------------------
   // 1. ป้องกันหน้าของนายหน้า (Agent Pages) — เส้นทางที่ขึ้นต้นด้วย /agent
@@ -88,7 +103,11 @@ export default async function proxy(request: NextRequest) {
 // - '/agent/:path*'     -> ทุกหน้าใต้ /agent เช่น /agent/dashboard, /agent/listings
 // - '/admin/:path*'     -> ทุกหน้าใต้ /admin เช่น /admin/users, /admin/login
 // - '/api/admin/:path*' -> ทุก API endpoint ใต้ /api/admin
+// - หน้าส่วนตัวของลูกค้า   -> ดู CUSTOMER_PRIVATE_PATHS
 // ============================================================================
 export const config = {
-  matcher: ['/agent/:path*', '/admin/:path*', '/api/admin/:path*'],
+  matcher: [
+    '/agent/:path*', '/admin/:path*', '/api/admin/:path*',
+    '/appointments/:path*', '/book-appointment/:path*', '/chat/:path*', '/profile/:path*', '/saved-properties/:path*', '/favorites/:path*',
+  ],
 };

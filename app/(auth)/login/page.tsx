@@ -49,7 +49,11 @@ export default function LoginPage() {
         } else if (role === 'agent') {
           window.location.href = '/agent/home';
         } else {
-          window.location.href = '/';
+          // ถ้าถูกพามาจากหน้าที่ต้อง login (proxy.ts ใส่ ?callbackUrl= มาให้) → กลับไปหน้าเดิม
+          // รับเฉพาะ path ภายในเว็บเรา (ขึ้นต้น / แต่ไม่ใช่ // หรือ /\) กันการพาไปเว็บอื่น
+          const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl');
+          const isSafe = !!callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') && !callbackUrl.startsWith('/\\');
+          window.location.href = isSafe ? callbackUrl : '/';
         }
       }
     } catch {
