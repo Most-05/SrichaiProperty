@@ -7,6 +7,13 @@ import { resolveProPlan } from "@/lib/pro"; // แปลงรอบบิล (m
 import fs from "fs"; // จัดการไฟล์สลิปการโอนเงินที่อัปโหลด
 import path from "path"; // จัดการเส้นทางไฟล์สลิปที่บันทึกไว้บนเซิร์ฟเวอร์
 
+// ประเภทรูปสลิปที่รับ → นามสกุลไฟล์ที่ระบบตั้งเอง (ห้ามใช้นามสกุลจากชื่อไฟล์ของผู้ใช้ กันอัปโหลด .html แล้วสคริปต์ทำงาน)
+const SLIP_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+};
+
 async function getUser(email: string) {
   return db.users.findUnique({ where: { email } });
 }
@@ -43,7 +50,8 @@ export async function POST(req: Request) {
     if (!slipFile || typeof slipFile === "string") {
       return NextResponse.json({ error: "กรุณาแนบไฟล์รูปภาพสลิป" }, { status: 400 });
     }
-    if (!slipFile.type.startsWith("image/")) {
+    const slipExt = SLIP_EXTENSIONS[slipFile.type];
+    if (!slipExt) {
       return NextResponse.json({ error: "รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP)" }, { status: 400 });
     }
     if (slipFile.size > 5 * 1024 * 1024) {
@@ -57,7 +65,7 @@ export async function POST(req: Request) {
     // บันทึกไฟล์ลง public/uploads/
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     fs.mkdirSync(uploadDir, { recursive: true });
-    const filename = `slip_${user.id.substring(0, 8)}_${Date.now()}${path.extname(slipFile.name) || ".png"}`;
+    const filename = `slip_${user.id.substring(0, 8)}_${Date.now()}${slipExt}`;
     fs.writeFileSync(path.join(uploadDir, filename), Buffer.from(await slipFile.arrayBuffer()));
     const slipUrl = `/uploads/${filename}`;
 
