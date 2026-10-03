@@ -20,7 +20,7 @@ const notifySync = (userId: string) =>
     .catch(err => console.error("Pusher trigger error (notifications-changed):", err));
 
 // GET: ดึงรายการแจ้งเตือนของผู้ใช้ที่ล็อกอินอยู่
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = (await getServerSession(authOptions)) as SessionUser | null;
     if (!session?.user?.email) {
@@ -41,10 +41,14 @@ export async function GET() {
       console.error("checkAndSendAppointmentReminders error:", err);
     });
 
+    const { searchParams } = new URL(req.url);
+    const limitParam = searchParams.get("limit");
+    const take = limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100) : 50;
+
     const notifications = await db.notifications.findMany({
       where: { user_id: user.id },
       orderBy: { created_at: "desc" },
-      take: 20
+      take
     });
 
     const unreadCount = await db.notifications.count({
@@ -71,7 +75,7 @@ export async function GET() {
   }
 }
 
-// PATCH: ทำเครื่องหมายอ่านแล้ว (Mark as read)
+// PATCH: ทำเครื่องหมายอ่านแล้ว / ยังไม่อ่าน (Mark as read / unread)
 export async function PATCH(req: Request) {
   try {
     const session = (await getServerSession(authOptions)) as SessionUser | null;
@@ -89,7 +93,7 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { notificationId, markAll } = body;
+    const { notificationId, markAll, isRead } = body;
 
     if (markAll) {
       await db.notifications.updateMany({
@@ -101,12 +105,13 @@ export async function PATCH(req: Request) {
     }
 
     if (notificationId) {
+      const targetReadState = isRead !== undefined ? Boolean(isRead) : true;
       await db.notifications.updateMany({
         where: { id: notificationId, user_id: user.id },
-        data: { is_read: true }
+        data: { is_read: targetReadState }
       });
       await notifySync(user.id);
-      return NextResponse.json({ success: true, message: "อ่านการแจ้งเตือนสำเร็จ" });
+      return NextResponse.json({ success: true, message: targetReadState ? "อ่านการแจ้งเตือนสำเร็จ" : "ตั้งค่าเป็นยังไม่ได้อ่านสำเร็จ" });
     }
 
     return NextResponse.json({ error: "กรุณาระบุ notificationId หรือ markAll" }, { status: 400 });

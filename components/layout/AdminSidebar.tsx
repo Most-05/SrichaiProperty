@@ -18,7 +18,8 @@ import {
   LogOut,
   Building2,
   Shield,
-  Settings
+  Settings,
+  Bell
 } from 'lucide-react';
 import NotificationBell from '@/components/common/NotificationBell';
 
@@ -162,6 +163,17 @@ export default function AdminSidebar() {
               >
                 <BarChart3 className={`w-4 h-4 ${isActive('/admin/analytics') ? 'text-white' : 'text-slate-400'}`} />
                 <span>สถิติและรายงาน</span>
+              </Link>
+
+              <Link
+                href="/admin/notifications"
+                onClick={() => setIsMobileOpen(false)}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg font-bold transition-all text-left ${
+                  isActive('/admin/notifications') ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'hover:bg-slate-800/70 text-slate-300'
+                }`}
+              >
+                <Bell className={`w-4 h-4 ${isActive('/admin/notifications') ? 'text-white' : 'text-slate-400'}`} />
+                <span>ศูนย์การแจ้งเตือน</span>
               </Link>
             </div>
 
