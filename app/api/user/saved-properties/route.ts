@@ -39,7 +39,8 @@ export async function GET() {
     if (error) return error;
 
     const saved = await db.saved_properties.findMany({
-      where: { user_id: userId },
+      // ซ่อนบ้านที่ไม่ได้เผยแพร่แล้ว (เช่น นายหน้าปิดประกาศ) ให้ตรงกับหน้าแรก/ค้นหา
+      where: { user_id: userId, properties: { status: { in: ["approved", "active"] } } },
       include: {
         properties: {
           include: {

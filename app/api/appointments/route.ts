@@ -230,6 +230,10 @@ export async function POST(request: Request) {
     // 2.3 ค้นหาข้อมูลบ้านหลังนี้ในฐานข้อมูล
     const property = await db.properties.findUnique({ where: { id: propertyId } });
     if (!property) return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์นี้" }, { status: 404 });
+    // จองได้เฉพาะประกาศที่อนุมัติแล้ว (กันจองประกาศที่รอตรวจ/ถูกตีกลับ/นายหน้าปิดแล้ว ผ่าน API ตรง)
+    if (!["approved", "active"].includes(property.status ?? "")) {
+      return NextResponse.json({ error: "ประกาศนี้ไม่เปิดรับนัดหมายแล้ว" }, { status: 400 });
+    }
 
     // 2.4 ตรวจสอบกฎธุรกิจ: ลูกค้า 1 คน จองค้างไว้ได้ทีละ 1 นัดต่อบ้าน 1 หลัง ( status: pending หรือ approved )
     const existing = await db.appointments.findFirst({
