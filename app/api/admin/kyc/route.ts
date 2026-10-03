@@ -75,7 +75,9 @@ export async function PATCH(req: Request) {
 
     const updatedUser = await db.users.update({
       where: { id: userId },
-      data: { status: dbStatus }
+      data: { status: dbStatus },
+      // ส่งกลับเฉพาะฟิลด์ที่ปลอดภัย — ห้ามส่งทั้งแถว (มี password_hash) กลับไปที่ browser (BUG-15)
+      select: { id: true, email: true, first_name: true, last_name: true, role_id: true, status: true }
     });
 
     // ส่ง In-app Notification แจ้งเตือนผลตรวจไปยังนายหน้า
