@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import NotificationBell from '@/components/common/NotificationBell';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 import {
   Home,
   Building2,
@@ -21,6 +22,8 @@ import {
 export default function AgentNavbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  // แสดงกระดิ่งแค่ชิ้นเดียวต่อหน้า (ตามขนาดจอ) — เดิม render 2 ชิ้น (จอใหญ่ + มือถือ) ซ่อนด้วย CSS แต่ทำงานทั้งคู่ → toast ซ้ำ 2 ครั้ง (BUG-19)
+  const isDesktop = useIsDesktop();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
 
@@ -137,7 +140,7 @@ export default function AgentNavbar() {
 
           {/* Notifications, Profile & Logout */}
           <div className="flex items-center gap-3">
-            <NotificationBell />
+            {isDesktop && <NotificationBell />}
             <Link 
               href="/agent/profile" 
               title="จัดการโปรไฟล์ของฉัน"
@@ -175,7 +178,7 @@ export default function AgentNavbar() {
 
         {/* Mobile Header Actions (< lg) */}
         <div className="flex items-center gap-2 lg:hidden">
-          <NotificationBell />
+          {!isDesktop && <NotificationBell />}
 
           <button
             type="button"

@@ -21,10 +21,13 @@ import {
   Settings
 } from 'lucide-react';
 import NotificationBell from '@/components/common/NotificationBell';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 
 export default function AdminSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  // แสดงกระดิ่งแค่ชิ้นเดียวต่อหน้า (ตามขนาดจอ) — เดิม render 2 ชิ้น (จอใหญ่ + มือถือ) ซ่อนด้วย CSS แต่ทำงานทั้งคู่ → toast ซ้ำ 2 ครั้ง (BUG-19)
+  const isDesktop = useIsDesktop();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [counts, setCounts] = useState({
     pending: 0,
@@ -73,7 +76,7 @@ export default function AdminSidebar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <NotificationBell theme="dark" align="right" />
+          {!isDesktop && <NotificationBell theme="dark" align="right" />}
           <button 
             type="button"
             onClick={() => setIsMobileOpen(!isMobileOpen)}
@@ -119,7 +122,7 @@ export default function AdminSidebar() {
             </div>
 
             <div className="flex items-center gap-1">
-              <NotificationBell theme="dark" align="left" />
+              {isDesktop && <NotificationBell theme="dark" align="left" />}
               <button
                 type="button"
                 onClick={() => setIsMobileOpen(false)}
