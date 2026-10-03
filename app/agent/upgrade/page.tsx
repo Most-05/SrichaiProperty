@@ -363,7 +363,7 @@ export default function UpgradePage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
               />

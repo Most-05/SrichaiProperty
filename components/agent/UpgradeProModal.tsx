@@ -104,7 +104,7 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
           <input
             type="file"
             id="pro-slip-input"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             className="hidden"
             onChange={e => setSlipFile(e.target.files?.[0] || null)}
           />
