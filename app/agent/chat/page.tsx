@@ -120,11 +120,24 @@ function AgentChatContent() {
 
   // เชื่อมต่อ Pusher และ subscribe channel ของห้องแชทที่กำลังเปิดอยู่ (ยืนยันสิทธิ์ผ่าน /api/pusher/auth
   // ด้วย NextAuth session cookie โดยอัตโนมัติ ไม่ต้องขอ JWT token เองแบบ Socket.io เดิม)
+  // ข้อความใหม่เข้าห้องที่เปิดอยู่ → ทำเครื่องหมายอ่านแล้วก่อน แล้วค่อยโหลดรายการใหม่
+  // เดิมเรียกแค่ fetchChatData (อ่านแล้วถูกตั้งเฉพาะตอนกดเปิดห้อง) → ห้องที่เปิดค้างอยู่ขึ้น "ยังไม่อ่าน 1" ค้าง (BUG-19)
+  const handleNewMessage = useCallback(() => {
+    if (!selectedSessionId) { fetchChatData(); return; }
+    fetch('/api/chat/messages', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: selectedSessionId })
+    })
+      .catch(err => console.error('Mark read failed:', err))
+      .finally(() => fetchChatData());
+  }, [selectedSessionId, fetchChatData]);
+
   const { isTyping, connectionError, sendTyping } = useChatRealtime({
     enabled: status === 'authenticated',
     sessionId: selectedSessionId,
     currentUserId,
-    onNewMessage: fetchChatData,
+    onNewMessage: handleNewMessage,
     onMessagesRead: fetchChatData
   });
 
