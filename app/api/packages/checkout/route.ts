@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับบันทึกสถานะแพ็กเกจและธุรกรรม
 import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนเกี่ยวกับการชำระเงิน/อนุมัติแพ็กเกจ
 import { resolveProPlan } from "@/lib/pro"; // แปลงรอบบิล (monthly/yearly) เป็นราคา + จำนวนวัน
+import { savePaymentOwner } from "@/lib/services/paymentOwnerService"; // บันทึกว่าสลิปนี้เป็นของนายหน้าคนไหน (BUG-02)
 import fs from "fs"; // จัดการไฟล์สลิปการโอนเงินที่อัปโหลด
 import path from "path"; // จัดการเส้นทางไฟล์สลิปที่บันทึกไว้บนเซิร์ฟเวอร์
 
@@ -74,22 +75,28 @@ export async function POST(req: Request) {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + plan.days);
 
-    const order = await db.listing_package_orders.create({
-      data: { package_id: plan.packageId, start_date: startDate, end_date: endDate, status: "pending" }
-    });
-    const transaction = await db.payment_transactions.create({
-      data: { order_id: order.id, amount: plan.amount, payment_method: "PromptPay", slip_url: slipUrl, status: "pending" }
+    // order + transaction + เจ้าของสลิป บันทึกพร้อมกัน (สำเร็จทั้งหมดหรือไม่บันทึกเลย)
+    // ตาราง order/transaction ไม่มีคอลัมน์ผู้จ่าย → เก็บเจ้าของสลิปแยกไว้ด้วย savePaymentOwner (BUG-02)
+    const { order, transaction } = await db.$transaction(async (txDb) => {
+      const order = await txDb.listing_package_orders.create({
+        data: { package_id: plan.packageId, start_date: startDate, end_date: endDate, status: "pending" }
+      });
+      const transaction = await txDb.payment_transactions.create({
+        data: { order_id: order.id, amount: plan.amount, payment_method: "PromptPay", slip_url: slipUrl, status: "pending" }
+      });
+      await savePaymentOwner(transaction.id, user.id, txDb);
+      return { order, transaction };
     });
 
     // แจ้งเตือน admin + agent
-    // ⚠️ content ต้องมีคีย์ txId/agentId/name/email/billing/amount เพื่อให้หน้า /admin/payments ดึงข้อมูลนายหน้าได้แม่นยำ
+    // ข้อความเป็นภาษาไทยอ่านง่ายได้แล้ว — หน้า /admin/payments ไม่ได้แกะข้อมูลจากข้อความนี้อีก (ใช้ paymentOwnerService)
     const agentName = `${user.first_name} ${user.last_name}`.trim();
     const admins = await db.users.findMany({ where: { role_id: "admin" }, select: { id: true } });
 
     await Promise.allSettled([
       notifyUsers(admins.map(admin => admin.id), {
         title: "แจ้งชำระเงินค่าธรรมเนียมแพ็กเกจ Verified PRO",
-        content: `txId:${transaction.id} agentId:${user.id} name:${agentName} email:${user.email} billing:${billingCycle} amount:${plan.amount}`,
+        content: `นายหน้า ${agentName} (${user.email}) ส่งหลักฐานการชำระเงิน ${plan.amount.toLocaleString()} บาท (${plan.label}) รอการตรวจสอบสลิป`,
         type: "payment",
         linkUrl: "/admin/payments"
       }),

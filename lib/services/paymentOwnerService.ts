@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 
 /**
  * ==============================================================================
@@ -28,9 +29,12 @@ export interface PaymentOwner {
   agentEmail: string;
 }
 
-/** บันทึกว่าสลิปรายการนี้เป็นของนายหน้าคนไหน (เรียกตอนนายหน้าส่งสลิป) */
-export async function savePaymentOwner(transactionId: string, agentId: string) {
-  await db.system_configs.upsert({
+/**
+ * บันทึกว่าสลิปรายการนี้เป็นของนายหน้าคนไหน (เรียกตอนนายหน้าส่งสลิป)
+ * ส่ง client ของ db.$transaction มาได้ เพื่อให้บันทึกพร้อมกับ order/transaction
+ */
+export async function savePaymentOwner(transactionId: string, agentId: string, client: Prisma.TransactionClient = db) {
+  await client.system_configs.upsert({
     where: { key: ownerKey(transactionId) },
     create: { key: ownerKey(transactionId), value: agentId, description: 'เจ้าของสลิป Verified PRO (รหัสนายหน้าที่จ่าย)' },
     update: { value: agentId, updated_at: new Date() }
