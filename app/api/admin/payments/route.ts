@@ -70,8 +70,12 @@ export async function PATCH(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { transactionId, action, agentId, reason, note } = body;
+  // ไม่รับ agentId จากหน้าเว็บแล้ว — server หาเจ้าของสลิปเอง (ด้านล่าง) กันส่งรหัสผิดคน/ค่าว่างมา
+  const { transactionId, action, reason, note } = body;
   if (!transactionId || !action) return NextResponse.json({ error: "ข้อมูลไม่ครบ" }, { status: 400 });
+  if (!["approve", "reject", "save_note"].includes(action)) {
+    return NextResponse.json({ error: "action ไม่ถูกต้อง" }, { status: 400 });
+  }
 
   // 1. กรณีบันทึกโน้ตภายในของแอดมิน (Internal Admin Note)
   if (action === "save_note") {
@@ -103,29 +107,47 @@ export async function PATCH(req: Request) {
   // 2. กรณีอนุมัติ / ปฏิเสธสลิป
   const isApprove = action === "approve";
 
-  const tx = await db.payment_transactions.update({
+  const existing = await db.payment_transactions.findUnique({
     where: { id: transactionId },
-    data: { status: isApprove ? "approved" : "rejected" }
+    select: { id: true, slip_url: true, status: true, order_id: true, amount: true }
   });
+  if (!existing) return NextResponse.json({ error: "ไม่พบรายการชำระเงินนี้" }, { status: 404 });
 
-  if (tx.order_id && isApprove) {
-    // อนุมัติ: เปลี่ยนสถานะ order เป็น "active" (DB constraint รับแค่ pending/active/expired)
-    await db.listing_package_orders.update({
-      where: { id: tx.order_id },
-      data: { status: "active" }
-    });
+  // ตรวจได้ครั้งเดียว — เดิมกดอนุมัติซ้ำได้ (เช่น ดับเบิลคลิก) → วัน PRO ถูกต่อเพิ่มซ้ำ
+  if (existing.status !== "pending") {
+    return NextResponse.json(
+      { error: `รายการนี้ถูก${existing.status === "approved" ? "อนุมัติ" : "ปฏิเสธ"}ไปแล้ว` },
+      { status: 409 }
+    );
   }
-  // ปฏิเสธ: ไม่ต้องอัปเดต order เพราะนายหน้าต้องส่งสลิปใหม่ — order ยังคง "pending" ต่อไป
+
+  // หาเจ้าของสลิปฝั่ง server (system_configs → ข้อความแจ้งเตือนรูปแบบเดิม → ชื่อไฟล์สลิป)
+  const owner = (await resolvePaymentOwners([existing])).get(existing.id);
+  const agentId = owner?.agentId ?? null;
+
+  // เดิม: หาเจ้าของไม่เจอ → ข้ามการอัปเกรดเงียบๆ แต่ตอบ success → แอดมินเข้าใจว่าสำเร็จ (BUG-02)
+  // ใหม่: ไม่อนุมัติ และบอกแอดมินตรงๆ (ไม่มีอะไรถูกเปลี่ยน)
+  if (isApprove && !agentId) {
+    return NextResponse.json(
+      { error: "หาไม่พบว่าสลิปนี้เป็นของนายหน้าคนไหน จึงยังอนุมัติไม่ได้ (ยังไม่มีการเปลี่ยนแปลงใดๆ)" },
+      { status: 422 }
+    );
+  }
+
+  if (!isApprove) {
+    // ปฏิเสธ: ไม่ต้องอัปเดต order เพราะนายหน้าต้องส่งสลิปใหม่ — order ยังคง "pending" ต่อไป
+    await db.payment_transactions.update({ where: { id: existing.id }, data: { status: "rejected" } });
+  }
 
   if (isApprove && agentId) {
     // ตรวจสอบว่าเป็นรอบรายเดือน (+30 วัน) หรือรายปี (+365 วัน) จาก package_id/ยอดเงิน
-    const txOrder = tx.order_id
+    const txOrder = existing.order_id
       ? await db.listing_package_orders.findUnique({
-          where: { id: tx.order_id },
+          where: { id: existing.order_id },
           select: { package_id: true }
         })
       : null;
-    const plan = resolveProPlanByAmount(Number(tx.amount), txOrder?.package_id ?? null);
+    const plan = resolveProPlanByAmount(Number(existing.amount), txOrder?.package_id ?? null);
 
     // คำนวณวันหมดอายุใหม่แบบทบวัน (ไม่ตัดวันที่เหลือทิ้ง)
     const currentUser = await db.users.findUnique({
@@ -135,11 +157,24 @@ export async function PATCH(req: Request) {
     const newExpiry = computeExtendedExpiry(currentUser?.plan_type, currentUser?.plan_expired_at, plan.days);
     const newExpiryText = newExpiry.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 
+    // สถานะสลิป + order + สิทธิ์ PRO เปลี่ยนพร้อมกัน (สำเร็จทั้งหมดหรือไม่เปลี่ยนเลย)
+    // updateMany + status: "pending" กันแอดมิน 2 คนกดอนุมัติพร้อมกัน → ต่อวันซ้ำ
+    const approved = await db.$transaction(async (txDb) => {
+      const { count } = await txDb.payment_transactions.updateMany({
+        where: { id: existing.id, status: "pending" },
+        data: { status: "approved" }
+      });
+      if (count === 0) return false;
+      if (existing.order_id) {
+        // DB constraint ของ order รับแค่ pending/active/expired
+        await txDb.listing_package_orders.update({ where: { id: existing.order_id }, data: { status: "active" } });
+      }
+      await txDb.users.update({ where: { id: agentId }, data: { plan_type: "pro", plan_expired_at: newExpiry } });
+      return true;
+    });
+    if (!approved) return NextResponse.json({ error: "รายการนี้ถูกตรวจไปแล้ว" }, { status: 409 });
+
     await Promise.all([
-      db.users.update({
-        where: { id: agentId },
-        data: { plan_type: "pro", plan_expired_at: newExpiry }
-      }),
       notifyUser({
         userId: agentId,
         title: "ยินดีด้วย! อนุมัติสิทธิ์ Verified PRO สำเร็จ",
