@@ -399,7 +399,7 @@ export default function AdminPaymentsPage() {
               <table className="w-full text-xs text-left min-w-[760px]">
                 <thead className="border-b border-slate-200 bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider">
                   <tr>
-                    <th className="px-5 py-3.5">นายหน้าผู้โอน</th>
+                    <th className="px-5 py-3.5" title="บัญชีนายหน้าที่ล็อกอินส่งสลิป (ชื่อบนสลิปอาจเป็นคนอื่น เช่น คนในครอบครัวโอนให้)">ส่งโดย (บัญชีนายหน้า)</th>
                     <th className="px-5 py-3.5">ยอดเงินชำระ</th>
                     <th className="px-5 py-3.5">หลักฐานสลิป</th>
                     <th className="px-5 py-3.5">โน้ตตรวจสอบภายใน</th>
