@@ -4,24 +4,12 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับตาราง payment_transactions และการแจ้งเตือน
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนไปยังตัวแทนเมื่ออนุมัติ/ปฏิเสธการชำระเงิน
 import { resolveProPlanByAmount, computeExtendedExpiry } from "@/lib/pro"; // คำนวณแพ็กเกจ + วันหมดอายุแบบทบวัน
+import { resolvePaymentOwners } from "@/lib/services/paymentOwnerService"; // หาว่าสลิปไหนเป็นของนายหน้าคนไหน (BUG-02)
 
 async function getAdminSession() {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== "admin") return null;
   return session;
-}
-
-/**
- * แยกข้อมูลนายหน้าออกจาก content ของ notification
- * รูปแบบ: `txId:... agentId:... name:... email:... billing:... amount:...`
- * ใช้ lookahead หยุดที่คีย์ถัดไป เพื่อรองรับชื่อ-นามสกุลภาษาไทยที่มีเว้นวรรค
- */
-function parseNoti(content: string) {
-  const get = (key: string) => {
-    const match = content.match(new RegExp(`${key}:(.+?)(?=\\s+[A-Za-z]+:|$)`));
-    return match ? match[1].trim() : "";
-  };
-  return { txId: get("txId"), agentId: get("agentId"), name: get("name"), email: get("email") };
 }
 
 // GET: รายการชำระเงิน Verified PRO พร้อมโน้ตภายใน
@@ -31,14 +19,10 @@ export async function GET(req: Request) {
 
   const status = new URL(req.url).searchParams.get("status") || "pending";
 
-  const [transactions, notis, notesConfigs] = await Promise.all([
+  const [transactions, notesConfigs] = await Promise.all([
     db.payment_transactions.findMany({
       where: status === "all" ? {} : { status },
       orderBy: { created_at: "desc" }
-    }),
-    db.notifications.findMany({
-      where: { type: "payment" },
-      select: { content: true }
     }),
     db.system_configs.findMany({
       where: {
@@ -49,11 +33,8 @@ export async function GET(req: Request) {
     })
   ]);
 
-  // สร้าง Map: txId -> agent info จาก notification
-  const agentMap = new Map(notis.map(n => {
-    const p = parseNoti(n.content);
-    return [p.txId, { agentId: p.agentId, agentName: p.name, agentEmail: p.email }];
-  }));
+  // Map: txId -> เจ้าของสลิป (เดิมแกะจากข้อความแจ้งเตือน → ลบแจ้งเตือนแล้วกลายเป็น "ไม่ระบุ" — BUG-02)
+  const agentMap = await resolvePaymentOwners(transactions);
 
   // สร้าง Map: txId -> internal note
   const noteMap = new Map(notesConfigs.map(c => {
