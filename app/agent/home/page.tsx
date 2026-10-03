@@ -86,6 +86,8 @@ export default function AgentHomePage() {
     pendingAptsCount: number;
     pendingApprovalCount?: number;
     isPro?: boolean;
+    planType?: string;
+    planExpiredAt?: string | null;
     totalViews: number;
     pendingChatCount: number;
     agentProfile?: AgentProfileData;
@@ -95,6 +97,8 @@ export default function AgentHomePage() {
   } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  // เวลาปัจจุบัน (timestamp) — ตั้งใน effect เพื่อไม่ให้เรียก Date.now() ระหว่าง render
+  const [nowTs, setNowTs] = useState(0);
 
   useEffect(() => {
     document.title = 'หน้าหลักนายหน้า | Srichai Property';
@@ -109,6 +113,7 @@ export default function AgentHomePage() {
 
     const timer = setTimeout(() => {
       setCurrentDate(formattedDate);
+      setNowTs(Date.now());
     }, 0);
 
     if (status === 'authenticated') {
@@ -207,7 +212,6 @@ export default function AgentHomePage() {
   // จำแนกรายการนัดหมาย (API ส่งมาเฉพาะนัดที่ยังจองอยู่ตั้งแต่วันนี้ + นัดที่เสร็จล่าสุด)
   const isActive = (a: AppointmentData) => ACTIVE_STATUSES.includes(a.rawStatus || '');
   const todayAptsList = appointments.filter(a => a.date === todayKey && isActive(a));
-  const pendingAptsList = appointments.filter(a => a.rawStatus === 'pending');
   const upcomingAptsList = appointments.filter(a => isActive(a) && a.date >= todayKey);
   const completedAptsList = appointments.filter(a => a.rawStatus === 'completed');
 
@@ -223,6 +227,11 @@ export default function AgentHomePage() {
   const lowSlotProperties = dbData?.lowSlotProperties || [];
   const propertiesCount = dbData?.propertiesCount || 0;
   const isPro = Boolean(dbData?.isPro);
+  const planType = dbData?.planType || 'basic';
+  const planExpiredAt = dbData?.planExpiredAt || null;
+  const daysRemaining = planExpiredAt && nowTs
+    ? Math.ceil((new Date(planExpiredAt).getTime() - nowTs) / (1000 * 60 * 60 * 24))
+    : null;
   const quotaRemaining = Math.max(0, FREE_LISTING_QUOTA - propertiesCount);
   const quotaPercentage = isPro ? 100 : Math.min(100, Math.round((propertiesCount / FREE_LISTING_QUOTA) * 100));
 
@@ -314,6 +323,57 @@ export default function AgentHomePage() {
 
         {/* แบนเนอร์แจ้งเตือนประกาศรออนุมัติ (ถ้ามี) */}
         <PendingApprovalBanner pendingCount={pendingApprovalCount} />
+
+        {/* แบนเนอร์เตือนวันหมดอายุ Verified PRO (เหลือ 1-7 วัน) */}
+        {isPro && daysRemaining != null && daysRemaining >= 1 && daysRemaining <= 7 && (
+          <section className={`rounded-2xl p-4 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+            daysRemaining <= 3 ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className={`w-5 h-5 shrink-0 ${daysRemaining <= 3 ? 'text-red-600' : 'text-amber-600'}`} />
+              <div>
+                <p className="font-extrabold text-sm">
+                  {daysRemaining <= 3
+                    ? `ด่วน! สิทธิ์ Verified PRO จะหมดอายุในอีก ${daysRemaining} วัน`
+                    : `สิทธิ์ Verified PRO ของคุณจะหมดอายุในอีก ${daysRemaining} วัน`}
+                </p>
+                <p className="text-xs font-semibold mt-0.5">
+                  กรุณาต่ออายุล่วงหน้าเพื่อการใช้งานประกาศอย่างต่อเนื่อง
+                  {daysRemaining <= 3 && ` (หากหมดอายุ โควตาประกาศจะปรับกลับเป็น Basic ${FREE_LISTING_QUOTA} รายการ)`}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/agent/upgrade"
+              className={`shrink-0 px-4 py-2 rounded-xl font-black text-xs transition ${
+                daysRemaining <= 3 ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+              }`}
+            >
+              ต่ออายุเลย
+            </Link>
+          </section>
+        )}
+
+        {/* แบนเนอร์เชิญต่ออายุเมื่อสิทธิ์ PRO หมดอายุแล้ว */}
+        {planType === 'pro' && !isPro && (
+          <section className="rounded-2xl p-4 border bg-slate-900 border-slate-800 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 shrink-0 text-amber-400" />
+              <div>
+                <p className="font-extrabold text-sm text-amber-400">สิทธิ์ Verified PRO ของคุณหมดอายุแล้ว</p>
+                <p className="text-xs font-semibold mt-0.5 text-slate-300">
+                  โควตาประกาศปรับกลับเป็น Basic {FREE_LISTING_QUOTA} รายการ กรุณาต่ออายุเพื่อกลับมาใช้สิทธิ์ไม่จำกัด
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/agent/upgrade"
+              className="shrink-0 px-4 py-2 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 transition"
+            >
+              ต่ออายุสิทธิ์
+            </Link>
+          </section>
+        )}
 
         {/* 2. โครงสร้างหลักแบบ 2 คอลัมน์ (Asymmetrical Pro Layout: ซ้าย 8 / ขวา 4) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

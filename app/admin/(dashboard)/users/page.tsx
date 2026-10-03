@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Badge from '@/components/ui/Badge';
 import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { isProActive, proDaysRemaining } from '@/lib/pro';
 import { toast } from '@/components/ui/toast';
 import {
   Users,
@@ -21,7 +22,8 @@ import {
   Download,
   RefreshCw,
   Mail,
-  Eye
+  Eye,
+  Crown
 } from 'lucide-react';
 import UserProfileModal from '@/components/admin/UserProfileModal';
 
@@ -34,6 +36,8 @@ interface UserData {
   profile_image: string | null;
   role_id: string;
   status: string;
+  plan_type: string | null;
+  plan_expired_at: string | null;
   created_at: string;
   noShowCount: number; // จำนวนครั้งที่เคยเบี้ยวนัด (no_show) สะสม
 }
@@ -56,6 +60,7 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
+  const [grantingId, setGrantingId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -134,6 +139,31 @@ export default function AdminUsersPage() {
     } catch (err) {
       console.error(err);
       toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล');
+    }
+  };
+
+  // มอบ / ขยาย สิทธิ์ Verified PRO โดยตรงจากฝั่งแอดมิน (+30 หรือ +365 วัน)
+  const handleGrantPro = async (user: UserData, days: number) => {
+    const label = days === 365 ? 'รายปี (+365 วัน)' : 'รายเดือน (+30 วัน)';
+    if (!confirm(`ยืนยันมอบสิทธิ์ Verified PRO ${label} ให้ "${user.first_name} ${user.last_name}" ใช่หรือไม่?`)) return;
+    setGrantingId(user.id);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, grantProDays: days })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`มอบสิทธิ์ Verified PRO ${label} เรียบร้อยแล้ว`);
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'ไม่สามารถมอบสิทธิ์ได้');
+      }
+    } catch {
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    } finally {
+      setGrantingId(null);
     }
   };
 
@@ -308,13 +338,14 @@ export default function AdminUsersPage() {
 
           {/* Table */}
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left min-w-[760px]">
+            <table className="w-full text-left min-w-[900px]">
               <thead className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-3.5">ผู้ใช้งาน</th>
                   <th className="px-6 py-3.5">ช่องทางติดต่อ</th>
                   <th className="px-6 py-3.5">บทบาท</th>
                   <th className="px-6 py-3.5 text-center">สถานะ</th>
+                  <th className="px-6 py-3.5 text-center">แพ็กเกจ</th>
                   <th className="px-6 py-3.5 text-center">ไม่มาตามนัด (No-show)</th>
                   <th className="px-6 py-3.5 text-right">การจัดการ</th>
                 </tr>
@@ -322,14 +353,14 @@ export default function AdminUsersPage() {
               <tbody className="divide-y divide-slate-100 text-xs">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="py-16 text-center text-slate-500 font-bold">
+                    <td colSpan={7} className="py-16 text-center text-slate-500 font-bold">
                       <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                       กำลังโหลดข้อมูลผู้ใช้...
                     </td>
                   </tr>
                 ) : paginatedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-16 text-center text-slate-500 font-medium">
+                    <td colSpan={7} className="py-16 text-center text-slate-500 font-medium">
                       ไม่พบข้อมูลผู้ใช้งานที่ตรงกับเงื่อนไขการค้นหา
                     </td>
                   </tr>
@@ -397,6 +428,26 @@ export default function AdminUsersPage() {
                         <Badge status={user.status} />
                       </td>
                       <td className="px-6 py-4 text-center">
+                        {user.role_id === 'agent' ? (
+                          (() => {
+                            const proActive = isProActive(user.plan_type, user.plan_expired_at);
+                            const remaining = proDaysRemaining(user.plan_expired_at);
+                            return proActive ? (
+                              <span className="px-2.5 py-1 rounded-md text-[10px] font-black inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200">
+                                <Crown className="w-3 h-3" />
+                                Pro (เหลือ {remaining != null ? Math.max(0, remaining) : '∞'} วัน)
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-slate-100 text-slate-500 border border-slate-200">
+                                Basic
+                              </span>
+                            );
+                          })()
+                        ) : (
+                          <span className="text-slate-300">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
                         {user.role_id === 'customer' ? (
                           <span
                             className={`px-2.5 py-1 rounded-md text-[10px] font-black inline-block ${
@@ -442,12 +493,32 @@ export default function AdminUsersPage() {
                             </button>
                           )}
                           {user.role_id === 'agent' && (
-                            <Link
-                              href="/admin/kyc"
-                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-bold transition border border-slate-200"
-                            >
-                              ตรวจ KYC
-                            </Link>
+                            <>
+                              <button
+                                onClick={() => handleGrantPro(user, 30)}
+                                disabled={grantingId === user.id}
+                                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                title="มอบ/ขยายสิทธิ์ Verified PRO รายเดือน (+30 วัน)"
+                              >
+                                <Crown className="w-3.5 h-3.5" />
+                                <span>+30 วัน</span>
+                              </button>
+                              <button
+                                onClick={() => handleGrantPro(user, 365)}
+                                disabled={grantingId === user.id}
+                                className="bg-gradient-to-r from-purple-700 to-fuchsia-600 hover:opacity-90 text-amber-200 px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50 border border-amber-300/40"
+                                title="มอบ/ขยายสิทธิ์ Verified PRO รายปี (+365 วัน)"
+                              >
+                                <Crown className="w-3.5 h-3.5" />
+                                <span>+365 วัน</span>
+                              </button>
+                              <Link
+                                href="/admin/kyc"
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-bold transition border border-slate-200"
+                              >
+                                ตรวจ KYC
+                              </Link>
+                            </>
                           )}
                         </div>
                       </td>

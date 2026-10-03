@@ -1,7 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, Star, Phone, Home } from 'lucide-react';
+import { Check, Star, Phone, Home, BadgeCheck } from 'lucide-react';
 
 export interface Agent {
   id: string;
@@ -16,6 +16,7 @@ export interface Agent {
   phone: string;
   email: string;
   isVerified: boolean;
+  isPro?: boolean;
 }
 
 interface AgentCardProps {
@@ -43,6 +44,11 @@ export default function AgentCard({ agent }: AgentCardProps) {
 
       <div>
         <h3 className="font-extrabold text-slate-900 text-sm">{agent.name}</h3>
+        {agent.isPro && (
+          <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm">
+            <BadgeCheck className="w-3 h-3 shrink-0" /> Verified PRO
+          </span>
+        )}
         <p className="text-[10px] text-slate-400 font-medium mt-0.5">{agent.role}</p>
       </div>
 

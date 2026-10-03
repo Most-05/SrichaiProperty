@@ -5,6 +5,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { BadgeCheck } from 'lucide-react'; // ป้าย Verified PRO (ห้ามใช้อิโมจิ)
 import { Property } from '@/context/AppContext'; // กำหนดโครงสร้างข้อมูลอสังหาริมทรัพย์ที่แสดงในการ์ด
 
 // Props ที่รับเข้ามาจากคอมโพเนนต์แม่ (search/page.tsx)
@@ -97,7 +98,11 @@ export default function PropertyCard({ prop, isFav, toggleFavorite }: PropertyCa
 
       {/* ป้าย Badge สถานะ (พรีเมียม / แท็ก / ประเภททรัพย์) */}
       <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5">
-        {prop.isPremium ? (
+        {prop.isVerifiedPro ? (
+          <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black px-2.5 py-0.5 rounded text-[10px] tracking-wide shadow flex items-center gap-1">
+            <BadgeCheck className="w-3 h-3 shrink-0" /> Verified PRO
+          </span>
+        ) : prop.isPremium ? (
           <span className="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded text-[10px] tracking-wide shadow flex items-center gap-1">
             <StarIcon className="w-2.5 h-2.5" /> พรีเมียมพิเศษ
           </span>
@@ -179,10 +184,14 @@ export default function PropertyCard({ prop, isFav, toggleFavorite }: PropertyCa
           <div>
             <div className="text-[10px] font-bold text-slate-700 leading-none">{prop.agentName}</div>
             <div className={`text-[8px] font-semibold mt-0.5 uppercase tracking-wider flex items-center gap-1 ${
-              prop.isPremium ? 'text-amber-600 font-extrabold' : 'text-blue-600 font-medium'
+              prop.isVerifiedPro || prop.isPremium ? 'text-amber-600 font-extrabold' : 'text-blue-600 font-medium'
             }`}>
-              {prop.isPremium && <CrownIcon className="w-2.5 h-2.5" />}
-              {prop.isPremium ? 'Premium Agent' : 'Verified Agent'}
+              {prop.isVerifiedPro ? (
+                <BadgeCheck className="w-2.5 h-2.5 shrink-0" />
+              ) : prop.isPremium ? (
+                <CrownIcon className="w-2.5 h-2.5" />
+              ) : null}
+              {prop.isVerifiedPro ? 'Verified PRO Agent' : prop.isPremium ? 'Premium Agent' : 'Verified Agent'}
             </div>
           </div>
         </div>

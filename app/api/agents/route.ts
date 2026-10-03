@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับค้นหารายชื่อนายหน้าที่ได้รับการอนุมัติ
+import { isProActive } from '@/lib/pro'; // ตรวจสิทธิ์ Verified PRO ที่ยังไม่หมดอายุ
 
 export async function GET(req: Request) {
   try {
@@ -29,6 +30,8 @@ export async function GET(req: Request) {
         specialty_zone: true,
         specialty_type: true,
         is_verified: true,
+        plan_type: true,
+        plan_expired_at: true,
         created_at: true,
         properties: {
           select: { id: true }
@@ -71,7 +74,8 @@ export async function GET(req: Request) {
         location: agent.specialty_zone || "สงขลา / หาดใหญ่",
         phone: agent.phone || "08X-XXX-XXXX",
         email: agent.email,
-        isVerified: agent.is_verified ?? true
+        isVerified: agent.is_verified ?? true,
+        isPro: isProActive(agent.plan_type, agent.plan_expired_at)
       };
     });
 

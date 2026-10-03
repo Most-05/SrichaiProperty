@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"; // ดึงเซสชั�
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับตาราง payment_transactions และการแจ้งเตือน
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนไปยังตัวแทนเมื่ออนุมัติ/ปฏิเสธการชำระเงิน
+import { resolveProPlanByAmount, computeExtendedExpiry } from "@/lib/pro"; // คำนวณแพ็กเกจ + วันหมดอายุแบบทบวัน
 
 async function getAdminSession() {
   const session = await getServerSession(authOptions);
@@ -10,8 +11,16 @@ async function getAdminSession() {
   return session;
 }
 
+/**
+ * แยกข้อมูลนายหน้าออกจาก content ของ notification
+ * รูปแบบ: `txId:... agentId:... name:... email:... billing:... amount:...`
+ * ใช้ lookahead หยุดที่คีย์ถัดไป เพื่อรองรับชื่อ-นามสกุลภาษาไทยที่มีเว้นวรรค
+ */
 function parseNoti(content: string) {
-  const get = (key: string) => content.match(new RegExp(`${key}:([\\w@.\\-]+)`))?.[1] ?? "";
+  const get = (key: string) => {
+    const match = content.match(new RegExp(`${key}:(.+?)(?=\\s+[A-Za-z]+:|$)`));
+    return match ? match[1].trim() : "";
+  };
   return { txId: get("txId"), agentId: get("agentId"), name: get("name"), email: get("email") };
 }
 
@@ -118,28 +127,44 @@ export async function PATCH(req: Request) {
     data: { status: isApprove ? "approved" : "rejected" }
   });
 
-  if (tx.order_id) {
+  if (tx.order_id && isApprove) {
+    // อนุมัติ: เปลี่ยนสถานะ order เป็น "active" (DB constraint รับแค่ pending/active/expired)
     await db.listing_package_orders.update({
       where: { id: tx.order_id },
-      data: { status: isApprove ? "paid" : "rejected" }
+      data: { status: "active" }
     });
   }
+  // ปฏิเสธ: ไม่ต้องอัปเดต order เพราะนายหน้าต้องส่งสลิปใหม่ — order ยังคง "pending" ต่อไป
 
   if (isApprove && agentId) {
-    const expDate = new Date();
-    expDate.setDate(expDate.getDate() + 30);
+    // ตรวจสอบว่าเป็นรอบรายเดือน (+30 วัน) หรือรายปี (+365 วัน) จาก package_id/ยอดเงิน
+    const txOrder = tx.order_id
+      ? await db.listing_package_orders.findUnique({
+          where: { id: tx.order_id },
+          select: { package_id: true }
+        })
+      : null;
+    const plan = resolveProPlanByAmount(Number(tx.amount), txOrder?.package_id ?? null);
+
+    // คำนวณวันหมดอายุใหม่แบบทบวัน (ไม่ตัดวันที่เหลือทิ้ง)
+    const currentUser = await db.users.findUnique({
+      where: { id: agentId },
+      select: { plan_type: true, plan_expired_at: true }
+    });
+    const newExpiry = computeExtendedExpiry(currentUser?.plan_type, currentUser?.plan_expired_at, plan.days);
+    const newExpiryText = newExpiry.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 
     await Promise.all([
       db.users.update({
         where: { id: agentId },
-        data: { plan_type: "pro", plan_expired_at: expDate }
+        data: { plan_type: "pro", plan_expired_at: newExpiry }
       }),
       notifyUser({
         userId: agentId,
         title: "ยินดีด้วย! อนุมัติสิทธิ์ Verified PRO สำเร็จ",
-        content: "สลิปการชำระเงินได้รับการยืนยันเรียบร้อยแล้ว บัญชีของคุณได้รับการปรับเป็น Verified PRO (ระยะเวลา 30 วัน)",
+        content: `สลิปการชำระเงินได้รับการยืนยันเรียบร้อยแล้ว บัญชีของคุณได้รับการปรับเป็น Verified PRO (${plan.label}) หมดอายุวันที่ ${newExpiryText}`,
         type: "package",
-        linkUrl: "/agent/packages"
+        linkUrl: "/agent/upgrade"
       }).catch(() => {})
     ]);
   } else if (!isApprove && agentId) {
@@ -149,7 +174,7 @@ export async function PATCH(req: Request) {
       title: "แจ้งผลการตรวจสอบสลิปการชำระเงิน",
       content: `สลิปการชำระเงินของคุณไม่ผ่านการอนุมัติ${reasonDetail} กรุณาตรวจสอบและอัปโหลดหลักฐานใหม่อีกครั้ง`,
       type: "package",
-      linkUrl: "/agent/packages"
+      linkUrl: "/agent/upgrade"
     }).catch(() => {});
   }
 

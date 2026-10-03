@@ -40,8 +40,8 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
       const compressed = await compressImage(slipFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
       const formData = new FormData();
       formData.append('slip', compressed.file);
+      formData.append('billingCycle', 'monthly');
       formData.append('packageId', '1');
-      formData.append('amount', '599');
 
       const res = await fetch('/api/packages/checkout', {
         method: 'POST',
@@ -83,8 +83,8 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
 
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center space-y-1">
           <span className="text-[10px] font-black text-amber-700 uppercase">ค่าบริการแพ็กเกจ</span>
-          <p className="text-2xl font-black text-slate-900">฿ 599 <span className="text-xs font-normal text-slate-500">/ 30 วัน</span></p>
-          <p className="text-[10px] text-slate-500 font-medium">สิทธิ์ลงประกาศไม่จำกัด + โควต้าดันโพสต์ฟรี 30 วัน</p>
+          <p className="text-2xl font-black text-slate-900">฿ 299 <span className="text-xs font-normal text-slate-500">/ 30 วัน</span></p>
+          <p className="text-[10px] text-slate-500 font-medium">สิทธิ์ลงประกาศไม่จำกัด + ดันประกาศขึ้นอันดับแรกอัตโนมัติ</p>
         </div>
 
         <div className="space-y-2 border-t pt-3">
@@ -93,7 +93,7 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
             <p className="text-xs font-bold text-amber-400">สแกน QR Code ชำระเงิน</p>
             <div className="w-40 h-40 bg-white mx-auto rounded-xl flex items-center justify-center p-2 shadow-inner">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PROMPTPAY_599_SRICHAI" alt="PromptPay QR" className="w-full h-full object-contain" />
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PROMPTPAY_299_SRICHAI" alt="PromptPay QR" className="w-full h-full object-contain" />
             </div>
             <p className="text-[10px] text-slate-300 font-medium">บจก. ศรีชัย พร็อพเพอร์ตี้ (ธ.กสิกรไทย 012-3-45678-9)</p>
           </div>

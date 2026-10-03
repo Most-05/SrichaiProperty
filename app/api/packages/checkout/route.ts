@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"; // ดึงเซสชั�
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับบันทึกสถานะแพ็กเกจและธุรกรรม
 import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนเกี่ยวกับการชำระเงิน/อนุมัติแพ็กเกจ
+import { resolveProPlan } from "@/lib/pro"; // แปลงรอบบิล (monthly/yearly) เป็นราคา + จำนวนวัน
 import fs from "fs"; // จัดการไฟล์สลิปการโอนเงินที่อัปโหลด
 import path from "path"; // จัดการเส้นทางไฟล์สลิปที่บันทึกไว้บนเซิร์ฟเวอร์
 
@@ -49,6 +50,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "ไฟล์ต้องมีขนาดไม่เกิน 5MB" }, { status: 400 });
     }
 
+    // รอบบิล: monthly (299/30 วัน) หรือ yearly (2,690/365 วัน) — ค่าเริ่มต้นคือ monthly
+    const billingCycle = String(formData.get("billingCycle") || "monthly");
+    const plan = resolveProPlan(billingCycle);
+
     // บันทึกไฟล์ลง public/uploads/
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -56,34 +61,36 @@ export async function POST(req: Request) {
     fs.writeFileSync(path.join(uploadDir, filename), Buffer.from(await slipFile.arrayBuffer()));
     const slipUrl = `/uploads/${filename}`;
 
-    // สร้าง order + transaction
+    // สร้าง order + transaction ตามรอบบิลที่เลือก
+    const startDate = new Date();
     const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 30);
+    endDate.setDate(endDate.getDate() + plan.days);
 
     const order = await db.listing_package_orders.create({
-      data: { package_id: 1, start_date: new Date(), end_date: endDate, status: "pending" }
+      data: { package_id: plan.packageId, start_date: startDate, end_date: endDate, status: "pending" }
     });
     const transaction = await db.payment_transactions.create({
-      data: { order_id: order.id, amount: 599, payment_method: "PromptPay", slip_url: slipUrl, status: "pending" }
+      data: { order_id: order.id, amount: plan.amount, payment_method: "PromptPay", slip_url: slipUrl, status: "pending" }
     });
 
     // แจ้งเตือน admin + agent
+    // ⚠️ content ต้องมีคีย์ txId/agentId/name/email/billing/amount เพื่อให้หน้า /admin/payments ดึงข้อมูลนายหน้าได้แม่นยำ
     const agentName = `${user.first_name} ${user.last_name}`.trim();
     const admins = await db.users.findMany({ where: { role_id: "admin" }, select: { id: true } });
 
     await Promise.allSettled([
       notifyUsers(admins.map(admin => admin.id), {
         title: "แจ้งชำระเงินค่าธรรมเนียมแพ็กเกจ Verified PRO",
-        content: `นายหน้า ${agentName} (${user.email}) ได้นำส่งหลักฐานการชำระเงินจำนวน 599 บาท อยู่ระหว่างรอการตรวจสอบ`,
+        content: `txId:${transaction.id} agentId:${user.id} name:${agentName} email:${user.email} billing:${billingCycle} amount:${plan.amount}`,
         type: "payment",
         linkUrl: "/admin/payments"
       }),
       notifyUser({
         userId: user.id,
         title: "บันทึกการส่งหลักฐานการชำระเงิน",
-        content: "ระบบได้รับหลักฐานการชำระเงินค่าแพ็กเกจ Verified PRO เรียบร้อยแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบภายใน 1 วันทำการ",
+        content: `ระบบได้รับหลักฐานการชำระเงินค่าแพ็กเกจ Verified PRO (${plan.label}) เรียบร้อยแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบภายใน 1 วันทำการ`,
         type: "payment",
-        linkUrl: "/agent/packages"
+        linkUrl: "/agent/upgrade"
       })
     ]);
 

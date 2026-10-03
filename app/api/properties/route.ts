@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับดึง/สร้าง/แก้ไขประกาศอสังหาริมทรัพย์
 import { validateSlotInput } from "@/lib/services/viewingSlotService"; // ตรวจวัน+รอบของรอบว่างที่เปิด (ห้ามย้อนหลัง)
 import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนเมื่อมีประกาศใหม่หรืออนุมัติ/ตีกลับประกาศ
+import { isProActive } from "@/lib/pro"; // ตรวจสิทธิ์ Verified PRO ที่ยังไม่หมดอายุ (ใช้จัดอันดับประกาศ)
 
 /**
  * ==============================================================================
@@ -36,6 +37,7 @@ export async function GET() {
             phone: true, 
             line_id: true, 
             plan_type: true,
+            plan_expired_at: true,
             profile_image: true,
             appointments_appointments_agent_idTousers: {
               where: {
@@ -78,9 +80,11 @@ export async function GET() {
         const agentName = p.users ? `${p.users.first_name} ${p.users.last_name}` : "ไม่ระบุตัวแทน";
         
         // เช็คว่าอสังหาฯ นี้เป็น "ทรัพย์พรีเมียม" หรือไม่ (นายหน้าซื้อแพ็กเกจดันประกาศ หรือ เป็นสมาชิกระดับ Pro/Premium)
-        const isPremium = Boolean(
-          p.listing_package_orders?.length || (p.users?.plan_type && p.users.plan_type !== "basic")
-        );
+        // ป้าย Verified PRO: นายหน้าเป็นสมาชิก pro และสิทธิ์ยังไม่หมดอายุ
+        const isVerifiedPro = isProActive(p.users?.plan_type, p.users?.plan_expired_at);
+
+        // ทรัพย์พรีเมียม = มีแพ็กเกจดันประกาศ หรือ เป็นสมาชิก Verified PRO ที่ยังไม่หมดอายุ
+        const isPremium = Boolean(p.listing_package_orders?.length || isVerifiedPro);
         
         const mainImage = p.property_images[0]?.image_url || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80";
 
@@ -111,6 +115,7 @@ export async function GET() {
           agentRating,
           agentReviewCount,
           isPremium,
+          isVerifiedPro,
           description: p.description || "",
           latitude: p.latitude ? Number(p.latitude) : null,
           longitude: p.longitude ? Number(p.longitude) : null,
@@ -137,8 +142,13 @@ export async function GET() {
           districtName: p.districts?.name_th || ""
         };
       })
-      // 1.3 เรียงลำดับทรัพย์พรีเมียมขึ้นก่อนทรัพย์ทั่วไป (Priority Sorting)
-      .sort((a, b) => (b.isPremium ? 1 : 0) - (a.isPremium ? 1 : 0));
+      // 1.3 จัดอันดับ: ประกาศของนายหน้า Verified PRO (ยังไม่หมดอายุ) ขึ้นก่อน,
+      //     รองลงมาคือทรัพย์พรีเมียมที่ซื้อแพ็กเกจดันประกาศ, สุดท้ายคือประกาศทั่วไป
+      .sort((a, b) => {
+        const proDiff = (b.isVerifiedPro ? 1 : 0) - (a.isVerifiedPro ? 1 : 0);
+        if (proDiff !== 0) return proDiff;
+        return (b.isPremium ? 1 : 0) - (a.isPremium ? 1 : 0);
+      });
 
     return NextResponse.json(formattedProperties);
   } catch (error) {

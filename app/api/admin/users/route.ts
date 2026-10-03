@@ -3,6 +3,7 @@ import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหร�
 import { getServerSession } from 'next-auth/next'; // ดึงเซสชันเพื่อตรวจสอบสิทธิ์ admin
 import { authOptions } from '@/lib/authOptions'; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { notifyUser } from '@/lib/notify';
+import { computeExtendedExpiry } from '@/lib/pro'; // คำนวณวันหมดอายุ PRO แบบทบวันเมื่อแอดมินมอบสิทธิ์ตรง
 
 interface AdminSession {
   user?: {
@@ -192,6 +193,8 @@ export async function GET(req: Request) {
         profile_image: true,
         role_id: true,
         status: true,
+        plan_type: true,
+        plan_expired_at: true,
         created_at: true,
       },
       orderBy: {
@@ -238,7 +241,47 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { userId, status, reason } = body;
+    const { userId, status, reason, grantProDays } = body;
+
+    // กรณีมอบ/ขยายสิทธิ์ Pro โดยตรงจากฝั่งแอดมิน (ไม่ต้องผ่านการตรวจสลิป)
+    if (grantProDays !== undefined) {
+      if (!userId) {
+        return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+      }
+      const days = Number(grantProDays);
+      if (!Number.isFinite(days) || days <= 0 || days > 3650) {
+        return NextResponse.json({ error: "จำนวนวันไม่ถูกต้อง" }, { status: 400 });
+      }
+
+      const target = await db.users.findUnique({
+        where: { id: userId },
+        select: { plan_type: true, plan_expired_at: true, role_id: true }
+      });
+      if (!target) {
+        return NextResponse.json({ error: "ไม่พบข้อมูลผู้ใช้งาน" }, { status: 404 });
+      }
+      if (target.role_id !== 'agent') {
+        return NextResponse.json({ error: "สามารถมอบสิทธิ์ Verified PRO ได้เฉพาะบัญชีนายหน้า" }, { status: 400 });
+      }
+
+      const newExpiry = computeExtendedExpiry(target.plan_type, target.plan_expired_at, days);
+      const newExpiryText = newExpiry.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
+
+      await db.users.update({
+        where: { id: userId },
+        data: { plan_type: "pro", plan_expired_at: newExpiry }
+      });
+
+      await notifyUser({
+        userId,
+        title: "ได้รับสิทธิ์ Verified PRO จากทีมงาน",
+        content: `ทีมงานได้มอบสิทธิ์ Verified PRO ให้บัญชีของคุณ ระยะเวลา ${days} วัน (หมดอายุวันที่ ${newExpiryText})`,
+        type: "package",
+        linkUrl: "/agent/upgrade"
+      }).catch(() => {});
+
+      return NextResponse.json({ success: true, planExpiredAt: newExpiry });
+    }
 
     if (!userId || !status) {
       return NextResponse.json({ error: "Missing userId or status" }, { status: 400 });
@@ -249,7 +292,17 @@ export async function PATCH(req: Request) {
 
     const updatedUser = await db.users.update({
       where: { id: userId },
-      data: { status: dbStatus }
+      data: { status: dbStatus },
+      select: {
+        id: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        role_id: true,
+        status: true,
+        plan_type: true,
+        plan_expired_at: true,
+      }
     });
 
     // แจ้งเตือนผู้ใช้ถึงผลการอนุมัติหรือระงับบัญชี

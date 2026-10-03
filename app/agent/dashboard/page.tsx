@@ -25,6 +25,7 @@ import { toast } from '@/components/ui/toast';
 import {
   Clock,
   Crown,
+  AlertTriangle,
   Search,
   Trash2,
   Home,
@@ -62,6 +63,9 @@ export default function AgentDashboardPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<PropertyData | null>(null);
 
+  // เวลาปัจจุบัน (timestamp) — ตั้งใน effect เพื่อไม่ให้เรียก Date.now() ระหว่าง render
+  const [nowTs, setNowTs] = useState(0);
+
   // State ข้อมูล Dashboard
   const [dbData, setDbData] = useState<{
     properties: PropertyData[];
@@ -71,6 +75,8 @@ export default function AgentDashboardPage() {
     totalCount: number;
     totalViews: number;
     isPro?: boolean;
+    planType?: string;
+    planExpiredAt?: string | null;
     recentAppointments?: AppointmentData[];
   } | null>(null);
 
@@ -90,12 +96,14 @@ export default function AgentDashboardPage() {
   }, []);
 
   useEffect(() => {
+    const nowTimer = setTimeout(() => setNowTs(Date.now()), 0);
     document.title = 'คลังประกาศ & แผงควบคุม | Srichai Property';
     if (status === 'authenticated') {
       loadDashboard();
     } else if (status === 'unauthenticated') {
       router.replace('/login/agent');
     }
+    return () => clearTimeout(nowTimer);
   }, [status, loadDashboard, router]);
 
   const toTelHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
@@ -156,6 +164,11 @@ export default function AgentDashboardPage() {
   }, [propertiesList, filterType, searchTerm]);
 
   const isPro = dbData?.isPro || false;
+  const planType = dbData?.planType || 'basic';
+  const planExpiredAt = dbData?.planExpiredAt || null;
+  const daysRemaining = planExpiredAt && nowTs
+    ? Math.ceil((new Date(planExpiredAt).getTime() - nowTs) / (1000 * 60 * 60 * 24))
+    : null;
   const remainingQuota = Math.max(0, FREE_LISTING_QUOTA - (dbData?.totalCount || 0));
 
   if (status === 'loading') {
@@ -207,6 +220,57 @@ export default function AgentDashboardPage() {
           onViewPending={() => setFilterType('pending')}
         />
 
+        {/* แบนเนอร์เตือนวันหมดอายุ Verified PRO (เหลือ 1-7 วัน) */}
+        {isPro && daysRemaining != null && daysRemaining >= 1 && daysRemaining <= 7 && (
+          <section className={`rounded-2xl p-4 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+            daysRemaining <= 3 ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className={`w-5 h-5 shrink-0 ${daysRemaining <= 3 ? 'text-red-600' : 'text-amber-600'}`} />
+              <div>
+                <p className="font-extrabold text-sm">
+                  {daysRemaining <= 3
+                    ? `ด่วน! สิทธิ์ Verified PRO จะหมดอายุในอีก ${daysRemaining} วัน`
+                    : `สิทธิ์ Verified PRO ของคุณจะหมดอายุในอีก ${daysRemaining} วัน`}
+                </p>
+                <p className="text-xs font-semibold mt-0.5">
+                  กรุณาต่ออายุล่วงหน้าเพื่อการใช้งานประกาศอย่างต่อเนื่อง
+                  {daysRemaining <= 3 && ` (หากหมดอายุ โควตาประกาศจะปรับกลับเป็น Basic ${FREE_LISTING_QUOTA} รายการ)`}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/agent/upgrade"
+              className={`shrink-0 px-4 py-2 rounded-xl font-black text-xs transition ${
+                daysRemaining <= 3 ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+              }`}
+            >
+              ต่ออายุเลย
+            </Link>
+          </section>
+        )}
+
+        {/* แบนเนอร์เชิญต่ออายุเมื่อสิทธิ์ PRO หมดอายุแล้ว */}
+        {planType === 'pro' && !isPro && (
+          <section className="rounded-2xl p-4 border bg-slate-900 border-slate-800 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 shrink-0 text-amber-400" />
+              <div>
+                <p className="font-extrabold text-sm text-amber-400">สิทธิ์ Verified PRO ของคุณหมดอายุแล้ว</p>
+                <p className="text-xs font-semibold mt-0.5 text-slate-300">
+                  โควตาประกาศปรับกลับเป็น Basic {FREE_LISTING_QUOTA} รายการ กรุณาต่ออายุเพื่อกลับมาใช้สิทธิ์ไม่จำกัด
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/agent/upgrade"
+              className="shrink-0 px-4 py-2 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 transition"
+            >
+              ต่ออายุสิทธิ์
+            </Link>
+          </section>
+        )}
+
         {/* แบนเนอร์อัปเกรด PRO (ถ้ายังไม่ได้เป็น) */}
         {!isPro && (
           <section className="bg-slate-900 rounded-2xl p-5 text-white flex flex-col md:flex-row items-center justify-between gap-4 shadow-md">
@@ -223,7 +287,7 @@ export default function AgentDashboardPage() {
               onClick={() => setShowUpgradeModal(true)}
               className="w-full md:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shrink-0 cursor-pointer transition shadow-2xs"
             >
-              อัปเกรด (599.-/เดือน)
+              อัปเกรด (299.-/เดือน)
             </button>
           </section>
         )}

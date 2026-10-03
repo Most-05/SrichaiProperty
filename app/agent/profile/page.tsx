@@ -700,6 +700,42 @@ export default function AgentProfilePage() {
               </div>
 
             </div>
+            {/* สถานะแพ็กเกจ Verified PRO & ทางต่ออายุ */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-3">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
+                สถานะแพ็กเกจ Verified PRO
+              </span>
+              {form.isPro ? (
+                <>
+                  <div className="flex items-center justify-between gap-2 ">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-black text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> ใช้งานอยู่
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-600">
+                      {form.planExpiredAt ? `หมดอายุ ${new Date(form.planExpiredAt).toLocaleDateString('th-TH')}` : 'ไม่ระบุวันหมดอายุ'}
+                    </span>
+                  </div>
+                  <Link
+                    href="/agent/upgrade"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition"
+                  >
+                    <Clock className="w-3.5 h-3.5" /> ต่ออายุล่วงหน้า (Renew PRO)
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    บัญชีของคุณยังใช้แพ็กเกจ Basic (ลงประกาศได้จำกัดจำนวน)
+                  </p>
+                  <Link
+                    href="/agent/upgrade"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl text-xs transition"
+                  >
+                    อัปเกรดเป็น Verified PRO
+                  </Link>
+                </>
+              )}
+            </div>
           </aside>
 
         </div>

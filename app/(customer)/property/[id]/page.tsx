@@ -58,7 +58,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Heart
+  Heart,
+  Star
 } from 'lucide-react';
 import { getGoogleMapsDirectionsUrl, type NearbyPlaceResult } from '@/lib/nearbyService';
 
@@ -1037,12 +1038,18 @@ export default function PropertyDetailPage() {
                 </div>
                 <div>
                   <h4 className="font-extrabold text-slate-800 text-sm leading-none mb-1.5">{property.agentName}</h4>
-                  <div className="flex items-center justify-center gap-1.5 mt-1">
-                    <span className="text-[10px] text-blue-600 font-extrabold uppercase tracking-widest">Verified Agent</span>
+                  <div className="flex items-center justify-center gap-1.5 mt-1 flex-wrap">
+                    {property.isVerifiedPro ? (
+                      <span className="text-[10px] text-amber-600 font-black uppercase tracking-widest inline-flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 shrink-0" /> Verified PRO
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-blue-600 font-extrabold uppercase tracking-widest">Verified Agent</span>
+                    )}
                     <span className="text-slate-300">•</span>
                     {agentRealReviewCount > 0 ? (
-                      <span className="text-[11px] font-extrabold text-amber-600 flex items-center gap-0.5">
-                        ⭐ {agentRealRating.toFixed(1)} <span className="text-slate-400 font-medium">({agentRealReviewCount})</span>
+                      <span className="text-[11px] font-extrabold text-amber-600 inline-flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" /> {agentRealRating.toFixed(1)} <span className="text-slate-400 font-medium">({agentRealReviewCount})</span>
                       </span>
                     ) : (
                       <span className="text-[10px] text-slate-400 font-medium">ยังไม่มีรีวิว</span>
@@ -1050,6 +1057,14 @@ export default function PropertyDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* กล่องความน่าเชื่อถือ Verified PRO */}
+              {property.isVerifiedPro && (
+                <div className="bg-amber-50 border border-amber-200/70 rounded-2xl p-3 text-[11px] text-amber-900 font-semibold leading-relaxed flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>นายหน้าพรีเมียม ผ่านการยืนยันตัวตนระดับ Verified PRO ได้รับการรับรองจากศรีชัยพร็อพเพอร์ตี้</span>
+                </div>
+              )}
 
               {/* ปุ่มติดต่อด่วน (โทรศัพท์ & คุย LINE) */}
               <div className="space-y-2">

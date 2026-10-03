@@ -53,7 +53,7 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 const PAYMENT_REJECT_PRESETS = [
-  'ยอดเงินในสลิปไม่ตรงกับราคาแพ็กเกจ (599.00 บาท)',
+  'ยอดเงินในสลิปไม่ตรงกับราคาแพ็กเกจ (299.00 บาท สำหรับรายเดือน หรือ 2,690.00 บาท สำหรับรายปี)',
   'สลิปซ้ำ หรือเคยใช้ยืนยันการชำระเงินในระบบแล้ว',
   'ภาพสลิปมีร่องรอยการตัดต่อ หรือรายละเอียดไม่ชัดเจน',
   'ไม่พบยอดเงินโอนเข้าในสเตทเมนต์บัญชีธนาคารปลายทาง',
@@ -62,6 +62,20 @@ const PAYMENT_REJECT_PRESETS = [
 ];
 
 type Filter = 'pending' | 'approved' | 'rejected' | 'all';
+
+// แปลงยอดเงินเป็นป้ายระบุรอบบิล (299 = รายเดือน, 2,690 = รายปี)
+function getBillingBadge(amount: number): { label: string; className: string } {
+  if (amount >= 2000) {
+    return {
+      label: 'รายปี (365 วัน)',
+      className: 'bg-gradient-to-r from-purple-700 to-fuchsia-600 text-amber-200 border-amber-300/50 shadow-sm',
+    };
+  }
+  return {
+    label: 'รายเดือน (30 วัน)',
+    className: 'bg-blue-50 text-blue-700 border-blue-200',
+  };
+}
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -405,7 +419,12 @@ export default function AdminPaymentsPage() {
                         <span className="font-black text-amber-600 text-sm">
                           ฿{p.amount.toLocaleString()}
                         </span>
-                        <span className="block text-[10px] text-slate-400 font-medium">PromptPay Slip</span>
+                        <div className="mt-1.5">
+                          <span className={`inline-block text-[10px] font-black px-2 py-0.5 rounded-md border ${getBillingBadge(p.amount).className}`}>
+                            {getBillingBadge(p.amount).label}
+                          </span>
+                        </div>
+                        <span className="block text-[10px] text-slate-400 font-medium mt-1">PromptPay Slip</span>
                       </td>
                       <td className="px-5 py-4">
                         {p.slipUrl ? (

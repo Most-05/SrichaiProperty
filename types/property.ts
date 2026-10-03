@@ -29,6 +29,7 @@ export interface Property {
   agentName: string;
   agentImage: string;
   isPremium?: boolean;
+  isVerifiedPro?: boolean;
   description?: string;
   latitude?: number;
   longitude?: number;

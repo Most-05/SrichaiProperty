@@ -3,8 +3,31 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { 
+  ShieldCheck, 
+  Clock, 
+  RefreshCw, 
+  Layers, 
+  TrendingUp, 
+  CheckCircle2, 
+  BarChart3, 
+  Sparkles, 
+  ArrowLeft, 
+  ArrowRight, 
+  Check,
+  Copy,
+  UploadCloud,
+  Paperclip,
+  AlertCircle,
+  Send,
+  Lock,
+  Receipt
+} from 'lucide-react';
+import { PRO_MONTHLY, PRO_YEARLY } from '@/lib/pro';
+import { compressImage } from '@/lib/utils/compressImage';
 
 type Step = 'details' | 'payment' | 'success';
+type BillingCycle = 'monthly' | 'yearly';
 
 export default function UpgradePage() {
   const { status } = useSession();
@@ -18,8 +41,25 @@ export default function UpgradePage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isProUser, setIsProUser] = useState(false);
   const [planExpiredAt, setPlanExpiredAt] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [renewing, setRenewing] = useState(false);
+  const [nowTs, setNowTs] = useState(0);
+  const [copiedPromptPay, setCopiedPromptPay] = useState(false);
+
+  // แผนแพ็กเกจตามรอบบิลที่เลือก (ราคา/จำนวนวันจากค่ากลาง lib/pro)
+  const plan = billingCycle === 'yearly' ? PRO_YEARLY : PRO_MONTHLY;
+  const daysLeft = planExpiredAt && nowTs
+    ? Math.ceil((new Date(planExpiredAt).getTime() - nowTs) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const handleCopyPromptPay = () => {
+    navigator.clipboard.writeText('0812345678');
+    setCopiedPromptPay(true);
+    setTimeout(() => setCopiedPromptPay(false), 2000);
+  };
 
   React.useEffect(() => {
+    const nowTimer = setTimeout(() => setNowTs(Date.now()), 0);
     fetch('/api/user/profile')
       .then(r => r.json())
       .then(data => {
@@ -29,23 +69,29 @@ export default function UpgradePage() {
         }
       })
       .catch(console.error);
+    return () => clearTimeout(nowTimer);
   }, []);
 
-  const handleFileChange = (file: File | null) => {
+  const handleFileChange = async (file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       setErrorMsg('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP)');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMsg('ไฟล์มีขนาดใหญ่เกิน 5MB กรุณาลดขนาดไฟล์ก่อน');
-      return;
-    }
     setErrorMsg('');
-    setSlipFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setSlipPreview(e.target?.result as string);
-    reader.readAsDataURL(file);
+    try {
+      // ⚡ บีบอัดรูปภาพอัตโนมัติ (รองรับภาพถ่ายจากมือถือความละเอียดสูง)
+      const compressed = await compressImage(file, { maxWidth: 1400, maxHeight: 1400, quality: 0.85 });
+      setSlipFile(compressed.file);
+      const reader = new FileReader();
+      reader.onload = (e) => setSlipPreview(e.target?.result as string);
+      reader.readAsDataURL(compressed.file);
+    } catch {
+      setSlipFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => setSlipPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -74,8 +120,8 @@ export default function UpgradePage() {
       // ส่งไฟล์สลิปตรงไปที่ checkout API (multipart/form-data)
       const formData = new FormData();
       formData.append('slip', slipFile);
-      formData.append('packageId', '1');
-      formData.append('amount', '599');
+      formData.append('billingCycle', billingCycle);
+      formData.append('packageId', String(plan.packageId));
 
       const res = await fetch('/api/packages/checkout', {
         method: 'POST',
@@ -101,23 +147,21 @@ export default function UpgradePage() {
     );
   }
 
-  // ===== ALREADY PRO MEMBER SCREEN =====
-  if (isProUser) {
+  // ===== ALREADY PRO MEMBER SCREEN (แสดงสถานะ + ปุ่มต่ออายุล่วงหน้า) =====
+  if (isProUser && !renewing) {
     return (
       <div className="pt-20 min-h-screen flex items-center justify-center p-4 bg-slate-50">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 text-center space-y-6 border border-slate-100">
           <div className="w-20 h-20 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-amber-200 text-slate-950">
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
+            <ShieldCheck className="w-10 h-10" />
           </div>
           <div className="space-y-1">
             <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
               VERIFIED PRO ACTIVE
             </span>
-            <h1 className="text-xl font-black text-slate-900 pt-2">คุณใช้งานสมาชิก PRO อยู่แล้ว</h1>
+            <h1 className="text-xl font-black text-slate-900 pt-2">คุณใช้งานสมาชิก PRO อยู่</h1>
             <p className="text-slate-500 text-xs leading-relaxed">
-              บัญชีของคุณได้รับสิทธิ์สมาชิกพรีเมียมเรียบร้อยแล้ว ไม่ต้องอัปเกรดซ้ำ
+              ต่ออายุล่วงหน้าได้ทันที ระบบจะทบวันใหม่จากวันหมดอายุเดิมให้อัตโนมัติ ไม่ตัดวันที่เหลือทิ้ง
             </p>
           </div>
 
@@ -130,18 +174,21 @@ export default function UpgradePage() {
               <span>วันหมดอายุสิทธิ์:</span>
               <span className="font-extrabold">{planExpiredAt ? new Date(planExpiredAt).toLocaleDateString('th-TH') : 'ใช้งานต่อเนื่อง'}</span>
             </p>
+            <p className="text-xs text-amber-800 font-bold flex items-center gap-1.5 pt-1">
+              <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>{daysLeft != null ? `เหลือเวลาอีก ${Math.max(0, daysLeft)} วัน` : 'ไม่ระบุวันหมดอายุ'}</span>
+            </p>
           </div>
 
           <div className="space-y-2 pt-2">
-            <Link
-              href="/agent/add-property"
-              className="w-full flex items-center justify-center gap-1.5 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition shadow-md shadow-amber-200/60 active:scale-[0.98]"
+            <button
+              type="button"
+              onClick={() => setRenewing(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition shadow-md shadow-amber-200/60 active:scale-[0.98] cursor-pointer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>ลงประกาศบ้านพรีเมียมทันที</span>
-            </Link>
+              <RefreshCw className="w-4 h-4" />
+              <span>ต่ออายุล่วงหน้า (Renew PRO)</span>
+            </button>
             <Link
               href="/agent/home"
               className="w-full block py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition text-center"
@@ -160,9 +207,7 @@ export default function UpgradePage() {
       <div className="pt-6 sm:pt-8 min-h-screen flex items-center justify-center p-4 bg-slate-50">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 text-center space-y-5 border border-slate-100">
           <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-200 shadow-sm">
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-            </svg>
+            <CheckCircle2 className="w-10 h-10" />
           </div>
           <div>
             <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
@@ -175,24 +220,20 @@ export default function UpgradePage() {
           </p>
           <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 text-left space-y-2">
             <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>สิทธิประโยชน์ที่คุณจะได้รับ</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>สิทธิประโยชน์ที่ใช้งานได้จริงในระบบ</span>
             </p>
             <ul className="space-y-1.5">
               {[
-                'ลงประกาศไม่จำกัดจำนวน',
-                'แบดจ์ Verified PRO ติดโปรไฟล์',
-                'ดันประกาศขึ้นหน้าแรกฟรี',
-                'สถิติยอดวิวและแชทแบบละเอียด',
-                'Priority Support จากทีมงาน',
+                'ลงประกาศได้ไม่จำกัดจำนวน (จากเดิม Basic สูงสุด 3 รายการ)',
+                'แบดจ์ Verified PRO ติดบนการ์ดประกาศและโปรไฟล์ของคุณ',
+                'ดันประกาศขึ้นอันดับแรกในหน้าค้นหาตลอดอายุแพ็กเกจ (Priority Boost)',
+                'กล่องรับรองตัวแทนนายหน้าในหน้ารายละเอียดทรัพย์ สร้างความมั่นใจให้ผู้ซื้อ',
+                'ติดตามยอดวิว แชท และจัดการคำขอนัดหมายบนแดชบอร์ดแบบเรียลไทม์',
               ].map((benefit) => (
                 <li key={benefit} className="flex items-center gap-2 text-xs text-amber-900 font-semibold">
-                  <svg className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" viewBox="0 0 24 24">
-                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                  </svg>
-                  {benefit}
+                  <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>{benefit}</span>
                 </li>
               ))}
             </ul>
@@ -216,8 +257,8 @@ export default function UpgradePage() {
 
           {/* Header */}
           <div className="flex items-center gap-3">
-            <button onClick={() => setStep('details')} className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-sm">
-              ←
+            <button onClick={() => setStep('details')} className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-sm cursor-pointer" aria-label="ย้อนกลับ">
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
               <h1 className="text-lg font-black text-slate-900">แนบหลักฐานการชำระเงิน</h1>
@@ -269,22 +310,40 @@ export default function UpgradePage() {
             </div>
             <div>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">PromptPay / พร้อมเพย์</p>
-              <p className="text-2xl font-black text-slate-900 mt-1 tracking-wider">081-234-5678</p>
-              <p className="text-sm text-slate-500 font-semibold">บริษัท ศรีชัย พร็อพเพอร์ตี้ จำกัด</p>
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <p className="text-2xl font-black text-slate-900 tracking-wider">081-234-5678</p>
+                <button
+                  type="button"
+                  onClick={handleCopyPromptPay}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition flex items-center gap-1 cursor-pointer"
+                  title="คัดลอกเบอร์พร้อมเพย์"
+                >
+                  {copiedPromptPay ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-700">คัดลอกแล้ว</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-500" />
+                      <span>คัดลอก</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-sm text-slate-500 font-semibold mt-1">บริษัท ศรีชัย พร็อพเพอร์ตี้ จำกัด</p>
             </div>
             <div className="bg-amber-50 rounded-2xl py-3 px-4 border border-amber-200">
               <p className="text-xs text-amber-700 font-bold">จำนวนเงินที่ต้องโอน</p>
-              <p className="text-3xl font-black text-amber-600">฿599<span className="text-sm font-bold text-amber-400">.00</span></p>
-              <p className="text-xs text-amber-600 font-semibold">Verified PRO · 30 วัน</p>
+              <p className="text-3xl font-black text-amber-600">฿{plan.amount.toLocaleString()}<span className="text-sm font-bold text-amber-400">.00</span></p>
+              <p className="text-xs text-amber-600 font-semibold">Verified PRO · {plan.shortLabel} · {plan.days} วัน</p>
             </div>
           </div>
 
           {/* Upload Slip */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
+              <Paperclip className="w-4 h-4 text-slate-500" />
               <span>แนบสลิปการโอนเงิน</span>
             </h3>
 
@@ -319,10 +378,8 @@ export default function UpgradePage() {
                   />
                   <div className="flex items-center justify-center gap-2">
                     <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                      </svg>
-                      แนบสลิปแล้ว
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>แนบสลิปแล้ว</span>
                     </span>
                     <span className="text-slate-400 text-xs">· {slipFile?.name}</span>
                   </div>
@@ -331,13 +388,11 @@ export default function UpgradePage() {
               ) : (
                 <div className="space-y-3">
                   <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                    <UploadCloud className="w-7 h-7" />
                   </div>
                   <div>
                     <p className="font-bold text-slate-700 text-sm">วางหรือกดเพื่อเลือกรูปสลิป</p>
-                    <p className="text-xs text-slate-400 font-semibold mt-1">รองรับ JPG, PNG, WEBP · ขนาดไม่เกิน 5MB</p>
+                    <p className="text-xs text-slate-400 font-semibold mt-1">ระบบปรับขนาดภาพอัตโนมัติ · รองรับภาพถ่ายจากมือถือ</p>
                   </div>
                 </div>
               )}
@@ -345,9 +400,7 @@ export default function UpgradePage() {
 
             {errorMsg && (
               <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-xs font-bold border border-red-100 flex items-center gap-2">
-                <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
@@ -355,7 +408,7 @@ export default function UpgradePage() {
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || !slipFile}
-              className="w-full py-4 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-200 active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full py-4 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-200 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
@@ -364,18 +417,14 @@ export default function UpgradePage() {
                 </span>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Send className="w-4 h-4" />
                   <span>ส่งหลักฐานการชำระเงิน</span>
                 </>
               )}
             </button>
 
             <p className="text-center text-[11px] text-slate-400 font-semibold flex items-center justify-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+              <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span>ข้อมูลและสลิปของคุณจะถูกเก็บเป็นความลับและปลอดภัย</span>
             </p>
           </div>
@@ -395,8 +444,9 @@ export default function UpgradePage() {
           <Link
             href="/agent/home"
             className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-sm"
+            aria-label="ย้อนกลับ"
           >
-            ←
+            <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="text-lg font-black text-slate-900">อัปเกรด Verified PRO</h1>
@@ -412,9 +462,7 @@ export default function UpgradePage() {
           <div className="flex items-start justify-between relative">
             <div className="space-y-3">
               <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1">
-                <svg className="w-3 h-3 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-950 shrink-0" />
                 VERIFIED PRO
               </span>
               <h2 className="text-xl font-black tracking-tight leading-tight">
@@ -426,66 +474,75 @@ export default function UpgradePage() {
             </div>
             <div className="text-right shrink-0">
               <p className="text-[10px] text-slate-400 font-bold uppercase">ราคา</p>
-              <p className="text-3xl font-black text-amber-400">฿599</p>
-              <p className="text-[10px] text-slate-400 font-semibold">/เดือน</p>
+              <p className="text-3xl font-black text-amber-400">฿{plan.amount.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-400 font-semibold">/{billingCycle === 'yearly' ? 'ปี' : 'เดือน'}</p>
             </div>
           </div>
+        </div>
+
+        {/* Billing Cycle Switch */}
+        <div className="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setBillingCycle('monthly')}
+            className={`rounded-2xl px-3 py-3 text-left transition cursor-pointer border ${
+              billingCycle === 'monthly'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-slate-100'
+            }`}
+          >
+            <span className="block text-xs font-black">รายเดือน</span>
+            <span className="block text-[11px] font-bold mt-0.5">299 บ. / 30 วัน</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingCycle('yearly')}
+            className={`relative rounded-2xl px-3 py-3 text-left transition cursor-pointer border ${
+              billingCycle === 'yearly'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 border-amber-500 shadow-sm'
+                : 'bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-slate-100'
+            }`}
+          >
+            <span className="block text-xs font-black">รายปี</span>
+            <span className="block text-[11px] font-bold mt-0.5">2,690 บ. / 365 วัน</span>
+            <span className="absolute -top-2 right-2 bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow">
+              ประหยัด 25%
+            </span>
+          </button>
         </div>
 
         {/* Benefits */}
         <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
           <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
-            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-            </svg>
-            <span>สิทธิประโยชน์ที่คุณจะได้รับ</span>
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>สิทธิประโยชน์ที่ใช้งานได้จริงในระบบ</span>
           </h3>
           <div className="space-y-3">
             {[
               { 
-                icon: (
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.178 8c5.096 0 5.096 8 0 8-2.613 0-4.32-2.316-6.178-4-1.858 1.684-3.565 4-6.178 4-5.096 0-5.096-8 0-8 2.613 0 4.32 2.316 6.178 4 1.858-1.684 3.565-4 6.178-4z" />
-                  </svg>
-                ), 
-                title: 'ลงประกาศไม่จำกัด', 
-                desc: 'จากเดิม 3 รายการ → ไม่จำกัดจำนวน' 
+                icon: <Layers className="w-5 h-5 text-blue-600 shrink-0" />, 
+                title: 'ลงประกาศได้ไม่จำกัดจำนวน', 
+                desc: 'ปลดล็อกโควตาจากเดิม Basic สูงสุด 3 รายการ เป็นไม่จำกัดจำนวน' 
               },
               { 
-                icon: (
-                  <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                  </svg>
-                ), 
-                title: 'แบดจ์ Verified PRO', 
-                desc: 'ติดโปรไฟล์เพื่อสร้างความน่าเชื่อถือ' 
+                icon: <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0" />, 
+                title: 'แบดจ์ Verified PRO สีทอง', 
+                desc: 'แสดงตราสัญลักษณ์บนการ์ดประกาศ, หน้ารวมนายหน้า และโปรไฟล์ของคุณ' 
               },
               { 
-                icon: (
-                  <svg className="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                ), 
-                title: 'ดันประกาศขึ้นหน้าแรก', 
-                desc: 'รับสิทธิ์ boost ฟรี 5 ครั้ง/เดือน' 
+                icon: <TrendingUp className="w-5 h-5 text-emerald-600 shrink-0" />, 
+                title: 'ดันประกาศขึ้นอันดับแรกอัตโนมัติ (Priority Boost)', 
+                desc: 'ทุกประกาศของคุณจะถูกจัดอันดับขึ้นก่อนประกาศทั่วไปในหน้าค้นหาตลอดอายุแพ็กเกจ' 
               },
               { 
-                icon: (
-                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                ), 
-                title: 'สถิติแบบละเอียด', 
-                desc: 'ยอดวิว, แชท, อัตราการนัดหมาย' 
+                icon: <CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" />, 
+                title: 'กล่องการันตีตัวตนในหน้ารายละเอียดทรัพย์', 
+                desc: 'แสดงกล่องรับรองตัวแทนนายหน้ามืออาชีพ เพิ่มความมั่นใจให้ลูกค้ากล้าติดต่อนัดชม' 
               },
               { 
-                icon: (
-                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ), 
-                title: 'Priority Support', 
-                desc: 'ทีมงานดูแลคุณก่อนในทุกปัญหา' 
+                icon: <BarChart3 className="w-5 h-5 text-slate-700 shrink-0" />, 
+                title: 'แดชบอร์ดติดตามสถิติและคิวนัดหมาย', 
+                desc: 'ดูยอดเข้าชมทรัพย์รายประกาศ, แชทลูกค้า และจัดการคำขอนัดหมายแบบเรียลไทม์' 
               },
             ].map((b) => (
               <div key={b.title} className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
@@ -494,12 +551,10 @@ export default function UpgradePage() {
                 </div>
                 <div>
                   <p className="font-extrabold text-slate-800 text-xs">{b.title}</p>
-                  <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{b.desc}</p>
+                  <p className="text-[11px] text-slate-500 font-semibold mt-0.5">{b.desc}</p>
                 </div>
-                <span className="ml-auto text-emerald-600 text-xs font-black">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                  </svg>
+                <span className="ml-auto text-emerald-600 text-xs font-black shrink-0">
+                  <Check className="w-4 h-4" />
                 </span>
               </div>
             ))}
@@ -509,15 +564,13 @@ export default function UpgradePage() {
         {/* Pricing Summary */}
         <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
           <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
-            <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
+            <Receipt className="w-4 h-4 text-slate-500 shrink-0" />
             <span>สรุปคำสั่งซื้อ</span>
           </h3>
           <div className="space-y-2 text-xs font-semibold">
             <div className="flex justify-between text-slate-600">
-              <span>Verified PRO Package · 30 วัน</span>
-              <span>฿599.00</span>
+              <span>Verified PRO Package · {plan.days} วัน ({plan.shortLabel})</span>
+              <span>฿{plan.amount.toLocaleString()}.00</span>
             </div>
             <div className="flex justify-between text-slate-400">
               <span>ภาษีมูลค่าเพิ่ม (VAT 7%)</span>
@@ -526,7 +579,7 @@ export default function UpgradePage() {
             <div className="h-px bg-slate-100" />
             <div className="flex justify-between text-slate-900 font-black text-sm">
               <span>ยอดรวมสุทธิ</span>
-              <span className="text-amber-500">฿599.00</span>
+              <span className="text-amber-500">฿{plan.amount.toLocaleString()}.00</span>
             </div>
           </div>
         </div>
@@ -537,9 +590,7 @@ export default function UpgradePage() {
           className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-2xl text-sm transition shadow-lg shadow-amber-200/60 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>ดำเนินการชำระเงิน</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
+          <ArrowRight className="w-4 h-4" />
         </button>
 
         <p className="text-center text-[11px] text-slate-400 font-semibold pb-4">
