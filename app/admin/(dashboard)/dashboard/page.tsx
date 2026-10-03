@@ -519,7 +519,17 @@ export default function AdminDashboardPage() {
                     } else if (app.status === 'completed') {
                       statusLabel = 'เข้าชมแล้ว';
                       statusClass = 'text-blue-800 bg-blue-50 border border-blue-200 font-bold';
-                    } else if (app.status === 'cancelled' || app.status === 'rejected') {
+                    } else if (app.status === 'awaiting_customer') {
+                      statusLabel = 'รอลูกค้ายืนยันวันใหม่';
+                      statusClass = 'text-sky-800 bg-sky-50 border border-sky-200 font-bold';
+                    } else if (app.status === 'no_show') {
+                      // เดิมไม่มีเงื่อนไขนี้ นัดไม่มาตามนัดจึงขึ้นเป็น "รอดำเนินการ" (BUG-21)
+                      statusLabel = 'ไม่มาตามนัด';
+                      statusClass = 'text-slate-700 bg-slate-100 border border-slate-300 font-bold';
+                    } else if (app.status === 'rejected') {
+                      statusLabel = 'ถูกปฏิเสธ';
+                      statusClass = 'text-rose-800 bg-rose-50 border border-rose-200 font-bold';
+                    } else if (app.status === 'cancelled') {
                       statusLabel = 'ยกเลิก';
                       statusClass = 'text-rose-800 bg-rose-50 border border-rose-200 font-bold';
                     }

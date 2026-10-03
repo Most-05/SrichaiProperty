@@ -3,6 +3,11 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 import { db } from "@/lib/db";
 import { calculateModerationSla } from "@/lib/services/slaService";
+import { TIME_SLOT_INFO, timeSlotRange } from "@/lib/constants"; // ชื่อ + เวลารอบ (ค่ากลางที่เดียว)
+
+// "morning" → "รอบเช้า" (ไม่แสดงคำภาษาอังกฤษดิบบนหน้า dashboard)
+const slotName = (slot: string | null) =>
+  slot === "morning" || slot === "afternoon" ? TIME_SLOT_INFO[slot].name : null;
 
 function formatThaiRelativeTime(date: Date): string {
   const now = new Date();
@@ -213,7 +218,7 @@ export async function GET(request: Request) {
         propertyTitle: a.properties?.title || "ไม่ระบุประกาศ",
         propertyLocation: a.properties?.location || "",
         appointmentDate: appDate,
-        timeSlot: a.time_slot || "ตามตกลง",
+        timeSlot: slotName(a.time_slot) ? `${slotName(a.time_slot)} ${timeSlotRange(a.time_slot)}` : "ตามตกลง",
         status: a.status || "pending",
         timeAgo: formatThaiRelativeTime(new Date(a.created_at))
       };
@@ -282,7 +287,7 @@ export async function GET(request: Request) {
         time: new Date(a.created_at),
         type: "appointment",
         title: "นัดหมายเข้าชมบ้าน",
-        description: `${cust} ขอนัดชม "${prop}" (${a.time_slot || "-"})`,
+        description: `${cust} ขอนัดชม "${prop}" (${slotName(a.time_slot) || "-"})`,
         badgeText: "นัดหมาย",
         badgeVariant: "blue"
       });
