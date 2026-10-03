@@ -41,19 +41,22 @@ export async function GET() {
       console.error("checkAndSendAppointmentReminders error:", err);
     });
 
-    const notifications = await db.notifications.findMany({
-      where: { user_id: user.id },
-      orderBy: { created_at: "desc" },
-      take: 20
-    });
-
-    const unreadCount = await db.notifications.count({
-      where: { user_id: user.id, is_read: false }
-    });
+    // ดึง 20 รายการล่าสุด + 20 รายการล่าสุดที่ยังไม่อ่าน (รวมแล้วตัดซ้ำ)
+    // เดิมดึงแค่ 20 ล่าสุด → ถ้ายังไม่อ่านเก่ากว่านั้น แท็บ "ยังไม่อ่าน" ว่างทั้งที่ตัวเลขบอก 147 (BUG-20)
+    const [latest, latestUnread, totalCount, unreadCount] = await Promise.all([
+      db.notifications.findMany({ where: { user_id: user.id }, orderBy: { created_at: "desc" }, take: 20 }),
+      db.notifications.findMany({ where: { user_id: user.id, is_read: false }, orderBy: { created_at: "desc" }, take: 20 }),
+      db.notifications.count({ where: { user_id: user.id } }),
+      db.notifications.count({ where: { user_id: user.id, is_read: false } })
+    ]);
+    const seen = new Set(latest.map(n => n.id));
+    const notifications = [...latest, ...latestUnread.filter(n => !seen.has(n.id))]
+      .sort((x, y) => new Date(y.created_at ?? 0).getTime() - new Date(x.created_at ?? 0).getTime());
 
     return NextResponse.json({
       success: true,
       unreadCount,
+      totalCount, // จำนวนแจ้งเตือนทั้งหมดจริง (ไม่ใช่แค่ที่ส่งมา) ใช้แสดงในแท็บ "ทั้งหมด"
       notifications: notifications.map(n => ({
         id: n.id,
         title: n.title,

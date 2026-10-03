@@ -153,6 +153,8 @@ export default function NotificationBell({ theme = 'auto', align = 'right', clas
 
   // States สำหรับนับจำนวนยังไม่อ่าน รายการแจ้งเตือน สถานะการเปิด/ปิด Popover และการเลือกแท็บ
   const [unreadCount, setUnreadCount] = useState(0);
+  // จำนวนแจ้งเตือนทั้งหมดจริงจาก API (รายการที่โหลดมามีแค่บางส่วน) ใช้ในแท็บ "ทั้งหมด" (BUG-20)
+  const [totalCount, setTotalCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'all' | 'unread'>('all');
@@ -169,6 +171,7 @@ export default function NotificationBell({ theme = 'auto', align = 'right', clas
       .then(data => {
         if (data.success) {
           setUnreadCount(data.unreadCount || 0);
+          setTotalCount(data.totalCount ?? (data.notifications || []).length);
           setNotifications(data.notifications || []);
         }
       })
@@ -189,6 +192,7 @@ export default function NotificationBell({ theme = 'auto', align = 'right', clas
     channel.bind('new-notification', (item: NotificationItem) => {
       setNotifications(prev => [item, ...prev].slice(0, 30));
       setUnreadCount(prev => prev + 1);
+      setTotalCount(prev => prev + 1);
 
       // ⚡ ยิง Toast เด้งเตือนสดที่มุมจอทันที เพื่อให้ลูกค้ารับรู้แบบ Real-time
       toast.info(item.content, {
@@ -248,10 +252,12 @@ export default function NotificationBell({ theme = 'auto', align = 'right', clas
     }).then(() => {
       if (id) {
         setNotifications(list => list.filter(n => n.id !== id));
+        setTotalCount(v => Math.max(0, v - 1));
         if (isUnread) setUnreadCount(v => Math.max(0, v - 1));
       } else {
         setNotifications([]);
         setUnreadCount(0);
+        setTotalCount(0);
       }
       setConfirmId(null);
     });
@@ -323,7 +329,7 @@ export default function NotificationBell({ theme = 'auto', align = 'right', clas
                 onClick={() => setTab('all')} 
                 className={`px-2.5 py-0.5 rounded-md font-bold transition cursor-pointer ${tab === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
               >
-                ทั้งหมด ({notifications.length})
+                ทั้งหมด ({totalCount})
               </button>
               <button 
                 onClick={() => setTab('unread')} 
@@ -434,6 +440,12 @@ export default function NotificationBell({ theme = 'auto', align = 'right', clas
               })
             )}
           </div>
+          {/* แสดงแค่บางส่วน → บอกให้รู้ว่ามีมากกว่านี้ ตัวเลขในแท็บจะได้ไม่ดูขัดกับรายการ */}
+          {list.length > 0 && list.length < (tab === 'unread' ? unreadCount : totalCount) && (
+            <div className="px-3 py-1 bg-slate-50 border-t border-slate-100 text-center text-[10px] text-slate-500">
+              แสดงล่าสุด {list.length} จาก {tab === 'unread' ? unreadCount : totalCount} รายการ
+            </div>
+          )}
           <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center text-[9px] text-slate-400">ศรีชัย พร็อพเพอร์ตี้ &bull; อัปเดตข้อมูลอัตโนมัติแบบเรียลไทม์</div>
         </div>
       )}
