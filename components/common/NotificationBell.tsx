@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'; // ใช้พาไปหน้�
 import { getPusherClient } from '@/lib/pusher-client'; // ใช้เชื่อมต่อ Pusher เพื่อรับการแจ้งเตือนแบบเรียลไทม์
 import { notificationChannelName } from '@/lib/notificationChannel'; // ใช้สร้างชื่อ channel การแจ้งเตือนของผู้ใช้แต่ละคน
 import { toast } from '@/components/ui/toast'; // แสดงผล Toast ป๊อปอัปเด้งเตือนสดทันที
+import { isNotificationForActiveChat } from '@/lib/realtime/activeChatSession'; // เช็คว่าแจ้งเตือนเป็นของห้องแชทที่เปิดอ่านอยู่หรือไม่
 import {
   Bell,
   Calendar,
@@ -190,6 +191,18 @@ export default function NotificationBell({ theme = 'auto', align = 'right', clas
     
     // ฟัง Event เมื่อมีข้อความแชทใหม่ หรือกิจกรรมใหม่ส่งเข้ามา
     channel.bind('new-notification', (item: NotificationItem) => {
+      // ข้อความใหม่ของห้องแชทที่ผู้ใช้กำลังเปิดอ่านอยู่ → ไม่ต้องเด้ง toast และถือว่าอ่านแล้วทันที
+      if (document.visibilityState === 'visible' && isNotificationForActiveChat(item.linkUrl)) {
+        setNotifications(prev => [{ ...item, isRead: true }, ...prev].slice(0, 30));
+        setTotalCount(prev => prev + 1);
+        fetch('/api/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notificationId: item.id })
+        }).catch(err => console.error('Mark notification read failed:', err));
+        return;
+      }
+
       setNotifications(prev => [item, ...prev].slice(0, 30));
       setUnreadCount(prev => prev + 1);
       setTotalCount(prev => prev + 1);

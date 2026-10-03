@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { MessageSquare, Search, Users } from 'lucide-react';
 import { useChatRealtime } from '@/hooks/useChatRealtime';
+import { setActiveChatSession } from '@/lib/realtime/activeChatSession';
 import SharedChatView, { SharedChatSession, OutgoingChatPayload } from '@/components/common/SharedChatView';
 import { toast } from '@/components/ui/toast';
 
@@ -90,6 +91,12 @@ function ChatContent() {
   // 2.3 เชื่อมต่อระบบ Real-Time WebSocket ผ่าน Pusher (useChatRealtime)
   // ----------------------------------------------------------------------------
   // ซิงก์ข้อความใหม่ สัญญาณการพิมพ์ (Typing) และการเปิดอ่านแบบ Real-time
+  // บอกกระดิ่งแจ้งเตือนว่าตอนนี้เปิดห้องไหนอยู่ → จะได้ไม่เด้ง toast ของห้องนี้ (ออกจากหน้าแชท = ล้างค่า)
+  useEffect(() => {
+    setActiveChatSession(selectedSessionId);
+    return () => setActiveChatSession(null);
+  }, [selectedSessionId]);
+
   // ข้อความใหม่เข้าห้องที่เปิดอยู่ → ทำเครื่องหมายอ่านแล้วก่อน แล้วค่อยโหลดรายการใหม่
   // เดิมเรียกแค่ fetchChatData (อ่านแล้วถูกตั้งเฉพาะตอนกดเปิดห้อง) → ห้องที่เปิดค้างอยู่ขึ้น "ยังไม่อ่าน 1" ค้าง (BUG-19)
   const handleNewMessage = useCallback(() => {

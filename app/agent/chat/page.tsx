@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { useChatRealtime } from '@/hooks/useChatRealtime';
+import { setActiveChatSession } from '@/lib/realtime/activeChatSession';
 import SharedChatView, { SharedChatSession, OutgoingChatPayload } from '@/components/common/SharedChatView';
 import { toast } from '@/components/ui/toast';
 
@@ -120,6 +121,12 @@ function AgentChatContent() {
 
   // เชื่อมต่อ Pusher และ subscribe channel ของห้องแชทที่กำลังเปิดอยู่ (ยืนยันสิทธิ์ผ่าน /api/pusher/auth
   // ด้วย NextAuth session cookie โดยอัตโนมัติ ไม่ต้องขอ JWT token เองแบบ Socket.io เดิม)
+  // บอกกระดิ่งแจ้งเตือนว่าตอนนี้เปิดห้องไหนอยู่ → จะได้ไม่เด้ง toast ของห้องนี้ (ออกจากหน้าแชท = ล้างค่า)
+  useEffect(() => {
+    setActiveChatSession(selectedSessionId);
+    return () => setActiveChatSession(null);
+  }, [selectedSessionId]);
+
   // ข้อความใหม่เข้าห้องที่เปิดอยู่ → ทำเครื่องหมายอ่านแล้วก่อน แล้วค่อยโหลดรายการใหม่
   // เดิมเรียกแค่ fetchChatData (อ่านแล้วถูกตั้งเฉพาะตอนกดเปิดห้อง) → ห้องที่เปิดค้างอยู่ขึ้น "ยังไม่อ่าน 1" ค้าง (BUG-19)
   const handleNewMessage = useCallback(() => {
