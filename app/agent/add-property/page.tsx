@@ -23,6 +23,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
 import { toast } from '@/components/ui/toast';
+import { timeSlotRange } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 // ถ้าโดน server-render (ซึ่ง Next.js ทำแม้ในหน้า 'use client' รอบแรกด้วย) จะพังทันที
@@ -34,7 +35,7 @@ const PropertyLocationMap = dynamic(() => import('@/components/property/Property
 // โครงสร้างข้อมูลสล็อตเวลาสำหรับให้นัดชมสถานที่
 interface ViewingSlot {
   date: string; // วันที่ในรูปแบบ YYYY-MM-DD
-  timeSlot: 'morning' | 'afternoon'; // รอบเช้า (09:00-12:00) หรือ รอบบ่าย (13:00-17:00)
+  timeSlot: 'morning' | 'afternoon'; // รอบเช้า / รอบบ่าย (เวลาจริงดูที่ TIME_SLOT_INFO ใน lib/constants.ts)
 }
 
 // รอบเวลาที่ "บ้านหลังอื่นของนายหน้าคนเดียวกัน" เปิดไว้แล้ว (เปิดซ้อนไม่ได้เพราะไปดูได้ทีละที่)
@@ -620,7 +621,7 @@ export default function AgentAddPropertyPage() {
                           }`}
                         >
                           <p className="text-[11px] font-black text-slate-800">{slot === 'morning' ? 'รอบเช้า' : 'รอบบ่าย'}</p>
-                          <p className="text-[9px] text-slate-500 font-bold">{slot === 'morning' ? '09:00 - 12:00' : '13:00 - 17:00'}</p>
+                          <p className="text-[9px] text-slate-500 font-bold">{timeSlotRange(slot)}</p>
                           {/* สถานะการเลือกต้องขึ้นเสมอ แม้รอบนี้จะชนกับบ้านหลังอื่น
                               (ของเดิมโชว์ได้อย่างเดียว พอชนแล้วเลือกไว้ก็ไม่รู้ว่าเลือกติดหรือยัง) */}
                           <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${active ? 'text-emerald-600' : 'text-slate-400'}`}>

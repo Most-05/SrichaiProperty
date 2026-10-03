@@ -531,8 +531,8 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
-              {/* การ์ดสเปคหลัก 3 ช่อง (ห้องนอน, ห้องน้ำ, พื้นที่) */}
-              <div className="border border-slate-200/60 py-4 grid grid-cols-3 text-center text-slate-600 bg-slate-50/50 rounded-2xl text-[11px] font-bold">
+              {/* การ์ดสเปคหลัก 4 ช่อง (ห้องนอน, ห้องน้ำ, ที่จอดรถ, พื้นที่) */}
+              <div className="border border-slate-200/60 py-4 grid grid-cols-2 sm:grid-cols-4 gap-y-3 text-center text-slate-600 bg-slate-50/50 rounded-2xl text-[11px] font-bold">
                 <div>
                   <p className="text-slate-400 font-medium mb-0.5">ห้องนอน</p>
                   <p className="font-extrabold text-xs text-slate-800 inline-flex items-center gap-1"><BedIcon className="w-3.5 h-3.5" /> {property.bedrooms} ห้อง</p>
@@ -541,7 +541,11 @@ export default function PropertyDetailPage() {
                   <p className="text-slate-400 font-medium mb-0.5">ห้องน้ำ</p>
                   <p className="font-extrabold text-xs text-slate-800 inline-flex items-center gap-1"><BathIcon className="w-3.5 h-3.5" /> {property.bathrooms} ห้อง</p>
                 </div>
-                <div className="border-l border-slate-200/60">
+                <div className="border-t sm:border-t-0 sm:border-l border-slate-200/60 pt-2 sm:pt-0">
+                  <p className="text-slate-400 font-medium mb-0.5">ที่จอดรถ</p>
+                  <p className="font-extrabold text-xs text-slate-800 inline-flex items-center gap-1"><Car className="w-3.5 h-3.5" /> {property.parking != null ? `${property.parking} คัน` : "ไม่ระบุ"}</p>
+                </div>
+                <div className="border-l border-slate-200/60 border-t sm:border-t-0 pt-2 sm:pt-0">
                   <p className="text-slate-400 font-medium mb-0.5">พื้นที่ใช้สอย</p>
                   <p className="font-extrabold text-xs text-slate-800 inline-flex items-center gap-1"><AreaIcon className="w-3.5 h-3.5" /> {property.area} ตร.ม.</p>
                 </div>

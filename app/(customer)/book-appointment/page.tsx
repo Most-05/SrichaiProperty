@@ -14,11 +14,14 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { useApp } from '@/context/AppContext';
 import BookingSidebar from '@/components/customer/BookingSidebar';
 import BookingCalendar from '@/components/customer/BookingCalendar';
-import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { NO_SHOW_LIMIT, timeSlotRange } from '@/lib/constants';
 import { toast } from '@/components/ui/toast';
+import { Bell, Check, Loader2, LogIn, AlertCircle, ArrowLeft } from 'lucide-react';
 
 // รายชื่อเดือนภาษาไทยสำหรับแสดงผลวันที่แบบข้อความอ่านง่าย
 const MONTH_NAMES_TH = [
@@ -34,6 +37,11 @@ function BookAppointmentForm() {
   const router = useRouter();
   const propertyId = searchParams.get('propertyId'); // รหัสอสังหาฯ ที่ส่งมาจากหน้าก่อนหน้า (?propertyId=uuid)
   const today = new Date();
+
+  // ตรวจสอบสถานะการเข้าสู่ระบบ
+  const { status: authStatus } = useSession();
+  const isGuest = authStatus === 'unauthenticated';
+  const returnUrl = propertyId ? `/book-appointment?propertyId=${propertyId}` : '/book-appointment';
 
   // ----------------------------------------------------------------------------
   // 2. LOCAL COMPONENT STATE (สถานะภายในฟอร์ม)
@@ -94,6 +102,11 @@ function BookAppointmentForm() {
 
   // 🔑 KEYWORD: ลงคิวรอ / ยกเลิกคิวรอ รอบที่จองไม่ได้
   const toggleWaitlist = async (dateStr: string, timeSlot: string) => {
+    if (isGuest) {
+      toast.error('กรุณาเข้าสู่ระบบก่อนลงคิวรอ');
+      router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
     const key = `${dateStr}|${timeSlot}`;
     const joined = waitlistKeys.includes(key);
     setWaitlistBusy(key);
@@ -130,10 +143,38 @@ function BookAppointmentForm() {
   // ----------------------------------------------------------------------------
   // 5. COMPUTED & MEMOIZED VALUES
   // ----------------------------------------------------------------------------
-  // 5.1 รายชื่อวันที่ที่มีอย่างน้อย 1 รอบเวลาว่างและยังไม่มีคนจอง (นำไปไฮไลต์ในปฏิทิน)
-  const availableDates = useMemo(() =>
-    Array.from(new Set(viewingSlots.filter((s) => !s.isBooked && !s.agentBusyElsewhere).map((s) => s.date)))
-  , [viewingSlots]);
+  // 5.1 คำนวณแยก 2 กลุ่ม: วันที่มีรอบว่างให้จองได้ (availableDates) vs วันที่เปิดรับนัดแต่ถูกจองเต็มแล้วทุกรอบ (fullyBookedDates)
+  const { availableDates, fullyBookedDates } = useMemo(() => {
+    const dateMap = new Map<string, { total: number; bookedCount: number }>();
+
+    viewingSlots.forEach((slot) => {
+      const current = dateMap.get(slot.date) || { total: 0, bookedCount: 0 };
+      current.total += 1;
+      if (slot.isBooked || slot.agentBusyElsewhere) {
+        current.bookedCount += 1;
+      }
+      dateMap.set(slot.date, current);
+    });
+
+    const available: string[] = [];
+    const fullyBooked: string[] = [];
+
+    dateMap.forEach((info, date) => {
+      if (info.total > 0 && info.bookedCount >= info.total) {
+        fullyBooked.push(date); // นายหน้าเปิดรอบรับนัด แต่ถูกจองเต็มแล้วทุกรอบ
+      } else if (info.total > info.bookedCount) {
+        available.push(date);   // ยังมีอย่างน้อย 1 รอบว่างให้จอง
+      }
+    });
+
+    return { availableDates: available, fullyBookedDates: fullyBooked };
+  }, [viewingSlots]);
+
+  // ตรวจสอบว่าวันที่กำลังเลือกอยู่เป็น "วันนัดเต็มแล้ว" หรือไม่
+  const isSelectedDateFullyBooked = useMemo(() => {
+    if (!selectedDateStr) return false;
+    return fullyBookedDates.includes(selectedDateStr);
+  }, [selectedDateStr, fullyBookedDates]);
 
   // 5.2 กรองเฉพาะรอบเวลาของ "วันที่ที่เลือกอยู่ปัจจุบัน"
   const slotsForSelectedDate = useMemo(() => 
@@ -165,6 +206,11 @@ function BookAppointmentForm() {
   // ----------------------------------------------------------------------------
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuest) {
+      toast.error('กรุณาเข้าสู่ระบบก่อนทำการจองนัดหมาย');
+      router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
     if (!property || !selectedDateStr || !selectedTimeSlot || isBlockedByNoShow) return;
 
     setSubmitting(true);
@@ -228,8 +274,9 @@ function BookAppointmentForm() {
         
         {/* หัวข้อหน้าและปุ่มย้อนกลับ */}
         <div className="mb-8">
-          <button onClick={() => router.back()} className="text-slate-500 hover:text-blue-600 font-bold text-xs flex items-center gap-1 mb-2 transition">
-            &lt; กลับไปหน้ารายละเอียด
+          <button onClick={() => router.back()} className="text-slate-500 hover:text-blue-600 font-bold text-xs flex items-center gap-1.5 mb-2 transition cursor-pointer">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>กลับไปหน้ารายละเอียด</span>
           </button>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">ทำการนัดหมาย</h1>
           <p className="text-slate-500 text-xs mt-0.5">เลือกวันและเวลาที่คุณสะดวก เพื่อเข้าชมสถานที่จริง</p>
@@ -241,12 +288,30 @@ function BookAppointmentForm() {
 
           {/* ฟอร์มการจองนัดหมายฝั่งขวา (3 ขั้นตอน) */}
           <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-sm space-y-8">
+            {/* แจ้งเตือนกรณีเป็น Guest ยังไม่ได้ล็อกอิน */}
+            {isGuest && (
+              <div className="p-4 rounded-2xl bg-blue-50/80 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-900">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="w-5 h-5 text-blue-600 shrink-0" />
+                  <div>
+                    <p className="font-extrabold text-blue-950">คุณกำลังเข้าชมในฐานะผู้เยี่ยมชม</p>
+                    <p className="text-blue-700 text-[11px]">กรุณาเข้าสู่ระบบเพื่อให้ข้อมูลการจองเชื่อมโยงกับบัญชีของคุณ</p>
+                  </div>
+                </div>
+                <Link
+                  href={`/login?callbackUrl=${encodeURIComponent(returnUrl)}`}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-xs shrink-0 cursor-pointer text-xs"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>เข้าสู่ระบบ</span>
+                </Link>
+              </div>
+            )}
+
             {/* แจ้งเตือนก่อนจองว่าถูกจำกัดจากประวัติไม่มาตามนัด */}
             {isBlockedByNoShow && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700">
-                <svg className="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                 <span>
                   บัญชีของคุณมีประวัติไม่มาตามนัดครบ {NO_SHOW_LIMIT} ครั้ง จึงถูกจำกัดการจองนัดใหม่ชั่วคราว
                   กรุณาติดต่อทีมงานหากต้องการความช่วยเหลือ
@@ -273,15 +338,20 @@ function BookAppointmentForm() {
                   setSelectedDateStr={handleDateSelect}
                   holidays={holidays}
                   availableDates={availableDates}
+                  fullyBookedDates={fullyBookedDates}
                 />
 
                 {/* ข้อความเตือนกรณีไม่มีวันว่างเปิดให้จองเลย */}
-                {!slotsLoading && availableDates.length === 0 && (
+                {!slotsLoading && availableDates.length === 0 && fullyBookedDates.length === 0 && (
                   <div className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center justify-center gap-1.5">
-                    <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                     <span>นายหน้ายังไม่ได้เปิดวันว่างสำหรับบ้านหลังนี้ กรุณาติดต่อนายหน้าโดยตรง</span>
+                  </div>
+                )}
+                {!slotsLoading && availableDates.length === 0 && fullyBookedDates.length > 0 && (
+                  <div className="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-center justify-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>วันนัดหมายที่เปิดไว้ถูกจองเต็มทั้งหมดแล้ว คุณสามารถคลิกวันที่ต้องการเพื่อลงชื่อคิวรอรับการแจ้งเตือนได้</span>
                   </div>
                 )}
               </div>
@@ -293,17 +363,30 @@ function BookAppointmentForm() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold">2</span>
-                    <label className="text-xs font-black text-slate-800 uppercase tracking-wider">เลือกตอบรอบเวลา</label>
+                    <label className="text-xs font-black text-slate-800 uppercase tracking-wider">เลือกรอบเวลา</label>
                   </div>
                   <span className="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
                     {getThaiPreviewDate()}
                   </span>
                 </div>
 
+                {/* แจ้งเตือนเมื่อเลือกวันที่ถูกจองเต็มแล้วทุกรอบ */}
+                {isSelectedDateFullyBooked && (
+                  <div className="p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-900">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-extrabold text-rose-950">วันนี้นัดหมายเต็มทุกรอบแล้ว</p>
+                      <p className="text-rose-700 text-[11px] mt-0.5 leading-relaxed">
+                        นายหน้าเปิดรับนัดในวันนี้ แต่มีผู้จองเต็มครบทุกรอบแล้ว คุณสามารถกดปุ่ม <span className="font-black text-rose-900">"แจ้งเตือนฉันถ้ารอบนี้ว่าง"</span> ที่รอบเวลาด้านล่าง เพื่อเข้าคิวรอรับการแจ้งเตือนทันทีหากมีผู้ยกเลิกนัด
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    { key: 'morning', title: 'รอบเช้า', time: '09:00 - 12:00', fullText: 'รอบเช้า (09:00 - 12:00 น.)', slot: morningSlot },
-                    { key: 'afternoon', title: 'รอบบ่าย', time: '13:00 - 17:00', fullText: 'รอบบ่าย (13:00 - 17:00 น.)', slot: afternoonSlot },
+                    { key: 'morning', title: 'รอบเช้า', time: timeSlotRange('morning'), fullText: `รอบเช้า (${timeSlotRange('morning')} น.)`, slot: morningSlot },
+                    { key: 'afternoon', title: 'รอบบ่าย', time: timeSlotRange('afternoon'), fullText: `รอบบ่าย (${timeSlotRange('afternoon')} น.)`, slot: afternoonSlot },
                   ].map(({ key, title, time, fullText, slot }) => {
                     const isSelected = selectedTimeSlot.includes(title);
                     
@@ -344,9 +427,7 @@ function BookAppointmentForm() {
                           <span className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded text-[8px] font-bold">นายหน้าติดนัดบ้านหลังอื่น</span>
                         ) : slot ? (
                           <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[8px] font-bold inline-flex items-center gap-1">
-                            <svg className="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                            </svg>
+                            <Check className="w-2.5 h-2.5 text-emerald-600 shrink-0 stroke-[3]" />
                             ว่างให้จอง
                           </span>
                         ) : (
@@ -366,11 +447,13 @@ function BookAppointmentForm() {
                               : 'border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-600'
                           }`}
                         >
-                          {waitlistBusy === waitKey
-                            ? 'กำลังบันทึก...'
-                            : isWaiting
-                              ? '✓ รออยู่ — กดอีกครั้งเพื่อยกเลิกคิว'
-                              : '🔔 แจ้งเตือนฉันถ้ารอบนี้ว่าง'}
+                          {waitlistBusy === waitKey ? (
+                            <span className="flex items-center justify-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin shrink-0" /> กำลังบันทึก...</span>
+                          ) : isWaiting ? (
+                            <span className="flex items-center justify-center gap-1.5"><Check className="w-3 h-3 shrink-0 text-blue-600" /> รออยู่ — กดอีกครั้งเพื่อยกเลิกคิว</span>
+                          ) : (
+                            <span className="flex items-center justify-center gap-1.5"><Bell className="w-3 h-3 shrink-0" /> แจ้งเตือนฉันถ้ารอบนี้ว่าง</span>
+                          )}
                         </button>
                       )}
                       </div>
@@ -396,16 +479,18 @@ function BookAppointmentForm() {
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition text-slate-800 font-bold text-xs resize-none placeholder-slate-400"
                 />
 
-                                <button
+                <button
                   type="submit"
                   disabled={submitting || !selectedDateStr || !selectedTimeSlot || isBlockedByNoShow}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition shadow flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed text-xs"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition shadow flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed text-xs cursor-pointer"
                 >
-                  {submitting
-                    ? '⏳ กำลังบันทึกข้อมูลนัดชม...'
-                    : (!selectedDateStr || !selectedTimeSlot)
-                      ? 'กรุณาเลือกวันและช่วงเวลาก่อน'
-                      : 'ยืนยันการนัดหมาย'}
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin shrink-0" /> กำลังบันทึกข้อมูลนัดชม...</span>
+                  ) : (!selectedDateStr || !selectedTimeSlot) ? (
+                    isSelectedDateFullyBooked ? 'วันนี้นัดหมายเต็มทุกรอบแล้ว (กดปุ่มลงคิวรอด้านบน)' : 'กรุณาเลือกวันและช่วงเวลาก่อน'
+                  ) : (
+                    'ยืนยันการนัดหมาย'
+                  )}
                 </button>
               </div>
 

@@ -121,33 +121,45 @@ export async function GET(req: Request) {
       db.properties.findUnique({ where: { id: propertyId }, select: { agent_id: true } })
     ]);
 
-    // นายหน้าเปิดวันว่างซ้อนกันได้หลายบ้าน (ดู viewingSlotService) รอบไหนของบ้านหลังนี้
-    // ที่ตรงกับนัดจริงของนายหน้าคนเดียวกันที่บ้านหลังอื่น ต้องบอกลูกค้าไว้ก่อนกดจอง
-    // (ฝั่งเซิร์ฟเวอร์กันซ้ำอยู่แล้วที่ api/appointments แต่ฝั่งนี้ทำให้ลูกค้าไม่เสียเวลากดแล้วโดนปฏิเสธ)
+    // ดึงนัดหมายที่กำลังดำเนินการอยู่ทั้งหมดของนายหน้าคนนี้
+    // 1. ถ้านัดเป็นของบ้านหลังนี้ (property_id === propertyId) -> ถือเป็น isBooked ทันที (แม้ flag is_booked ในตารางจะค้างอยู่)
+    // 2. ถ้านัดเป็นของบ้านหลังอื่นของนายหน้า -> ถือเป็น agentBusyElsewhere (เตือนลูกค้าว่านายหน้าติดคิวบ้านอื่น)
     let agentBusyKeys = new Set<string>();
+    let thisPropertyBookedKeys = new Set<string>();
     if (property?.agent_id) {
       const busyAppointments = await db.appointments.findMany({
         where: {
           agent_id: property.agent_id,
-          property_id: { not: propertyId },
           status: { in: ACTIVE_APPOINTMENT_STATUSES }
         },
-        select: { appointment_date: true, time_slot: true }
+        select: { property_id: true, appointment_date: true, time_slot: true }
       });
-      agentBusyKeys = new Set(
-        busyAppointments.map((a) => `${toDateKey(a.appointment_date)}|${a.time_slot}`)
-      );
+      for (const a of busyAppointments) {
+        if (!a.appointment_date || !a.time_slot) continue;
+        const key = `${toDateKey(a.appointment_date)}|${a.time_slot}`;
+        if (a.property_id === propertyId) {
+          thisPropertyBookedKeys.add(key);
+        } else {
+          agentBusyKeys.add(key);
+        }
+      }
     }
 
     const formatted = propertySlots
       .filter((s) => s.time_slot)
-      .map((s) => ({
-        id: s.id,
-        date: toDateKey(s.available_date),
-        timeSlot: s.time_slot as string,
-        isBooked: Boolean(s.is_booked),
-        agentBusyElsewhere: agentBusyKeys.has(`${toDateKey(s.available_date)}|${s.time_slot}`)
-      }));
+      .map((s) => {
+        const dateKey = toDateKey(s.available_date);
+        const slotKey = `${dateKey}|${s.time_slot}`;
+        const isBooked = Boolean(s.is_booked) || thisPropertyBookedKeys.has(slotKey);
+        const agentBusyElsewhere = !isBooked && agentBusyKeys.has(slotKey);
+        return {
+          id: s.id,
+          date: dateKey,
+          timeSlot: s.time_slot as string,
+          isBooked,
+          agentBusyElsewhere
+        };
+      });
 
     return NextResponse.json({ success: true, slots: formatted });
   } catch (error) {

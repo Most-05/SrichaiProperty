@@ -9,7 +9,7 @@ import {
   findCustomerWaitlistForProperty,
   purgeExpiredWaitlist
 } from "@/lib/services/waitlistService";
-import { NO_SHOW_LIMIT } from "@/lib/constants";
+import { NO_SHOW_LIMIT, timeSlotRange } from "@/lib/constants";
 
 // ==============================================================================
 // API คิวรอรอบเข้าชม (Waitlist)
@@ -26,8 +26,9 @@ async function getCurrentUser() {
 }
 
 // ------------------------------------------------------------------------------
-// GET: รอบที่ลูกค้าคนนี้ลงคิวรอไว้กับบ้านหลังหนึ่ง
-// หน้าจองใช้ตัดสินว่าปุ่มไหนควรขึ้นว่า "รออยู่แล้ว" แทน "แจ้งเตือนฉันถ้าว่าง"
+// GET: รอบที่ลูกค้าคนนี้ลงคิวรอไว้
+// - ถ้าส่ง propertyId: ส่งคืน keys ของบ้านหลังนั้น (สำหรับหน้าจองนัดหมาย)
+// - ถ้าไม่ส่ง propertyId: ส่งคืนรายการคิวรอทั้งหมดของลูกค้า (สำหรับหน้าประวัตินัดหมาย)
 // ------------------------------------------------------------------------------
 export async function GET(req: Request) {
   try {
@@ -35,13 +36,67 @@ export async function GET(req: Request) {
     if (!user) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน" }, { status: 401 });
 
     const propertyId = new URL(req.url).searchParams.get("propertyId");
-    if (!propertyId) {
-      return NextResponse.json({ error: "กรุณาระบุรหัสอสังหาริมทรัพย์ (propertyId)" }, { status: 400 });
-    }
 
     await purgeExpiredWaitlist(); // เก็บกวาดคิวที่เลยวันไปแล้ว (โปรเจกต์นี้ไม่มี cron)
-    const keys = await findCustomerWaitlistForProperty(user.id, propertyId);
-    return NextResponse.json({ success: true, waitlistKeys: keys });
+
+    if (propertyId) {
+      const keys = await findCustomerWaitlistForProperty(user.id, propertyId);
+      return NextResponse.json({ success: true, waitlistKeys: keys });
+    }
+
+    // กรณีไม่ได้ส่ง propertyId: ดึงรายการคิวรอทั้งหมดของลูกค้ารายนี้พร้อมข้อมูลโครงการ
+    const list = await db.appointment_waitlist.findMany({
+      where: {
+        customer_id: user.id
+      },
+      include: {
+        properties: {
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            users: {
+              select: {
+                first_name: true,
+                last_name: true,
+                phone: true
+              }
+            },
+            property_images: {
+              orderBy: { order_index: 'asc' },
+              take: 1,
+              select: { image_url: true }
+            }
+          }
+        }
+      },
+      orderBy: {
+        available_date: 'asc'
+      }
+    });
+
+    const items = list.map((item) => {
+      const dateStr = item.available_date instanceof Date
+        ? item.available_date.toISOString().split("T")[0]
+        : String(item.available_date).split("T")[0];
+
+      return {
+        id: item.id,
+        propertyId: item.property_id,
+        propertyName: item.properties?.title || "ไม่พบชื่ออสังหาริมทรัพย์",
+        propertyPrice: item.properties?.price ? `฿${Number(item.properties.price).toLocaleString()}` : "-",
+        propertyImage: item.properties?.property_images?.[0]?.image_url || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600",
+        agentName: item.properties?.users ? `${item.properties.users.first_name} ${item.properties.users.last_name || ''}`.trim() : "นายหน้าประจำโครงการ",
+        agentPhone: item.properties?.users?.phone || "-",
+        date: dateStr,
+        timeSlot: item.time_slot,
+        timeSlotText: item.time_slot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")})` : `ช่วงเช้า (${timeSlotRange("morning")})`,
+        notifiedAt: item.notified_at ? item.notified_at.toISOString() : null,
+        createdAt: item.created_at.toISOString()
+      };
+    });
+
+    return NextResponse.json({ success: true, waitlist: items });
   } catch (error) {
     return NextResponse.json({ error: "ดึงคิวรอล้มเหลว: " + (error as Error).message }, { status: 500 });
   }
@@ -125,9 +180,22 @@ export async function DELETE(req: Request) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน" }, { status: 401 });
 
-    const { propertyId, date, timeSlot } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { propertyId, date, timeSlot, waitlistId } = body;
+
+    // รองรับการส่ง waitlistId โดยตรงจากหน้ารายการคิวรอ
+    if (waitlistId) {
+      const res = await db.appointment_waitlist.deleteMany({
+        where: {
+          id: waitlistId,
+          customer_id: user.id
+        }
+      });
+      return NextResponse.json({ success: true, removed: res.count });
+    }
+
     if (!propertyId || !date || !timeSlot) {
-      return NextResponse.json({ error: "ข้อมูลไม่ครบ ต้องมีบ้าน วันที่ และรอบเวลา" }, { status: 400 });
+      return NextResponse.json({ error: "ข้อมูลไม่ครบ ต้องมีบ้าน วันที่ และรอบเวลา หรือ waitlistId" }, { status: 400 });
     }
 
     // ผูก customer_id ของคนที่ล็อกอินเสมอ ลบคิวของคนอื่นไม่ได้แม้จะรู้ข้อมูลครบ

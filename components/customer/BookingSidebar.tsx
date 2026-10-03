@@ -14,6 +14,7 @@
 
 import React from 'react';
 import Image from 'next/image'; // ใช้แสดงรูปหลักของทรัพย์และรูปโปรไฟล์นายหน้า
+import { MapPin, Check, Clock, Info } from 'lucide-react';
 import { Property } from '@/context/AppContext'; // กำหนดโครงสร้างข้อมูลอสังหาริมทรัพย์ที่ใช้แสดงในการ์ดสรุป
 
 // อินเทอร์เฟซกำหนด Props รับออบเจกต์อสังหาริมทรัพย์ (property) มาจากหน้าแม่
@@ -62,10 +63,7 @@ export default function BookingSidebar({ property }: BookingSidebarProps) {
             {property.price}
           </p>
           <p className="text-slate-400 text-[10px] font-bold flex items-center gap-1.5 pt-1.5 border-t border-slate-100">
-            <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span>{locationText}</span>
           </p>
         </div>
@@ -89,9 +87,7 @@ export default function BookingSidebar({ property }: BookingSidebarProps) {
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">นายหน้าผู้ดูแล</p>
             <h4 className="text-xs font-black text-slate-800">{property.agentName}</h4>
             <span className="bg-emerald-50 text-emerald-700 text-[8px] font-black px-2 py-0.5 rounded mt-1 inline-flex items-center gap-1">
-              <svg className="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-              </svg>
+              <Check className="w-2.5 h-2.5 text-emerald-600 shrink-0 stroke-[3]" />
               ยืนยันตัวตนแล้ว
             </span>
           </div>
@@ -100,9 +96,7 @@ export default function BookingSidebar({ property }: BookingSidebarProps) {
         {/* กล่องข้อแนะนำวันเวลาเข้าชมสถานที่ */}
         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-1.5">
           <div className="flex items-center gap-1.5 text-slate-700 text-xs font-bold">
-            <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
             <span>ข้อแนะนำการเข้าชม</span>
           </div>
           <p className="text-[10px] font-medium text-slate-500 leading-relaxed">
@@ -115,9 +109,7 @@ export default function BookingSidebar({ property }: BookingSidebarProps) {
           กล่องส่วนที่ 3: คำชี้แจงสำคัญเรื่องกระบวนการนัดหมาย (NOTICE BOX)
           ======================================================================== */}
       <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100 flex items-start gap-2.5">
-        <svg className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
         <p className="text-[10px] text-blue-700 font-bold leading-relaxed">
           การนัดหมายนี้เป็นการส่งคำขอเบื้องต้น นายหน้าจะทำการติดต่อกลับเพื่อยืนยันเวลาและวันเข้าชมที่แน่นอนอีกครั้งหนึ่ง
         </p>

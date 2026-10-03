@@ -141,6 +141,7 @@ function SearchPageContent() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [activeTab, setActiveTab] = useState<'buy' | 'rent'>(() => searchParams.get('tab') === 'rent' ? 'rent' : 'buy');
   const [propertyType, setPropertyType] = useState(() => searchParams.get('type') || 'all');
+  const [agentId, setAgentId] = useState(() => searchParams.get('agentId') || '');
 
   const [filters, setFilters] = useState<FilterState>(() => ({
     province: searchParams.get('province') || '',
@@ -178,6 +179,7 @@ function SearchPageContent() {
     if (debouncedSearchTerm) params.set('q', debouncedSearchTerm);
     if (activeTab !== 'buy') params.set('tab', activeTab);
     if (propertyType !== 'all') params.set('type', propertyType);
+    if (agentId) params.set('agentId', agentId);
 
     if (filters.priceMin) params.set('priceMin', filters.priceMin);
     if (filters.priceMax) params.set('priceMax', filters.priceMax);
@@ -204,7 +206,7 @@ function SearchPageContent() {
     if (newUrl !== currentUrl) {
       router.replace(newUrl, { scroll: false });
     }
-  }, [debouncedSearchTerm, activeTab, propertyType, filters, pathname, router, searchParams]);
+  }, [debouncedSearchTerm, activeTab, propertyType, agentId, filters, pathname, router, searchParams]);
 
   const triggerSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -216,6 +218,7 @@ function SearchPageContent() {
     setSearchTerm('');
     setDebouncedSearchTerm('');
     setPropertyType('all');
+    setAgentId('');
     setFilters(DEFAULT_FILTERS);
     setCurrentPage(1);
   };
@@ -224,10 +227,12 @@ function SearchPageContent() {
     if (activeTab === 'rent' && prop.listingType !== 'rent') return false;
     if (activeTab === 'buy' && prop.listingType !== 'sale') return false;
 
+    if (agentId && prop.agent_id !== agentId) return false;
+
     if (filters.isPremiumOnly && !prop.isPremium) return false;
 
     const s = debouncedSearchTerm.toLowerCase().trim();
-    if (s && ![prop.title, prop.location, prop.amphureName, prop.provinceName, prop.districtName].some(f => (f || '').toLowerCase().includes(s))) {
+    if (s && ![prop.title, prop.location, prop.amphureName, prop.provinceName, prop.districtName, prop.agentName].some(f => (f || '').toLowerCase().includes(s))) {
       return false;
     }
 
@@ -295,6 +300,16 @@ function SearchPageContent() {
       id: 'type',
       label: typeMap[propertyType] || propertyType,
       onRemove: () => setPropertyType('all'),
+    });
+  }
+
+  if (agentId) {
+    const matchedAgentProp = properties.find(p => p.agent_id === agentId);
+    const agentLabel = matchedAgentProp?.agentName ? `นายหน้า: ${matchedAgentProp.agentName}` : 'นายหน้าที่เลือก';
+    activeChips.push({
+      id: 'agentId',
+      label: agentLabel,
+      onRemove: () => setAgentId(''),
     });
   }
 

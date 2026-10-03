@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next"; // ดึงเซสชันเพื่อระบุตัวนายหน้า/แอดมินที่ทำรายการ
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับดึง/สร้าง/แก้ไขประกาศอสังหาริมทรัพย์
+import { validateSlotInput } from "@/lib/services/viewingSlotService"; // ตรวจวัน+รอบของรอบว่างที่เปิด (ห้ามย้อนหลัง)
 import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนเมื่อมีประกาศใหม่หรืออนุมัติ/ตีกลับประกาศ
 
 /**
@@ -181,6 +182,16 @@ export async function POST(request: Request) {
 
     if (Number(price) <= 0) {
       return NextResponse.json({ error: "ราคาต้องเป็นตัวเลขมากกว่า 0" }, { status: 400 });
+    }
+
+    // รอบว่างที่เปิดพร้อมประกาศ: ห้ามวันที่ผ่านแล้ว / รอบหรือวันที่ผิดรูปแบบ (หน้าเว็บกันไว้ แต่ยิง API ตรงได้ — BUG-12)
+    if (Array.isArray(viewingSlots)) {
+      for (const slot of viewingSlots) {
+        const slotError = validateSlotInput(slot?.date, slot?.timeSlot);
+        if (slotError) {
+          return NextResponse.json({ error: `รอบวันว่าง ${slot?.date ?? ""}: ${slotError}` }, { status: 400 });
+        }
+      }
     }
 
     const rawArea = area_sqm ?? areaSqm;

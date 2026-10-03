@@ -3,9 +3,9 @@ import { getServerSession } from "next-auth/next"; // ดึงเซสชั�
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
-import { hasAgentBookingConflict } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
-import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow, getCustomerReliability } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก
-import { NO_SHOW_LIMIT, APPOINTMENT_STATUS } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
+import { hasAgentBookingConflict, validateSlotInput } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
+import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow, getCustomerReliability, getTodayDateBangkok } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก + วันนี้ตามเวลาไทย
+import { NO_SHOW_LIMIT, APPOINTMENT_STATUS, timeSlotRange } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
 import { findUpcomingAppointments, findRecentlyRemindedAppointmentIds, buildReminderMessage, REMINDER_TYPE } from "@/lib/services/appointmentReminderService"; // เตือนล่วงหน้าก่อนถึงวันนัด
 import { collectWaitlistToNotify, buildWaitlistAlert, removeFromWaitlist, purgeExpiredWaitlist } from "@/lib/services/waitlistService"; // คิวรอรอบเข้าชม
 import { notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนหลายคนพร้อมกัน
@@ -139,9 +139,9 @@ export async function GET(request: Request) {
       
       // แปลงคีย์รอบเวลาให้เป็นข้อความภาษาไทยสำหรับแสดงผล
       const timeSlotText = apt.time_slot === "morning"
-        ? "10:00 - 12:00 น. (ช่วงเช้า)"
+        ? `${timeSlotRange("morning")} น. (ช่วงเช้า)`
         : apt.time_slot === "afternoon"
-          ? "14:00 - 16:00 น. (ช่วงบ่าย)"
+          ? `${timeSlotRange("afternoon")} น. (ช่วงบ่าย)`
           : apt.time_slot || "ไม่ระบุเวลา";
 
       return {
@@ -216,6 +216,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน" }, { status: 400 });
     }
 
+    // จองนัดดูบ้านได้เฉพาะบัญชีลูกค้า (เดิมนายหน้า/แอดมินก็จองได้ รวมถึงนายหน้าจองบ้านของตัวเอง — BUG-11)
+    if (user.role_id !== "customer") {
+      return NextResponse.json({ error: "การจองนัดเข้าชมใช้ได้เฉพาะบัญชีลูกค้าเท่านั้น" }, { status: 403 });
+    }
+
+    // รหัสบ้านผิดรูปแบบ → 400 แทนการปล่อยให้ Prisma error เป็น 500
+    if (typeof propertyId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId)) {
+      return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
+    }
+
     // 2.3 ค้นหาข้อมูลบ้านหลังนี้ในฐานข้อมูล
     const property = await db.properties.findUnique({ where: { id: propertyId } });
     if (!property) return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์นี้" }, { status: 404 });
@@ -238,7 +248,16 @@ export async function POST(request: Request) {
     }
 
     // 2.5 แปลงข้อความรอบเวลาให้อยู่ในคีย์มาตรฐาน DB ('morning' หรือ 'afternoon')
+    if (typeof timeSlot !== "string") {
+      return NextResponse.json({ error: "รอบเวลาไม่ถูกต้อง" }, { status: 400 });
+    }
     const dbTimeSlot = timeSlot.includes("13:") || timeSlot.includes("15:") || timeSlot.includes("บ่าย") || timeSlot.toLowerCase().includes("afternoon") ? "afternoon" : "morning";
+
+    // ห้ามจองวันที่ผ่านไปแล้ว / วันที่ผิดรูปแบบ (หน้าเว็บกันไว้แล้ว แต่ยิง API ตรงได้ — BUG-12)
+    const slotError = validateSlotInput(date, dbTimeSlot);
+    if (slotError) {
+      return NextResponse.json({ error: slotError }, { status: 400 });
+    }
 
     // 2.6 เช็คว่านายหน้าคนนี้มีนัดจริงกับ "บ้านหลังอื่น" ชนวัน+เวลานี้อยู่แล้วหรือไม่
     if (property.agent_id && await hasAgentBookingConflict(property.agent_id, property.id, new Date(date), dbTimeSlot)) {
@@ -311,13 +330,13 @@ export async function POST(request: Request) {
 
     // 2.8 ส่งการแจ้งเตือนไปยังนายหน้าผู้ดูแลและลูกค้าที่ทำรายการ
     const customerName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "ลูกค้า";
-    const timeLabel = dbTimeSlot === "morning" ? "ช่วงเช้า (10:00 - 12:00 น.)" : "ช่วงบ่าย (14:00 - 16:00 น.)";
+    const timeLabel = dbTimeSlot === "morning" ? `ช่วงเช้า (${timeSlotRange("morning")} น.)` : `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)`;
 
     if (property.agent_id) {
       sendNotification(
         property.agent_id,
         "คำขอนัดหมายเข้าชมโครงการ",
-        `คุณ ${customerName} ได้ยื่นคำขอนัดหมายเข้าชม "${property.title}" สำหรับวันที่ ${date} (${timeLabel})`,
+        `คุณ ${customerName} ได้ยื่นคำขอนัดหมายเข้าชม "${property.title}" สำหรับวันที่ ${date} ${timeLabel}`,
         "appointment",
         "/agent/appointments"
       );
@@ -387,53 +406,80 @@ export async function PATCH(request: Request) {
           return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์ของนัดนี้" }, { status: 400 });
         }
 
+        // ตรวจค่าที่ส่งมา: รอบต้องเป็น morning/afternoon, วันที่ต้องอ่านได้และไม่ใช่วันที่ผ่านไปแล้ว
+        if (timeSlot !== "morning" && timeSlot !== "afternoon") {
+          return NextResponse.json({ error: "รอบเวลาไม่ถูกต้อง" }, { status: 400 });
+        }
+        const newDate = new Date(date);
+        if (Number.isNaN(newDate.getTime())) {
+          return NextResponse.json({ error: "รูปแบบวันที่ไม่ถูกต้อง" }, { status: 400 });
+        }
+        if (newDate < getTodayDateBangkok()) {
+          return NextResponse.json({ error: "ไม่สามารถเลื่อนไปวันที่ผ่านมาแล้วได้" }, { status: 400 });
+        }
+        if (toDateKey(newDate) === toDateKey(appointment.appointment_date) && timeSlot === appointment.time_slot) {
+          return NextResponse.json({ error: "วันและรอบใหม่ต้องไม่ซ้ำกับของเดิม" }, { status: 400 });
+        }
+
         // เช็คว่าวันใหม่ที่จะเลื่อนไป ตัวนายหน้าเองไม่ได้ติดนัดบ้านหลังอื่นอยู่แล้ว
         // (กฎเดียวกับตอนลูกค้าจอง/ลูกค้าเลื่อน — นายหน้าไปนำชมได้ทีละที่)
-        if (await hasAgentBookingConflict(user.id, appointment.property_id, new Date(date), timeSlot)) {
+        if (await hasAgentBookingConflict(user.id, appointment.property_id, newDate, timeSlot)) {
           return NextResponse.json({ error: "คุณติดนัดชมบ้านหลังอื่นในช่วงเวลานี้แล้ว กรุณาเลือกวันหรือเวลาอื่น" }, { status: 400 });
         }
 
         // เก็บวัน+รอบ "ครั้งแรกสุด" ไว้โชว์ขีดฆ่า เขียนครั้งเดียวไม่ทับของเดิม (กฎเดียวกับตอนลูกค้าเลื่อนเอง)
         const shouldKeepOriginal = appointment.original_date === null;
+        const propertyId = appointment.property_id;
 
-        const updated = await db.appointments.update({
-          where: { id },
-          data: {
-            appointment_date: new Date(date),
-            time_slot: timeSlot,
-            status: APPOINTMENT_STATUS.AWAITING_CUSTOMER,
-            ...(shouldKeepOriginal
-              ? { original_date: appointment.appointment_date, original_time_slot: appointment.time_slot }
-              : {})
+        // ⚡ ล็อกรอบใหม่ + ปลดรอบเดิม + แก้นัด ใน Transaction เดียว (สำเร็จทั้งหมด หรือไม่เปลี่ยนอะไรเลย)
+        // เดิม hasAgentBookingConflict เช็คแค่บ้าน "หลังอื่น" แล้ว upsert ตั้ง is_booked = true ทับไปเลย
+        // ทำให้เลื่อนไปทับรอบที่ลูกค้าอีกคนจองบ้านหลังเดียวกันไว้แล้วได้ → นัดซ้อน 2 ใบในรอบเดียว
+        const updated = await db.$transaction(async (tx) => {
+          // (1) ล็อกรอบใหม่แบบมีเงื่อนไข is_booked = false (วิธีเดียวกับตอนลูกค้าจอง)
+          const targetSlot = await tx.property_viewing_slots.findUnique({
+            where: { property_id_available_date_time_slot: { property_id: propertyId, available_date: newDate, time_slot: timeSlot } }
+          });
+          if (targetSlot) {
+            const lock = await tx.property_viewing_slots.updateMany({
+              where: { property_id: propertyId, available_date: newDate, time_slot: timeSlot, is_booked: false },
+              data: { is_booked: true }
+            });
+            if (lock.count === 0) throw new Error("SLOT_ALREADY_BOOKED"); // มีลูกค้าคนอื่นจองรอบนี้อยู่แล้ว
+          } else {
+            // 🔑 KEYWORD: เปิดรอบวันว่างอัตโนมัติตอนนายหน้าเลื่อนนัด
+            // นายหน้าเป็นเจ้าของบ้าน มีสิทธิ์เปิดรอบอยู่แล้ว — ถ้าวันใหม่ยังไม่เคยเปิดไว้ก็สร้างให้เลย
+            // ไม่งั้นต้องไปเปิดรอบที่หน้าแก้ไขประกาศก่อนแล้วค่อยกลับมาเลื่อน (2 ขั้นตอน เสียเวลา)
+            await tx.property_viewing_slots.create({
+              data: { property_id: propertyId, available_date: newDate, time_slot: timeSlot, is_booked: true }
+            });
           }
-        });
 
-        // ปลดล็อกรอบเดิมคืนระบบ ให้ลูกค้าคนอื่นจองแทนได้
-        await db.property_viewing_slots.updateMany({
-          where: { property_id: appointment.property_id, available_date: appointment.appointment_date, time_slot: appointment.time_slot ?? undefined },
-          data: { is_booked: false }
-        });
-        notifyWaitlistForFreedSlot(appointment.property_id, appointment.appointment_date, appointment.time_slot);
+          // (2) ปลดล็อกรอบเดิมคืนระบบ ให้ลูกค้าคนอื่นจองแทนได้
+          await tx.property_viewing_slots.updateMany({
+            where: { property_id: propertyId, available_date: appointment.appointment_date, time_slot: appointment.time_slot ?? undefined },
+            data: { is_booked: false }
+          });
 
-        // 🔑 KEYWORD: เปิดรอบวันว่างอัตโนมัติตอนนายหน้าเลื่อนนัด
-        // นายหน้าเป็นเจ้าของบ้าน มีสิทธิ์เปิดรอบอยู่แล้ว — ถ้าวันใหม่ยังไม่เคยเปิดไว้ก็สร้างให้เลย
-        // ไม่งั้นต้องไปเปิดรอบที่หน้าแก้ไขประกาศก่อนแล้วค่อยกลับมาเลื่อน (2 ขั้นตอน เสียเวลา)
-        await db.property_viewing_slots.upsert({
-          where: {
-            property_id_available_date_time_slot: {
-              property_id: appointment.property_id,
-              available_date: new Date(date),
-              time_slot: timeSlot
+          // (3) ย้ายนัดไปวันใหม่ รอลูกค้ากดยืนยัน
+          return tx.appointments.update({
+            where: { id },
+            data: {
+              appointment_date: newDate,
+              time_slot: timeSlot,
+              status: APPOINTMENT_STATUS.AWAITING_CUSTOMER,
+              ...(shouldKeepOriginal
+                ? { original_date: appointment.appointment_date, original_time_slot: appointment.time_slot }
+                : {})
             }
-          },
-          create: {
-            property_id: appointment.property_id,
-            available_date: new Date(date),
-            time_slot: timeSlot,
-            is_booked: true
-          },
-          update: { is_booked: true }
+          });
+        }).catch((err) => {
+          // มีคนสร้างรอบเดียวกันตัดหน้าระหว่างเช็คกับ create (unique constraint ชน) → ถือว่ารอบถูกจองแล้ว
+          if ((err as { code?: string }).code === "P2002") throw new Error("SLOT_ALREADY_BOOKED");
+          throw err;
         });
+
+        // แจ้งคิวรอหลัง transaction สำเร็จเท่านั้น (ถ้าย้อนกลับจะได้ไม่แจ้งหลอก)
+        notifyWaitlistForFreedSlot(appointment.property_id, appointment.appointment_date, appointment.time_slot);
 
         // แจ้งลูกค้าทันทีว่านายหน้าขอเลื่อน พร้อมบอกวันเก่า -> วันใหม่ ให้เห็นชัดว่าเปลี่ยนไปเป็นอะไร
         if (appointment.customer_id) {
@@ -596,6 +642,10 @@ export async function PATCH(request: Request) {
       }
       if (!appointment.property_id) return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์" }, { status: 400 });
 
+      // ห้ามเลื่อนไปวันที่ผ่านแล้ว / รอบหรือวันที่ผิดรูปแบบ (กฎเดียวกับตอนจองครั้งแรก)
+      const editSlotError = validateSlotInput(date, timeSlot);
+      if (editSlotError) return NextResponse.json({ error: editSlotError }, { status: 400 });
+
       const isSameSlot = toDateKey(appointment.appointment_date) === date && appointment.time_slot === timeSlot;
       if (!isSameSlot) {
         const targetSlot = await db.property_viewing_slots.findUnique({
@@ -660,11 +710,11 @@ export async function PATCH(request: Request) {
       if (appointment.agent_id) {
         const prop = await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } });
         const customerName = `${user.first_name || ""}`.trim() + (user.last_name ? ` ${user.last_name}` : "") || "ลูกค้า";
-        const timeLabel = timeSlot === "morning" ? "ช่วงเช้า (10:00 - 12:00 น.)" : timeSlot === "afternoon" ? "ช่วงบ่าย (14:00 - 16:00 น.)" : timeSlot;
+        const timeLabel = timeSlot === "morning" ? `ช่วงเช้า (${timeSlotRange("morning")} น.)` : timeSlot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : timeSlot;
         sendNotification(
           appointment.agent_id,
           "ลูกค้าขอเปลี่ยนวันเวลานัดหมาย",
-          `คุณ ${customerName} ได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} (${timeLabel})`,
+          `คุณ ${customerName} ได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} ${timeLabel}`,
           "appointment",
           "/agent/appointments"
         );
@@ -724,9 +774,16 @@ export async function DELETE(request: Request) {
     const isAgent = appointment.agent_id === user.id;
     if (!isCustomer && !isAgent) return NextResponse.json({ error: "คุณไม่มีสิทธิ์ยกเลิกนัดหมายนี้" }, { status: 403 });
 
-    // 4.5 ป้องกันการยกเลิกซ้ำในนัดที่ปิดงานไปแล้ว (completed, cancelled, rejected)
-    if (["completed", "cancelled", "rejected"].includes(appointment.status || "")) {
+    // 4.5 ป้องกันการยกเลิกซ้ำในนัดที่ปิดงานไปแล้ว (completed, cancelled, rejected, no_show)
+    // no_show ต้องอยู่ในลิสต์ด้วย ไม่งั้นลูกค้ายกเลิกนัดที่ถูกบันทึกว่าไม่มาได้ → ประวัติไม่มาหาย หลุดโควตาบล็อก
+    if (["completed", "cancelled", "rejected", "no_show"].includes(appointment.status || "")) {
       return NextResponse.json({ error: "นัดหมายนี้ถูกปิดไปแล้ว ไม่สามารถยกเลิกซ้ำได้" }, { status: 400 });
+    }
+
+    // 4.5.1 นัดที่เลยวันไปแล้วยกเลิกไม่ได้ — ต้องจบที่ "มาแล้ว" หรือ "ไม่มา" เท่านั้น
+    // (กันลูกค้ายกเลิกย้อนหลังเพื่อหนีการถูกบันทึกว่าไม่มาตามนัด · หน้าเว็บซ่อนปุ่มอยู่แล้ว แต่ API ต้องกันเองด้วย)
+    if (appointment.appointment_date < getTodayDateBangkok()) {
+      return NextResponse.json({ error: "นัดหมายนี้เลยวันนัดแล้ว ไม่สามารถยกเลิกได้" }, { status: 400 });
     }
 
     // 4.6 ปลดล็อกรอบเวลาว่างคืนให้ระบบ (ตั้งค่า is_booked = false)

@@ -20,9 +20,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import ReviewModal from '@/components/customer/ReviewModal';
-import { NO_SHOW_LIMIT } from '@/lib/constants';
+import { NO_SHOW_LIMIT, timeSlotStart } from '@/lib/constants';
 import { toast } from '@/components/ui/toast';
-import { Calendar, CalendarDays, MessageSquare, Star, AlertTriangle, X } from 'lucide-react';
+import { Calendar, CalendarDays, MessageSquare, Star, AlertTriangle, X, Check, Loader2, Bell, Clock, Trash2 } from 'lucide-react';
 
 function CalendarIcon({ className }: { className?: string }) {
   return (
@@ -91,6 +91,21 @@ interface AppointmentItem {
   review?: { id: string; rating: number; comment?: string } | null;
 }
 
+interface WaitlistItem {
+  id: string;
+  propertyId: string;
+  propertyName: string;
+  propertyPrice: string;
+  propertyImage: string;
+  agentName: string;
+  agentPhone: string;
+  date: string;
+  timeSlot: string;
+  timeSlotText: string;
+  notifiedAt: string | null;
+  createdAt: string;
+}
+
 const MONTH_NAMES_TH = [
   "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
@@ -117,22 +132,44 @@ const getStatusDetails = (status: string) => {
 };
 
 export default function AppointmentsPage() {
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'cancelled' | 'waitlist'>('upcoming');
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistItem[]>([]);
+  const [cancelingWaitlistId, setCancelingWaitlistId] = useState<string | null>(null);
   // นัดที่จะถึงภายในวันนี้/พรุ่งนี้ — API คำนวณมาให้พร้อมกับตอนส่งแจ้งเตือน
   const [upcomingReminders, setUpcomingReminders] = useState<{ appointmentId: string; date: string; timeSlot: string; propertyTitle: string; counterpartName: string; isToday: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ----------------------------------------------------------------------------
-  // 1. ฟังก์ชันโหลด/รีเฟรชข้อมูลคิวนัดหมายจาก API หลังบ้าน (/api/appointments)
+  // 1. ฟังก์ชันโหลด/รีเฟรชข้อมูลคิวนัดหมายและคิวรอจาก API หลังบ้าน
   // ----------------------------------------------------------------------------
+  const loadWaitlist = useCallback(async () => {
+    try {
+      const res = await fetch('/api/appointments/waitlist');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.waitlist)) {
+        setWaitlist(data.waitlist);
+      }
+    } catch (err) {
+      console.error('Error fetching waitlist:', err);
+    }
+  }, []);
+
   const loadAppointments = useCallback(async () => {
     try {
-      const res = await fetch('/api/appointments');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.appointments)) {
-        setAppointments(data.appointments);
-        setUpcomingReminders(Array.isArray(data.upcomingReminders) ? data.upcomingReminders : []);
+      const [aptRes, waitlistRes] = await Promise.all([
+        fetch('/api/appointments'),
+        fetch('/api/appointments/waitlist')
+      ]);
+      const aptData = await aptRes.json();
+      const waitlistData = await waitlistRes.json();
+
+      if (aptData.success && Array.isArray(aptData.appointments)) {
+        setAppointments(aptData.appointments);
+        setUpcomingReminders(Array.isArray(aptData.upcomingReminders) ? aptData.upcomingReminders : []);
+      }
+      if (waitlistData.success && Array.isArray(waitlistData.waitlist)) {
+        setWaitlist(waitlistData.waitlist);
       }
     } catch (err) {
       console.error('Error fetching appointments:', err);
@@ -143,17 +180,46 @@ export default function AppointmentsPage() {
 
   // ใช้ asynchronous promise callback (.then) ภายใน useEffect เพื่อป้องกันเตือน Cascading Renders
   useEffect(() => {
-    fetch('/api/appointments')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && Array.isArray(data.appointments)) {
-          setAppointments(data.appointments);
-          setUpcomingReminders(Array.isArray(data.upcomingReminders) ? data.upcomingReminders : []);
+    Promise.all([
+      fetch('/api/appointments').then(res => res.json()),
+      fetch('/api/appointments/waitlist').then(res => res.json())
+    ])
+      .then(([aptData, waitlistData]) => {
+        if (aptData.success && Array.isArray(aptData.appointments)) {
+          setAppointments(aptData.appointments);
+          setUpcomingReminders(Array.isArray(aptData.upcomingReminders) ? aptData.upcomingReminders : []);
+        }
+        if (waitlistData.success && Array.isArray(waitlistData.waitlist)) {
+          setWaitlist(waitlistData.waitlist);
         }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  // ฟังก์ชันยกเลิกคิวรอของลูกค้า
+  const cancelWaitlist = async (item: WaitlistItem) => {
+    if (!confirm(`คุณต้องการยกเลิกคิวรอเข้าชมโครงการ "${item.propertyName}" ใช่หรือไม่?`)) return;
+    setCancelingWaitlistId(item.id);
+    try {
+      const res = await fetch('/api/appointments/waitlist', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ waitlistId: item.id })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success('ยกเลิกคิวรอเรียบร้อยแล้ว');
+        setWaitlist(prev => prev.filter(w => w.id !== item.id));
+      } else {
+        toast.error(data.error || 'ยกเลิกคิวไม่สำเร็จ');
+      }
+    } catch {
+      toast.error('เกิดข้อผิดพลาดในการยกเลิกคิว');
+    } finally {
+      setCancelingWaitlistId(null);
+    }
+  };
 
   // ----------------------------------------------------------------------------
   // 2. ระบบโมดัลยกเลิกนัดหมายแบบระบุเหตุผล (Cancel Modal Logic)
@@ -335,6 +401,17 @@ export default function AppointmentsPage() {
               <span className="bg-slate-200 text-slate-700 ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold">{cancelledCount}</span>
             )}
           </button>
+
+          <button 
+            onClick={() => setActiveTab('waitlist')} 
+            className={`px-4 py-2 border-b-2 font-bold text-xs whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'waitlist' ? 'border-slate-900 text-slate-900 font-extrabold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>คิวรอแจ้งเตือน</span>
+            {waitlist.length > 0 && (
+              <span className="bg-blue-600 text-white ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black">{waitlist.length}</span>
+            )}
+          </button>
         </div>
 
         {/* 🔑 KEYWORD: แถบเตือนก่อนถึงวันนัด — กระดิ่งอย่างเดียวหลายคนไม่กดดู */}
@@ -353,7 +430,7 @@ export default function AppointmentsPage() {
                   <span className={`inline-block px-1.5 py-0.5 rounded mr-1.5 text-[9px] font-black ${r.isToday ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
                     {r.isToday ? 'วันนี้' : 'พรุ่งนี้'}
                   </span>
-                  {r.timeSlot === 'afternoon' ? '13:00 น.' : '10:00 น.'} — {r.propertyTitle} (นายหน้า: {r.counterpartName})
+                  {timeSlotStart(r.timeSlot)} น. — {r.propertyTitle} (นายหน้า: {r.counterpartName})
                 </li>
               ))}
             </ul>
@@ -408,12 +485,101 @@ export default function AppointmentsPage() {
           );
         })()}
 
-        {/* 4.3 รายการการ์ดนัดหมาย */}
+        {/* 4.3 รายการการ์ดนัดหมาย หรือ รายการคิวรอแจ้งเตือน */}
         <div className="space-y-4">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
+          ) : activeTab === 'waitlist' ? (
+            waitlist.length === 0 ? (
+              <div className="text-center py-14 bg-white border border-slate-100 rounded-2xl text-slate-400 font-bold space-y-2">
+                <Bell className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-slate-600 font-extrabold text-sm">คุณยังไม่มีรายการที่ลงคิวรอแจ้งเตือน</p>
+                <p className="text-xs text-slate-400 font-medium">
+                  เมื่อรอบเวลาเข้าชมเต็ม คุณสามารถกด &ldquo;แจ้งเตือนฉันเมื่อมีรอบว่าง&rdquo; ได้ที่หน้าจองนัดหมาย
+                </p>
+              </div>
+            ) : (
+              waitlist.map((item) => {
+                const dateObj = new Date(item.date);
+                const dayStr = isNaN(dateObj.getTime()) ? item.date : dateObj.getDate().toString();
+                const monthStr = isNaN(dateObj.getTime()) ? 'ส.ค.' : MONTH_NAMES_TH[dateObj.getMonth()];
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-4 hover:shadow-md transition relative overflow-hidden"
+                  >
+                    {/* แสดงวันที่และรอบเวลา */}
+                    <div className="flex gap-3 sm:gap-4 items-center w-full lg:w-1/3">
+                      <div className="w-16 h-20 bg-blue-50/70 rounded-xl border border-blue-100 flex flex-col items-center justify-center flex-shrink-0 shadow-inner">
+                        <span className="text-[10px] font-bold text-blue-600 uppercase">{monthStr}</span>
+                        <span className="text-2xl font-extrabold text-slate-900 leading-none my-0.5">{dayStr}</span>
+                        <span className="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded shadow-sm mt-1">{item.timeSlotText || item.timeSlot}</span>
+                      </div>
+                      <div className="w-full h-20 rounded-lg overflow-hidden relative border border-slate-100">
+                        <Image
+                          src={item.propertyImage}
+                          width={120}
+                          height={80}
+                          className="w-full h-full object-cover"
+                          alt={item.propertyName}
+                          unoptimized
+                        />
+                      </div>
+                    </div>
+
+                    {/* รายละเอียดทรัพย์สิน */}
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {item.notifiedAt ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-black bg-emerald-50 text-emerald-700 border-emerald-200 animate-pulse">
+                            <Check className="w-3 h-3 shrink-0" /> มีรอบว่างแล้ว (ระบบแจ้งเตือนแล้ว)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-black bg-blue-50 text-blue-700 border-blue-200">
+                            <Clock className="w-3 h-3 shrink-0" /> อยู่ในคิวรอแจ้งเตือน
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-extrabold text-slate-900 text-sm line-clamp-1">{item.propertyName}</h3>
+                      <div className="text-blue-700 font-extrabold text-xs">{item.propertyPrice}</div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                        <span>นายหน้า: {item.agentName} ({item.agentPhone})</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        ระบบจะส่งแจ้งเตือนทันทีที่มีลูกค้ายกเลิกหรือรอบเวลานี้เปิดรับจองใหม่
+                      </p>
+                    </div>
+
+                    {/* ปุ่มการทำงาน */}
+                    <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 border-t lg:border-t-0 pt-3 lg:pt-0">
+                      <Link
+                        href={`/property/${item.propertyId}`}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition cursor-pointer"
+                      >
+                        ดูประกาศ
+                      </Link>
+                      <Link
+                        href={`/book-appointment?propertyId=${item.propertyId}`}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-black text-xs transition cursor-pointer flex items-center gap-1 shadow-sm"
+                      >
+                        <Calendar className="w-3.5 h-3.5 shrink-0" /> ดูรอบว่าง
+                      </Link>
+                      <button
+                        onClick={() => cancelWaitlist(item)}
+                        disabled={cancelingWaitlistId === item.id}
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-bold text-xs transition cursor-pointer disabled:opacity-60 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                        {cancelingWaitlistId === item.id ? 'กำลังยกเลิก...' : 'ยกเลิกคิวรอ'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )
           ) : filteredAppointments.length === 0 ? (
             <div className="text-center py-12 bg-white border border-slate-100 rounded-2xl text-slate-400 font-bold">
               ไม่มีข้อมูลการนัดหมายในหมวดหมู่นี้
@@ -607,9 +773,13 @@ export default function AppointmentsPage() {
                       <button
                         onClick={() => acceptNewDate(apt)}
                         disabled={acceptingId === String(apt.id)}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-black text-xs transition cursor-pointer active:scale-95 disabled:opacity-60"
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-black text-xs transition cursor-pointer active:scale-95 disabled:opacity-60 flex items-center gap-1.5"
                       >
-                        {acceptingId === String(apt.id) ? 'กำลังบันทึก...' : '✓ ตกลงวันใหม่'}
+                        {acceptingId === String(apt.id) ? (
+                          <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> กำลังบันทึก...</span>
+                        ) : (
+                          <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> ตกลงวันใหม่</span>
+                        )}
                       </button>
                     )}
 

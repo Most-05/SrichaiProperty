@@ -60,6 +60,15 @@ export async function POST(request: Request) {
     // ถ้าไม่ได้ส่ง role มาเลย ให้ default เป็น 'customer'
     const userRole = role === 'buyer' ? 'customer' : (role || 'customer');
 
+    // 6.1 สมัครผ่านเว็บได้เฉพาะลูกค้ากับนายหน้าเท่านั้น
+    // บัญชีแอดมินต้องสร้างจากฝั่งเซิร์ฟเวอร์ (prisma/seeds/admin.ts) ไม่เปิดให้สมัครเอง
+    if (userRole !== 'customer' && userRole !== 'agent') {
+      return NextResponse.json(
+        { error: "ประเภทบัญชีไม่ถูกต้อง" },
+        { status: 400 }
+      );
+    }
+
     // 7. กำหนด status: ถ้าสมัครเป็น agent ต้อง "pending" รอแอดมินอนุมัติก่อนถึงจะ login ได้
     // (ตรงกับเงื่อนไขที่เช็คใน authOptions.ts บรรทัด authorize())
     // ถ้าเป็น customer ธรรมดา อนุมัติทันที (approved) ไม่ต้องรอ

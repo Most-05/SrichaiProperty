@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/authOptions'; // ค่าคอนฟิก 
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับดึงข้อมูลของนายหน้าในหน้าพอร์ทัล
 import { findPropertiesWithLowSlots, findRecentlyAlertedPropertyIds, SLOT_ALERT_TYPE, SLOT_LOOKAHEAD_DAYS } from '@/lib/services/slotAvailabilityService'; // หาบ้านที่วันว่างใกล้หมด ไว้เตือนนายหน้า
 import { notifyUser } from '@/lib/notify'; // สร้างการแจ้งเตือน + ยิง Pusher ให้เห็นทันที
+import { timeSlotRange, timeSlotStart } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
+import { getTodayDateBangkok } from '@/lib/services/noShowService'; // วันนี้ตามเวลาไทย ใช้แยกนัดที่ยังไม่ถึง/ผ่านไปแล้ว
+import { ACTIVE_APPOINTMENT_STATUSES } from '@/lib/services/viewingSlotService'; // สถานะนัดที่ยังจองอยู่จริง (pending/approved/awaiting_customer)
 
 /**
  * ==============================================================================
@@ -113,23 +116,39 @@ export async function GET(request: Request) {
         orderBy: { created_at: 'desc' }
       });
 
-      // 2.6 ดึงรายการนัดหมายชมสถานที่ (Appointments) ล่าสุดไม่เกิน 10 รายการ
+      // 2.6 ดึงรายการนัดหมายชมสถานที่ (Appointments) สำหรับหน้าแรก
       // พร้อมเชื่อมโยงตารางอสังหาริมทรัพย์ (properties) และรูปภาพหน้าปก รวมถึงข้อมูลลูกค้าผู้ขอนัดหมาย (users)
-      const appointments = await db.appointments.findMany({
-        where: { agent_id: agent.id },
-        include: {
-          properties: {
-            include: {
-              property_images: { orderBy: { order_index: 'asc' }, take: 1 }
-            }
-          },
-          users_appointments_customer_idTousers: {
-            select: { id: true, first_name: true, last_name: true, phone: true }
+      // เดิมดึงทุกสถานะเรียงวันเก่า→ใหม่แล้วตัด 10 รายการแรก พอนายหน้ามีนัดเกิน 10 รายการ
+      // หน้าแรกจะเห็นแต่นัดเก่าที่ผ่านไปแล้ว นัดวันนี้/ที่จะถึงหลุดหายไปหมด
+      // ตอนนี้แยกดึง 2 ชุด: (1) นัดที่ยังจองอยู่ตั้งแต่วันนี้เป็นต้นไป เรียงใกล้→ไกล (2) นัดที่เสร็จล่าสุด 5 รายการ
+      const aptInclude = {
+        properties: {
+          include: {
+            property_images: { orderBy: { order_index: 'asc' as const }, take: 1 }
           }
         },
-        orderBy: { appointment_date: 'asc' },
-        take: 10
-      });
+        users_appointments_customer_idTousers: {
+          select: { id: true, first_name: true, last_name: true, phone: true }
+        }
+      };
+      const [activeAppointments, recentCompleted] = await Promise.all([
+        db.appointments.findMany({
+          where: {
+            agent_id: agent.id,
+            status: { in: ACTIVE_APPOINTMENT_STATUSES },
+            appointment_date: { gte: getTodayDateBangkok() }
+          },
+          include: aptInclude,
+          orderBy: [{ appointment_date: 'asc' }, { time_slot: 'desc' }] // วันเดียวกัน: morning มาก่อน afternoon
+        }),
+        db.appointments.findMany({
+          where: { agent_id: agent.id, status: 'completed' },
+          include: aptInclude,
+          orderBy: { appointment_date: 'desc' },
+          take: 5
+        })
+      ]);
+      const appointments = [...activeAppointments, ...recentCompleted];
 
       // 2.7 แปลงรูปแบบข้อมูลนัดหมาย (Data Formatting) ให้เหมาะสมสำหรับแสดงผลบน Frontend
       const formattedApts = appointments.map(apt => {
@@ -145,14 +164,15 @@ export async function GET(request: Request) {
         
         return {
           id: apt.id,
-          // จัดกลุ่มสถานะ: หากอนุมัติแล้วหรือเสร็จสิ้นแล้วให้ถือว่าเป็น completed
-          status: apt.status === 'approved' || apt.status === 'completed' ? 'completed' : 'pending',
+          // จัดกลุ่มสถานะ: completed = นำชมเสร็จจริงเท่านั้น
+          // (เดิมนับ approved เป็น completed ด้วย ทำให้นัดที่แค่ยืนยันแล้วขึ้นว่า "สำเร็จแล้ว" ทั้งที่ลูกค้ายังไม่ได้มาดูบ้าน)
+          status: apt.status === 'completed' ? 'completed' : 'pending',
           rawStatus: apt.status,
           date: aptDateStr,
           timeSlot: apt.time_slot || 'ไม่ระบุเวลา',
-          // แสดงข้อความเวลาแบบอ่านง่าย เช่น ช่วงเช้า 10:00 น., ช่วงบ่าย 14:00 น.
-          time: apt.time_slot === 'morning' ? '10:00 น.' : apt.time_slot === 'afternoon' ? '14:00 น.' : (apt.time_slot || 'ไม่ระบุเวลา'),
-          title: apt.status === 'approved' || apt.status === 'completed' ? '✓ นัดหมายสำเร็จแล้ว' : 'นัดชมสถานที่จริง',
+          // แสดงข้อความเวลาแบบอ่านง่าย เช่น 09:00 น. / 13:00 น. (ดึงจากค่ากลางใน lib/constants.ts)
+          time: apt.time_slot === 'morning' || apt.time_slot === 'afternoon' ? `${timeSlotStart(apt.time_slot)} น.` : (apt.time_slot || 'ไม่ระบุเวลา'),
+          title: apt.status === 'completed' ? '✓ นัดหมายสำเร็จแล้ว' : apt.status === 'approved' ? 'ยืนยันนัดแล้ว' : 'นัดชมสถานที่จริง',
           detail: `${customerName} (📞 ${customerPhone}) - สนใจ ${apt.properties?.title || 'อสังหาฯ'}`,
           note: apt.note ? apt.note.trim() : '',
           propertyId: apt.property_id,
@@ -401,8 +421,8 @@ export async function GET(request: Request) {
           id: apt.id,
           status: apt.status,
           date: apt.appointment_date,
-          timeSlot: apt.time_slot === 'morning' ? '10:00 - 12:00 น. (ช่วงเช้า)'
-            : apt.time_slot === 'afternoon' ? '14:00 - 16:00 น. (ช่วงบ่าย)'
+          timeSlot: apt.time_slot === 'morning' ? `${timeSlotRange('morning')} น. (ช่วงเช้า)`
+            : apt.time_slot === 'afternoon' ? `${timeSlotRange('afternoon')} น. (ช่วงบ่าย)`
             : (apt.time_slot || 'ไม่ระบุเวลา'),
           propertyTitle: apt.properties?.title || 'อสังหาริมทรัพย์',
           customerName,

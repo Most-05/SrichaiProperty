@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from '@/components/ui/toast';
+import { Star, X, Check, Loader2 } from 'lucide-react';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -65,9 +66,7 @@ export default function ReviewModal({
         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-              </svg>
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
             </div>
             <h3 className="font-extrabold text-base text-slate-900">รีวิวและให้คะแนนการบริการ</h3>
           </div>
@@ -76,9 +75,7 @@ export default function ReviewModal({
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-4 h-4 shrink-0" />
           </button>
         </div>
 
@@ -99,14 +96,11 @@ export default function ReviewModal({
                   className="p-1 rounded-lg transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                   title={`${star} ดาว`}
                 >
-                  <svg
-                    className={`w-7 h-7 transition-colors ${
-                      isFilled ? 'fill-amber-400 text-amber-400 drop-shadow-sm' : 'fill-slate-100 text-slate-200 stroke-slate-300 stroke-[1.5]'
+                  <Star
+                    className={`w-7 h-7 transition-colors shrink-0 ${
+                      isFilled ? 'fill-amber-400 text-amber-400 drop-shadow-sm' : 'fill-slate-100 text-slate-300'
                     }`}
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                  </svg>
+                  />
                 </button>
               );
             })}
@@ -131,7 +125,7 @@ export default function ReviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs transition-colors"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs transition-colors cursor-pointer"
           >
             ยกเลิก
           </button>
@@ -139,16 +133,17 @@ export default function ReviewModal({
             type="button"
             onClick={handleSubmitReview}
             disabled={submittingReview}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-extrabold rounded-xl text-xs transition-all shadow-md shadow-blue-600/20 flex items-center gap-2"
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-extrabold rounded-xl text-xs transition-all shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
           >
             {submittingReview ? (
-              <span className="animate-pulse">กำลังบันทึก...</span>
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                <span>กำลังบันทึก...</span>
+              </>
             ) : (
               <>
+                <Check className="w-3.5 h-3.5 shrink-0" />
                 <span>บันทึกรีวิว</span>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
               </>
             )}
           </button>

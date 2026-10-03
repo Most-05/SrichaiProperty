@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"; // ดึงเซสชั�
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับดึง/แก้ไข/ลบข้อมูลอสังหาริมทรัพย์
 import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนผู้ใช้ในระบบ
+import { validateSlotInput } from "@/lib/services/viewingSlotService"; // ตรวจวัน+รอบของรอบว่างที่เพิ่มใหม่ (ห้ามย้อนหลัง)
 import { findUsersToAlertForNewSlots, buildSavedPropertyAlert } from "@/lib/services/savedPropertyAlertService"; // แจ้งลูกค้าที่บันทึกบ้านไว้เมื่อมีรอบเข้าชมเพิ่ม
 
 /**
@@ -140,6 +141,23 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     if (Number(price) <= 0) {
       return NextResponse.json({ error: "ราคาต้องเป็นตัวเลขมากกว่า 0" }, { status: 400 });
+    }
+
+    // รอบว่างที่ "เพิ่มใหม่" ห้ามเป็นวันที่ผ่านแล้ว / รอบหรือวันที่ผิดรูปแบบ (BUG-12)
+    // ฟอร์มแก้ไขส่งรอบทั้งหมดกลับมา รวมรอบเก่าที่ผ่านวันไปแล้ว → รอบที่มีอยู่แล้วใน DB ข้ามการเช็ค ไม่งั้นบันทึกประกาศไม่ได้
+    if (Array.isArray(viewingSlots)) {
+      const existingSlots = await db.property_viewing_slots.findMany({
+        where: { property_id: id },
+        select: { available_date: true, time_slot: true }
+      });
+      const existingSlotKeys = new Set(existingSlots.map((s) => `${toDateKey(s.available_date)}|${s.time_slot}`));
+      for (const slot of viewingSlots) {
+        if (existingSlotKeys.has(`${slot?.date}|${slot?.timeSlot}`)) continue;
+        const slotError = validateSlotInput(slot?.date, slot?.timeSlot);
+        if (slotError) {
+          return NextResponse.json({ error: `รอบวันว่าง ${slot?.date ?? ""}: ${slotError}` }, { status: 400 });
+        }
+      }
     }
 
     if (area_sqm !== undefined && area_sqm !== null && area_sqm !== "" && Number(area_sqm) < 0) {
