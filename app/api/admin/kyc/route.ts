@@ -70,12 +70,20 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // แปลงสถานะ 'rejected' เป็น 'banned' เพื่อให้ตรงตาม PostgreSQL check constraint ('pending', 'approved', 'banned')
+    // ผลตรวจ KYC มีแค่ อนุมัติ / ปฏิเสธ / กลับไปรอตรวจ — ค่าอื่น 400 ไม่บันทึก (BUG-14)
+    // หมายเหตุ: ใน DB จริงไม่มี check constraint ที่ status (เช็คแล้ว 4 ต.ค.) จึงต้องกันที่ API
+    if (!["pending", "approved", "rejected"].includes(status)) {
+      return NextResponse.json({ error: "ผลตรวจ KYC ไม่ถูกต้อง (รับเฉพาะ approved / rejected / pending)" }, { status: 400 });
+    }
+
+    // แปลงสถานะ 'rejected' เป็น 'banned' (ระบบใช้ banned แทนการปฏิเสธ KYC — ดู BUG-29)
     const dbStatus = status === 'rejected' ? 'banned' : status;
 
     const updatedUser = await db.users.update({
       where: { id: userId },
-      data: { status: dbStatus }
+      data: { status: dbStatus },
+      // ส่งกลับเฉพาะฟิลด์ที่ปลอดภัย — ห้ามส่งทั้งแถว (มี password_hash) กลับไปที่ browser (BUG-15)
+      select: { id: true, email: true, first_name: true, last_name: true, role_id: true, status: true }
     });
 
     // ส่ง In-app Notification แจ้งเตือนผลตรวจไปยังนายหน้า

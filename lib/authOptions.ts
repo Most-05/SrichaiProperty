@@ -142,6 +142,17 @@ export const authOptions: NextAuthOptions = {
     //  jwt callback: รันทุกครั้งที่มีการสร้าง/ต่ออายุ JWT token
     // หน้าที่คือ "ยัด" ข้อมูลสำคัญ (id, role, phone, status) เข้าไปเก็บไว้ใน token
     async jwt({ token, user, account }) {
+      // ทุกครั้งที่อ่าน session (ไม่ใช่ตอนเพิ่งล็อกอิน) → เช็คสถานะจริงในฐานข้อมูล
+      // เดิมเช็คแบนแค่ตอนล็อกอิน คนที่ถูกแบนระหว่างล็อกอินอยู่จึงใช้ต่อได้จน token หมดอายุ 8 ชม. (BUG-13)
+      // throw ตรงนี้ → NextAuth ลบ cookie session ทิ้ง → ทุก API ได้ 401 / หน้าเว็บพาไป login
+      if (!user && token.id) {
+        const dbUser = await db.users.findUnique({ where: { id: token.id }, select: { status: true } });
+        if (!dbUser || dbUser.status === "banned") {
+          throw new Error("SESSION_REVOKED: บัญชีถูกระงับหรือถูกลบแล้ว");
+        }
+        token.status = dbUser.status || token.status;
+      }
+
       // กรณีนี้คือ "เพิ่งล็อกอินสำเร็จ" (user มาจาก authorize() หรือ profile() ของ provider)
       // type ของฟิลด์พวกนี้ประกาศไว้ที่ types/next-auth.d.ts แล้ว ไม่ต้อง cast เอง
       if (user) {

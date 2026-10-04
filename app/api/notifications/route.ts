@@ -45,19 +45,22 @@ export async function GET(req: Request) {
     const limitParam = searchParams.get("limit");
     const take = limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100) : 50;
 
-    const notifications = await db.notifications.findMany({
-      where: { user_id: user.id },
-      orderBy: { created_at: "desc" },
-      take
-    });
-
-    const unreadCount = await db.notifications.count({
-      where: { user_id: user.id, is_read: false }
-    });
+    // ดึงรายการล่าสุด + รายการล่าสุดที่ยังไม่อ่าน (รวมแล้วตัดซ้ำ)
+    // เดิมดึงแค่ take ล่าสุด → ถ้ายังไม่อ่านเก่ากว่านั้น แท็บ "ยังไม่อ่าน" ว่างทั้งที่ตัวเลขบอก 147 (BUG-20)
+    const [latest, latestUnread, totalCount, unreadCount] = await Promise.all([
+      db.notifications.findMany({ where: { user_id: user.id }, orderBy: { created_at: "desc" }, take }),
+      db.notifications.findMany({ where: { user_id: user.id, is_read: false }, orderBy: { created_at: "desc" }, take }),
+      db.notifications.count({ where: { user_id: user.id } }),
+      db.notifications.count({ where: { user_id: user.id, is_read: false } })
+    ]);
+    const seen = new Set(latest.map(n => n.id));
+    const notifications = [...latest, ...latestUnread.filter(n => !seen.has(n.id))]
+      .sort((x, y) => new Date(y.created_at ?? 0).getTime() - new Date(x.created_at ?? 0).getTime());
 
     return NextResponse.json({
       success: true,
       unreadCount,
+      totalCount, // จำนวนแจ้งเตือนทั้งหมดจริง (ไม่ใช่แค่ที่ส่งมา) ใช้แสดงในแท็บ "ทั้งหมด"
       notifications: notifications.map(n => ({
         id: n.id,
         title: n.title,

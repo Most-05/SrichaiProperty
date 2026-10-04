@@ -302,7 +302,7 @@ export default function AgentAddPropertyPage() {
                 <select value={f.listingType} onChange={e => setF({ ...f, listingType: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-xs">
                   <option value="ขาย">ขาย</option>
                   <option value="เช่า">ให้เช่า</option>
-                  <option value="ขายดาวน์">ขายดาวน์</option>
+                  {/* เดิมมี "ขายดาวน์" แต่ระบบเก็บได้แค่ sale/rent → บันทึกเป็น "ขาย" เงียบๆ จึงตัดออก (BUG-27) */}
                 </select>
               </div>
             </div>

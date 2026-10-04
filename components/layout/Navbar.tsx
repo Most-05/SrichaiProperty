@@ -20,6 +20,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation"; // ใช้เช็คหน้าปัจจุบันเพื่อไฮไลต์เมนูที่กำลังเปิดอยู่
 import { useSession, signOut } from "next-auth/react"; // ใช้ดึงข้อมูลผู้ใช้ที่ล็อกอินและออกจากระบบ
 import NotificationBell from "@/components/common/NotificationBell"; // ใช้แสดงกระดิ่งแจ้งเตือนบนแถบเมนู
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 // รายการลิงก์เมนูหลักในระบบ (นำมาวนลูปแสดงผลทั้งบน Desktop และ Mobile เพื่อไม่ให้เขียนโค้ดซ้ำ)
 const NAV_LINKS = [
@@ -39,6 +40,8 @@ export default function Navbar() {
   
   // ดึงเส้นทาง URL ปัจจุบันมาเช็คสีไฮไลต์เมนู
   const pathname = usePathname();
+  // แสดงกระดิ่งแค่ชิ้นเดียวต่อหน้า (ตามขนาดจอ) — เดิม render 2 ชิ้น (จอใหญ่ + มือถือ) ซ่อนด้วย CSS แต่ทำงานทั้งคู่ → toast ซ้ำ 2 ครั้ง (BUG-19)
+  const isDesktop = useIsDesktop();
 
   // ฟังก์ชันตรวจสอบว่าลิงก์เมนูนี้ตรงกับหน้าปัจจุบันหรือไม่ (ใช้สำหรับไฮไลต์สีเมนู)
   const isActive = (path: string) => {
@@ -117,7 +120,7 @@ export default function Navbar() {
                   </svg>
                 </Link>
 
-                <NotificationBell />
+                {isDesktop && <NotificationBell />}
                 <div className="h-6 w-px bg-slate-200 mx-1" />
 
                 <Link href="/profile" className="flex items-center gap-2 py-1 px-2 hover:bg-slate-50 rounded-xl transition cursor-pointer">
@@ -160,7 +163,7 @@ export default function Navbar() {
 
           {/* 4. ปุ่มเครื่องมือและการแจ้งเตือนบนมือถือ (Mobile Controls & Notification) */}
           <div className="flex items-center gap-1.5 lg:hidden">
-            {session && <NotificationBell />}
+            {session && !isDesktop && <NotificationBell />}
 
             {session && isUserAdmin && (
               <Link href="/admin/dashboard" className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-2.5 py-1.5 rounded-lg text-[10px] shadow-sm flex items-center gap-1 cursor-pointer whitespace-nowrap">

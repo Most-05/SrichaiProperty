@@ -144,7 +144,7 @@ export async function PATCH(req: Request) {
           title: "ประกาศของคุณถูกระงับการแสดงผลชั่วคราว",
           content: `ประกาศ "${prop.title}" ถูกระงับการแสดงผลชั่วคราว เนื่องจากมีรายงานข้อร้องเรียน กำลังอยู่ระหว่างการตรวจสอบจากทีมงาน`,
           type: "system",
-          linkUrl: "/agent/listings"
+          linkUrl: "/agent/dashboard" // หน้ารายการประกาศของนายหน้า (ไม่มีหน้า /agent/listings)
         }).catch(() => {});
       }
 
@@ -183,7 +183,7 @@ export async function PATCH(req: Request) {
         title: "บัญชีของคุณถูกระงับการใช้งาน",
         content: `บัญชีนายหน้าของคุณถูกระงับการใช้งานถาวรเนื่องจากตรวจพบการละเมิดกฎร้ายแรงตามรายงานข้อร้องเรียน`,
         type: "system",
-        linkUrl: "/support"
+        linkUrl: null // ไม่มีหน้า /support และบัญชีที่ถูกแบนล็อกอินเข้ามาดูไม่ได้อยู่แล้ว
       }).catch(() => {});
     }
 

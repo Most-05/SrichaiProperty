@@ -5,6 +5,7 @@ import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหร�
 import { validateSlotInput } from "@/lib/services/viewingSlotService"; // ตรวจวัน+รอบของรอบว่างที่เปิด (ห้ามย้อนหลัง)
 import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนเมื่อมีประกาศใหม่หรืออนุมัติ/ตีกลับประกาศ
 import { isProActive } from "@/lib/pro"; // ตรวจสิทธิ์ Verified PRO ที่ยังไม่หมดอายุ (ใช้จัดอันดับประกาศ)
+import { PROPERTY_STATUS_CLOSED } from "@/lib/constants"; // สถานะประกาศที่นายหน้าลบ (ปิด) ไปแล้ว — แอดมินห้ามเปลี่ยน
 
 /**
  * ==============================================================================
@@ -313,6 +314,9 @@ export async function POST(request: Request) {
 // ==============================================================================
 // 3. PATCH: อัปเดตสถานะประกาศอนุมัติ / ตีกลับ (เฉพาะบัญชีผู้ดูแลระบบ / admin)
 // ==============================================================================
+// สถานะที่แอดมินตั้งให้ประกาศได้ (closed เป็นของนายหน้าเท่านั้น ผ่านปุ่มลบประกาศ)
+const ADMIN_PROPERTY_STATUSES = ["pending", "approved", "rejected"];
+
 export async function PATCH(request: Request) {
   try {
     // 3.1 ตรวจสอบสิทธิ์การเข้าถึง ต้องเป็นแอดมินเท่านั้น
@@ -332,6 +336,12 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "กรุณาระบุรหัสอสังหาฯ และสถานะที่ต้องการเปลี่ยน" }, { status: 400 });
     }
 
+    // รับเฉพาะสถานะที่ระบบรู้จัก — เดิมรับทุกค่า เช่น "hacked" แล้วบันทึกจริง
+    // → ประกาศหายจากทุกแท็บในหน้าแอดมิน + นายหน้าได้แจ้งเตือน "ไม่ผ่านการอนุมัติ" (BUG-14)
+    if (!ADMIN_PROPERTY_STATUSES.includes(status)) {
+      return NextResponse.json({ error: "สถานะประกาศไม่ถูกต้อง (รับเฉพาะ pending / approved / rejected)" }, { status: 400 });
+    }
+
     // 🔑 KEYWORD: บันทึกร่องรอยการตรวจสอบประกาศ (ใครตรวจ ตอนไหน)
     // หาแอดมินจากอีเมลในเซสชัน เพราะ session ไม่ได้การันตีว่ามี id ของแถวจริงใน DB
     const reviewer = session.user?.email
@@ -340,8 +350,9 @@ export async function PATCH(request: Request) {
 
     // กรณีจัดการพร้อมกันหลายรายการ (Batch Actions)
     if (Array.isArray(ids) && ids.length > 0) {
-      await db.properties.updateMany({
-        where: { id: { in: ids } },
+      // ข้ามประกาศที่นายหน้าปิดไปแล้ว (closed) — ไม่ให้แอดมินดึงกลับขึ้นเว็บ
+      const { count } = await db.properties.updateMany({
+        where: { id: { in: ids }, status: { not: PROPERTY_STATUS_CLOSED } },
         data: {
           status,
           ...(isApproved ? { reject_reason: null, reviewed_by: reviewer?.id ?? null, reviewed_at: new Date() } : {})
@@ -350,7 +361,7 @@ export async function PATCH(request: Request) {
 
       // ดึงนายหน้าเจ้าของประกาศเพื่อส่งการแจ้งเตือน
       const affectedProperties = await db.properties.findMany({
-        where: { id: { in: ids }, agent_id: { not: null } },
+        where: { id: { in: ids }, agent_id: { not: null }, status },
         select: { id: true, title: true, agent_id: true }
       });
 
@@ -369,10 +380,16 @@ export async function PATCH(request: Request) {
         })
       );
 
-      return NextResponse.json({ success: true, count: ids.length });
+      return NextResponse.json({ success: true, count });
     }
 
     // กรณีจัดการรายการเดี่ยว (Single Item Action)
+    const current = await db.properties.findUnique({ where: { id }, select: { status: true } });
+    if (!current) return NextResponse.json({ error: "ไม่พบประกาศนี้" }, { status: 404 });
+    if (current.status === PROPERTY_STATUS_CLOSED) {
+      return NextResponse.json({ error: "ประกาศนี้ถูกนายหน้าลบ (ปิด) ไปแล้ว เปลี่ยนสถานะไม่ได้" }, { status: 409 });
+    }
+
     const updatedProperty = await db.properties.update({
       where: { id },
       data: {

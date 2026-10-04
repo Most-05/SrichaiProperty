@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { getPusherClient } from '@/lib/pusher-client';
 import { notificationChannelName } from '@/lib/notificationChannel';
 import { toast } from '@/components/ui/toast';
+import { isNotificationForActiveChat } from '@/lib/realtime/activeChatSession';
 import {
   Bell,
   CheckCheck,
@@ -63,6 +64,7 @@ export default function NotificationBell({
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'all' | 'unread'>('all');
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
@@ -78,6 +80,7 @@ export default function NotificationBell({
         if (data.success) {
           setNotifications(data.notifications || []);
           setUnreadCount(data.unreadCount || 0);
+          setTotalCount(data.totalCount ?? (data.notifications || []).length);
         }
       })
       .catch(err => console.error('Fetch notifications error:', err));
@@ -94,9 +97,27 @@ export default function NotificationBell({
     const channel = pusher.subscribe(notificationChannelName(userId));
 
     channel.bind('new-notification', (item: NotificationItem) => {
+      // ข้อความใหม่ของห้องแชทที่ผู้ใช้กำลังเปิดอ่านอยู่ → ไม่ต้องเด้ง toast และถือว่าอ่านแล้วทันที
+      if (document.visibilityState === 'visible' && isNotificationForActiveChat(item.linkUrl)) {
+        setNotifications(prev => [{ ...item, isRead: true }, ...prev].slice(0, 30));
+        setTotalCount(prev => prev + 1);
+        fetch('/api/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notificationId: item.id })
+        }).catch(err => console.error('Mark notification read failed:', err));
+        return;
+      }
+
       setNotifications(prev => [item, ...prev].slice(0, 30));
       setUnreadCount(prev => prev + 1);
-      toast.info(item.content, { title: item.title, duration: 5000 });
+      setTotalCount(prev => prev + 1);
+
+      // ⚡ ยิง Toast เด้งเตือนสดที่มุมจอทันที เพื่อให้ลูกค้ารับรู้แบบ Real-time
+      toast.info(item.content, {
+        title: item.title,
+        duration: 5500
+      });
     });
 
     channel.bind('notifications-changed', loadNotifications);
@@ -148,6 +169,7 @@ export default function NotificationBell({
       body: JSON.stringify({ notificationId: id })
     }).then(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
+      setTotalCount(v => Math.max(0, v - 1));
       if (isUnread) setUnreadCount(v => Math.max(0, v - 1));
     });
   };
@@ -164,6 +186,14 @@ export default function NotificationBell({
     theme === 'dark'
       ? 'text-slate-300 hover:text-white hover:bg-slate-800'
       : 'text-slate-600 hover:text-blue-700 hover:bg-slate-100';
+
+  const userRole = (session?.user as { role?: string })?.role;
+  const fullCenterHref =
+    userRole === 'admin'
+      ? '/admin/notifications'
+      : userRole === 'agent'
+        ? '/agent/notifications'
+        : '/notifications';
 
   return (
     <div className={`relative ${className}`} ref={ref}>
@@ -222,7 +252,7 @@ export default function NotificationBell({
                 tab === 'all' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              ทั้งหมด ({notifications.length})
+              ทั้งหมด ({totalCount > 0 ? totalCount : notifications.length})
             </button>
             <button
               type="button"
@@ -306,16 +336,17 @@ export default function NotificationBell({
             )}
           </div>
 
+          {/* แสดงแค่บางส่วน → บอกให้รู้ว่ามีมากกว่านี้ ตัวเลขในแท็บจะได้ไม่ดูขัดกับรายการ */}
+          {displayList.length > 0 && displayList.length < (tab === 'unread' ? unreadCount : totalCount) && (
+            <div className="px-3 py-1 bg-slate-50 border-t border-slate-100 text-center text-[10px] text-slate-500">
+              แสดงล่าสุด {displayList.length} จาก {tab === 'unread' ? unreadCount : totalCount} รายการ
+            </div>
+          )}
+
           {/* ท้ายกล่อง: ลิงก์ไปยังหน้าจอใหญ่ */}
           <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex flex-col gap-1 text-center">
             <Link
-              href={
-                session?.user?.role === 'admin'
-                  ? '/admin/notifications'
-                  : session?.user?.role === 'agent'
-                    ? '/agent/notifications'
-                    : '/notifications'
-              }
+              href={fullCenterHref}
               onClick={() => setOpen(false)}
               className="w-full py-2 px-3 bg-white hover:bg-blue-50 text-blue-700 font-bold rounded-xl border border-blue-200 text-xs flex items-center justify-center gap-1.5 transition shadow-2xs cursor-pointer"
             >

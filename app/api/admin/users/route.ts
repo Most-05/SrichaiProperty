@@ -287,7 +287,13 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Missing userId or status" }, { status: 400 });
     }
 
-    // แปลงสถานะ 'rejected' เป็น 'banned' เพื่อให้ตรงตาม PostgreSQL check constraint ('pending', 'approved', 'banned')
+    // รับเฉพาะสถานะที่ระบบรู้จัก — เดิมรับทุกค่า เช่น "maybe" แล้วบันทึกจริง (BUG-14)
+    // หมายเหตุ: ใน DB จริงไม่มี check constraint ที่ status (เช็คแล้ว 4 ต.ค.) จึงต้องกันที่ API
+    if (!["pending", "approved", "banned", "rejected"].includes(status)) {
+      return NextResponse.json({ error: "สถานะผู้ใช้ไม่ถูกต้อง (รับเฉพาะ pending / approved / banned)" }, { status: 400 });
+    }
+
+    // แปลงสถานะ 'rejected' เป็น 'banned' (ระบบใช้ banned แทนการปฏิเสธบัญชี)
     const dbStatus = status === 'rejected' ? 'banned' : status;
 
     const updatedUser = await db.users.update({
@@ -323,7 +329,7 @@ export async function PATCH(req: Request) {
         title: "บัญชีของคุณถูกระงับการใช้งาน",
         content: `บัญชีของคุณถูกระงับการใช้งานโดยผู้ดูแลระบบ${reasonDetail} หากมีข้อสงสัยหรือต้องการสอบถามเพิ่มเติม กรุณาติดต่อทีมงานฝ่ายสนับสนุน`,
         type: "system",
-        linkUrl: "/support"
+        linkUrl: null // ไม่มีหน้า /support และบัญชีที่ถูกแบนล็อกอินเข้ามาดูไม่ได้อยู่แล้ว
       }).catch(() => {});
     }
 

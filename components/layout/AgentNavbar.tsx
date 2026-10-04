@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import NotificationBell from '@/components/common/NotificationBell';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 import {
   Home,
   Building2,
@@ -21,6 +22,8 @@ import {
 export default function AgentNavbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  // แสดงกระดิ่งแค่ชิ้นเดียวต่อหน้า (ตามขนาดจอ) — เดิม render 2 ชิ้น (จอใหญ่ + มือถือ) ซ่อนด้วย CSS แต่ทำงานทั้งคู่ → toast ซ้ำ 2 ครั้ง (BUG-19)
+  const isDesktop = useIsDesktop();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
 
@@ -93,9 +96,10 @@ export default function AgentNavbar() {
           <div className="w-8 h-8 bg-amber-500 rounded-xl flex items-center justify-center text-slate-950 font-black text-lg shadow-md">
             S
           </div>
-          <span className="text-lg font-black tracking-tight text-white">
+          {/* จอ 1024-1279px (lg) พื้นที่ไม่พอ → ซ่อนชื่อแบรนด์ เหลือโลโก้ "S" (กันเมนูล้นจอ BUG-23) */}
+          <span className="text-lg font-black tracking-tight text-white lg:hidden xl:inline">
             Srichai<span className="text-amber-500">Agent</span>
-            <span className="ml-2 text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-extrabold px-2 py-0.5 rounded uppercase hidden xl:inline-block">Agent Portal</span>
+            <span className="ml-2 text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-extrabold px-2 py-0.5 rounded uppercase hidden 2xl:inline-block">Agent Portal</span>
           </span>
         </Link>
 
@@ -104,7 +108,8 @@ export default function AgentNavbar() {
           {navLinks.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
             return (
-              <Link key={link.href} href={link.href} className={`${navLinkClass(link.href)} inline-flex items-center gap-1.5`}>
+              // whitespace-nowrap: เดิมจอ 1366px เมนูตัดคำเป็น 2 บรรทัด ("หน้า/หลัก") (BUG-23)
+              <Link key={link.href} href={link.href} className={`${navLinkClass(link.href)} inline-flex items-center gap-1.5 whitespace-nowrap`}>
                 {link.icon}
                 <span>{link.label}</span>
                 {Boolean(link.badge && link.badge > 0) && (
@@ -128,14 +133,14 @@ export default function AgentNavbar() {
             }`}
           >
             <Plus className="w-4 h-4 shrink-0 stroke-[2.5]" />
-            <span>ลงประกาศใหม่</span>
+            <span className="whitespace-nowrap">ลงประกาศใหม่</span>
           </Link>
 
           <div className="h-6 w-px bg-slate-800 mx-1" />
 
           {/* Notifications, Profile & Logout */}
           <div className="flex items-center gap-3">
-            <NotificationBell />
+            {isDesktop && <NotificationBell />}
             <Link 
               href="/agent/profile" 
               title="จัดการโปรไฟล์ของฉัน"
@@ -149,7 +154,7 @@ export default function AgentNavbar() {
                 className="w-8 h-8 rounded-full border border-amber-500/40 object-cover group-hover:border-amber-400 transition"
                 unoptimized
               />
-              <div className="text-left hidden xl:block">
+              <div className="text-left hidden 2xl:block">
                 <p className="text-xs font-bold text-white leading-none group-hover:text-amber-400 transition">{userFullName}</p>
                 <p className="text-[9px] text-amber-400 font-bold uppercase mt-0.5">นายหน้าพรีเมียม</p>
               </div>
@@ -173,7 +178,7 @@ export default function AgentNavbar() {
 
         {/* Mobile Header Actions (< lg) */}
         <div className="flex items-center gap-2 lg:hidden">
-          <NotificationBell />
+          {!isDesktop && <NotificationBell />}
 
           <button
             type="button"
