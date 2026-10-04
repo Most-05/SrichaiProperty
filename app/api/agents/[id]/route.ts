@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fallbackAvatarUrl } from '@/lib/utils/avatar'; // รูปโปรไฟล์สำรองแบบ PNG (ชื่อไทยบางชื่อได้ SVG ที่ next/image ไม่รับ — BUG-32)
 import { db } from '@/lib/db';
 import { isProActive } from '@/lib/pro';
 
@@ -140,7 +141,7 @@ export async function GET(
           image: mainImage,
           images: p.property_images.map(img => img.image_url),
           agentName: `${agent.first_name} ${agent.last_name}`,
-          agentImage: agent.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.first_name + ' ' + agent.last_name)}&background=1e40af&color=fff`,
+          agentImage: agent.profile_image || fallbackAvatarUrl(agent.first_name + ' ' + agent.last_name),
           agentRating: averageRating,
           agentReviewCount: reviewCount,
           isPremium,
@@ -163,7 +164,7 @@ export async function GET(
       email: agent.email,
       phone: agent.phone || '08X-XXX-XXXX',
       lineId: agent.line_id || null,
-      avatar: agent.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.first_name + ' ' + agent.last_name)}&background=1e40af&color=fff`,
+      avatar: agent.profile_image || fallbackAvatarUrl(agent.first_name + ' ' + agent.last_name),
       role: agent.specialty_type ? `ตัวแทนจำหน่าย${agent.specialty_type}` : 'นายหน้าอสังหาริมทรัพย์มืออาชีพ',
       experience: agent.experience && agent.experience !== 'none'
         ? (agent.experience === '1-3' ? '1 - 3 ปี' : agent.experience === '3-5' ? '3 - 5 ปี' : agent.experience === '5+' ? 'มากกว่า 5 ปี' : (/^\d+$/.test(agent.experience.trim()) ? `${agent.experience.trim()} ปี` : agent.experience.trim()))
