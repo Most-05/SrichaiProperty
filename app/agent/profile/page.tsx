@@ -188,6 +188,13 @@ export default function AgentProfilePage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        // ส่งเอกสาร KYC ใหม่หลังถูกปฏิเสธ → บัญชีกลับไป "รอตรวจ" ซึ่งใช้งานระบบไม่ได้จนกว่าแอดมินอนุมัติ
+        // จึงแจ้งแล้วพาออกจากระบบ (ล็อกอินอีกครั้งได้เมื่อได้รับอนุมัติ — BUG-29)
+        if (form.status === 'rejected' && data.user?.status === 'pending') {
+          toast.success('ส่งเอกสารยืนยันตัวตนใหม่เรียบร้อยแล้ว ทีมงานจะตรวจสอบภายใน 1-2 วันทำการ ระบบจะออกจากระบบให้ และแจ้งเตือนเมื่อได้รับการอนุมัติ');
+          setTimeout(() => signOut({ callbackUrl: '/login/agent' }), 2500);
+          return;
+        }
         toast.success('บันทึกข้อมูลโปรไฟล์สำเร็จเรียบร้อยแล้ว');
         setForm(prev => ({
           ...prev,
@@ -474,7 +481,7 @@ export default function AgentProfilePage() {
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>อนุมัติแล้ว</span>
                   </span>
-                ) : form.status === 'banned' ? (
+                ) : form.status === 'rejected' ? (
                   <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
                     <span>ไม่ผ่านการอนุมัติ (ต้องแก้ไข)</span>
@@ -487,7 +494,7 @@ export default function AgentProfilePage() {
                 )}
               </div>
 
-              {form.status === 'banned' && (
+              {form.status === 'rejected' && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl space-y-1">
                   <p className="text-xs font-bold text-red-800 flex items-center gap-1.5">
                     <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
