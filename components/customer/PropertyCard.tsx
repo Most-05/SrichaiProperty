@@ -1,207 +1,434 @@
 'use client';
 
-// การ์ดแสดงผลอสังหาริมทรัพย์ 1 รายการ ใช้ในหน้าค้นหาและหน้าแรก
+/**
+ * ==============================================================================
+ * การ์ดแสดงผลอสังหาริมทรัพย์ (PropertyCard Component)
+ * ==============================================================================
+ * ออกแบบใหม่:
+ * 1. ใช้ Lucide Icons มาตรฐานทั้งระบบ (MapPin, Bed, Bath, Maximize2, Star, Crown, BadgeCheck, Heart, Calendar)
+ * 2. รองรับ 2 มุมมอง: Grid View (การ์ดตาราง) และ List View (การ์ดแนวนอน)
+ * 3. แสดงราคาต่อ ตร.ม. และยอดผ่อนประเมินเบื้องต้นต่องวด
+ * 4. ปุ่มลัดกด "นัดหมายเข้าชม" ตรงถึงหน้านัดหมายได้ทันที
+ * ==============================================================================
+ */
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { BadgeCheck } from 'lucide-react'; // ป้าย Verified PRO (ห้ามใช้อิโมจิ)
-import { Property } from '@/context/AppContext'; // กำหนดโครงสร้างข้อมูลอสังหาริมทรัพย์ที่แสดงในการ์ด
+import { 
+  BadgeCheck, 
+  MapPin, 
+  Bed, 
+  Bath, 
+  Maximize2, 
+  Star, 
+  Crown, 
+  Heart, 
+  Car, 
+  Calendar,
+  ArrowRight
+} from 'lucide-react';
+import { Property } from '@/context/AppContext';
 
-// Props ที่รับเข้ามาจากคอมโพเนนต์แม่ (search/page.tsx)
 interface PropertyCardProps {
-  prop: Property;                              // ข้อมูลอสังหาริมทรัพย์ 1 หลัง
-  isFav: boolean;                             // สถานะว่าบ้านหลังนี้อยู่ในรายการโปรดหรือไม่ (true/false)
-  toggleFavorite: (id: string | number) => void; // ฟังก์ชันกดสลับสถานะรายการโปรด
+  prop: Property;
+  isFav: boolean;
+  toggleFavorite: (id: string | number) => void;
+  viewMode?: 'grid' | 'list';
 }
 
-function PinIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 21s7-6.5 7-11.5a7 7 0 1 0-14 0C5 14.5 12 21 12 21Z" />
-      <circle cx="12" cy="9.5" r="2.5" />
-    </svg>
-  );
-}
+export default function PropertyCard({ 
+  prop, 
+  isFav, 
+  toggleFavorite,
+  viewMode = 'grid'
+}: PropertyCardProps) {
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
-function BedIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 18v2M21 18v2M3 12V8a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v2" />
-    </svg>
-  );
-}
-
-function BathIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3Z" />
-      <path d="M7 12V6a2 2 0 0 1 3.2-1.6M4 19v1M18 19v1" />
-    </svg>
-  );
-}
-
-function AreaIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 3v6M3 3h6M21 21v-6M21 21h-6" />
-      <rect x="7" y="7" width="10" height="10" rx="1" />
-    </svg>
-  );
-}
-
-function StarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
-      <path d="M12 2.5l2.9 6 6.6.7-4.9 4.6 1.3 6.5L12 16.9l-5.9 3.4 1.3-6.5-4.9-4.6 6.6-.7L12 2.5Z" />
-    </svg>
-  );
-}
-
-function CrownIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8Z" />
-    </svg>
-  );
-}
-
-export default function PropertyCard({ prop, isFav, toggleFavorite }: PropertyCardProps) {
-  const [isImageLoaded, setIsImageLoaded] = React.useState(false);
-
-  // ฟังก์ชันช่วยสร้างรูป Avatar สำรองจากชื่อนายหน้า (กรณีที่นายหน้าไม่มีรูปโปรไฟล์)
+  // ฟังก์ชันช่วยสร้างรูป Avatar สำรองจากชื่อนายหน้า
   const getInitialsAvatar = (name: string) =>
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1d4ed8&color=fff`;
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Agent')}&background=1d4ed8&color=fff`;
 
+  // คำนวณราคาเป็นตัวเลข
+  const rawPriceStr = prop.price || '';
+  const numPrice = parseInt(rawPriceStr.replace(/[^\d]/g, ''), 10) || 0;
+
+  // คำนวณราคาต่อ ตร.ม.
+  const pricePerSqm = (prop.area && prop.area > 0 && numPrice > 0)
+    ? Math.round(numPrice / prop.area)
+    : null;
+
+  // คำนวณยอดผ่อนประเมิน (สำหรับทรัพย์ขาย ดอกเบี้ยมาตรฐาน 30 ปี ~฿5,500 - ฿6,000 ต่อ 1 ล้าน)
+  const isSale = prop.listingType === 'sale' || !rawPriceStr.includes('/ เดือน');
+  const estimatedMonthly = (isSale && numPrice > 0)
+    ? Math.round(numPrice * 0.0055)
+    : null;
+
+  // ทำเลที่ตั้งแบบกระชับ
+  const displayLocation = (prop.districtName && prop.amphureName && prop.provinceName)
+    ? `${prop.districtName}, ${prop.amphureName}, ${prop.provinceName}`
+    : (prop.location || '').replace("📍 ", "").trim();
+
+  // ----------------------------------------------------------------------------
+  // LIST VIEW: มุมมองแนวนอน กว้าง รายละเอียดครบ สแกนง่าย
+  // ----------------------------------------------------------------------------
+  if (viewMode === 'list') {
+    return (
+      <div className={`bg-white rounded-2xl border shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col sm:flex-row group relative ${
+        prop.isPremium ? 'border-amber-400 ring-2 ring-amber-400/20 shadow-amber-50/50' : 'border-slate-200/90'
+      }`}>
+        {/* รูปภาพและป้ายกำกับด้านซ้าย */}
+        <div className="relative sm:w-72 md:w-80 h-52 sm:h-auto shrink-0 overflow-hidden bg-slate-100">
+          {!isImageLoaded && (
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-pulse" />
+          )}
+          <Link href={`/property/${prop.id}`} className="block w-full h-full">
+            <Image
+              src={prop.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&auto=format&fit=crop'}
+              alt={prop.title}
+              width={400}
+              height={260}
+              onLoad={() => setIsImageLoaded(true)}
+              className={`w-full h-full object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
+                isImageLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-xs'
+              }`}
+            />
+          </Link>
+
+          {/* ป้ายสถานะบนรูปภาพ */}
+          <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5 pointer-events-none">
+            {prop.isVerifiedPro ? (
+              <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black px-2.5 py-0.5 rounded-lg text-[10px] tracking-wide shadow-md flex items-center gap-1">
+                <BadgeCheck className="w-3.5 h-3.5 shrink-0" /> Verified PRO
+              </span>
+            ) : prop.isPremium ? (
+              <span className="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-lg text-[10px] tracking-wide shadow-md flex items-center gap-1">
+                <Star className="w-3 h-3 fill-slate-950 text-slate-950" /> พรีเมียม
+              </span>
+            ) : (
+              <span className="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-xs">
+                {prop.tag || 'ทั่วไป'}
+              </span>
+            )}
+            <span className="bg-slate-900/80 backdrop-blur-xs text-white px-2 py-0.5 rounded-lg text-[10px] font-semibold tracking-wide">
+              {prop.type}
+            </span>
+          </div>
+
+          {/* ปุ่มหัวใจรายการโปรด */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleFavorite(prop.id);
+            }}
+            aria-label="บันทึกในรายการโปรด"
+            className="absolute top-3 right-3 z-10 w-8 h-8 bg-white/90 hover:bg-white backdrop-blur-xs rounded-full flex items-center justify-center transition-all border border-slate-200/60 shadow-sm cursor-pointer active:scale-90"
+          >
+            <Heart
+              className={`w-4 h-4 transition-colors ${
+                isFav ? 'text-rose-500 fill-rose-500' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* ข้อมูลตรงกลางและขวา */}
+        <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <div>
+                <Link href={`/property/${prop.id}`}>
+                  <h3 className="text-base font-extrabold text-slate-900 line-clamp-1 hover:text-blue-600 transition-colors">
+                    {prop.title}
+                  </h3>
+                </Link>
+                <p className="text-slate-400 text-xs font-medium flex items-center gap-1.5 mt-1">
+                  <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span className="truncate">{displayLocation}</span>
+                </p>
+              </div>
+
+              {/* ราคา */}
+              <div className="sm:text-right shrink-0">
+                <div className="text-xl font-black text-blue-700 tracking-tight leading-none">
+                  {prop.price}
+                </div>
+                {pricePerSqm && (
+                  <div className="text-[11px] text-slate-400 font-semibold mt-1">
+                    ฿{pricePerSqm.toLocaleString()} /ตร.ม.
+                  </div>
+                )}
+                {estimatedMonthly && (
+                  <div className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md mt-1 inline-block">
+                    ผ่อนเริ่มต้น ~฿{estimatedMonthly.toLocaleString()}/ด.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* สเปกบ้าน: นอน, น้ำ, พื้นที่, ที่จอดรถ */}
+            <div className="flex flex-wrap items-center gap-4 text-slate-600 text-xs font-bold pt-2">
+              <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-2.5 py-1 rounded-lg">
+                <Bed className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>{prop.bedrooms} ห้องนอน</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-2.5 py-1 rounded-lg">
+                <Bath className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>{prop.bathrooms} ห้องน้ำ</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-2.5 py-1 rounded-lg">
+                <Maximize2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>{prop.area} ตร.ม.</span>
+              </span>
+              {prop.parking && prop.parking > 0 && (
+                <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-2.5 py-1 rounded-lg">
+                  <Car className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>{prop.parking} ที่จอดรถ</span>
+                </span>
+              )}
+            </div>
+
+            {/* พรีวิวสิ่งอำนวยความสะดวก */}
+            {prop.amenities && prop.amenities.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+                {prop.amenities.slice(0, 3).map((amenity, idx) => (
+                  <span key={idx} className="text-slate-500 bg-slate-100 px-2 py-0.5 rounded text-[10px]">
+                    {amenity}
+                  </span>
+                ))}
+                {prop.amenities.length > 3 && (
+                  <span className="text-slate-400 text-[10px]">
+                    +{prop.amenities.length - 3} สิ่งอำนวยความสะดวก
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* แถวล่าง: นายหน้า + ปุ่มดำเนินการ */}
+          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Image
+                src={prop.agentImage || getInitialsAvatar(prop.agentName)}
+                alt={prop.agentName}
+                width={32}
+                height={32}
+                unoptimized={!prop.agentImage}
+                className={`w-8 h-8 rounded-full object-cover shadow-2xs ${
+                  prop.isPremium ? 'ring-2 ring-amber-400' : 'ring-1 ring-slate-200'
+                }`}
+              />
+              <div>
+                <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                  <span>{prop.agentName}</span>
+                  {prop.agentRating && (
+                    <span className="flex items-center gap-0.5 text-[10px] text-amber-600 font-extrabold bg-amber-50 px-1.5 py-0.2 rounded">
+                      <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                      {Number(prop.agentRating).toFixed(1)}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium">
+                  {prop.isVerifiedPro ? 'Verified PRO Agent' : prop.isPremium ? 'Premium Agent' : 'นายหน้าตัวแทน'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/book-appointment?propertyId=${prop.id}`}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 hover:border-transparent transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                <span>นัดชม</span>
+              </Link>
+              <Link
+                href={`/property/${prop.id}`}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-blue-600 text-white transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+              >
+                <span>ดูรายละเอียด</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------------------------
+  // GRID VIEW: มุมมองการ์ดสี่เหลี่ยมมาตรฐาน สวยงาม พรีเมียม
+  // ----------------------------------------------------------------------------
   return (
-    <div className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col group relative ${
-      prop.isPremium ? 'border-amber-400 ring-2 ring-amber-400/30 shadow-amber-100' : 'border-slate-200'
+    <div className={`bg-white rounded-2xl border shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group relative ${
+      prop.isPremium ? 'border-amber-400 ring-2 ring-amber-400/20 shadow-amber-50/50' : 'border-slate-200/90'
     }`}>
-
       {/* ปุ่มกดหัวใจบันทึกรายการโปรด */}
       <button
+        type="button"
         onClick={(e) => {
-          e.preventDefault(); // ป้องกันไม่ให้คลิกปุ่มหัวใจแล้วเผลอนำทางเปิดลิงก์บ้าน
+          e.preventDefault();
+          e.stopPropagation();
           toggleFavorite(prop.id);
         }}
-        className="absolute top-3 right-3 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center transition border border-slate-100 cursor-pointer shadow-sm"
+        aria-label="บันทึกในรายการโปรด"
+        className="absolute top-3 right-3 z-10 w-8 h-8 bg-white/90 hover:bg-white backdrop-blur-xs rounded-full flex items-center justify-center transition-all border border-slate-200/60 shadow-sm cursor-pointer active:scale-90"
       >
-        <svg 
-          className={`w-4 h-4 ${isFav ? 'text-red-500' : 'text-slate-400'}`} 
-          fill={isFav ? 'currentColor' : 'none'} 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-        </svg>
+        <Heart
+          className={`w-4 h-4 transition-colors ${
+            isFav ? 'text-rose-500 fill-rose-500' : 'text-slate-400 hover:text-slate-600'
+          }`}
+        />
       </button>
 
       {/* ป้าย Badge สถานะ (พรีเมียม / แท็ก / ประเภททรัพย์) */}
-      <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5">
+      <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5 pointer-events-none">
         {prop.isVerifiedPro ? (
-          <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black px-2.5 py-0.5 rounded text-[10px] tracking-wide shadow flex items-center gap-1">
-            <BadgeCheck className="w-3 h-3 shrink-0" /> Verified PRO
+          <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black px-2.5 py-0.5 rounded-lg text-[10px] tracking-wide shadow-md flex items-center gap-1">
+            <BadgeCheck className="w-3.5 h-3.5 shrink-0" /> Verified PRO
           </span>
         ) : prop.isPremium ? (
-          <span className="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded text-[10px] tracking-wide shadow flex items-center gap-1">
-            <StarIcon className="w-2.5 h-2.5" /> พรีเมียมพิเศษ
+          <span className="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-lg text-[10px] tracking-wide shadow-md flex items-center gap-1">
+            <Star className="w-3 h-3 fill-slate-950 text-slate-950" /> พรีเมียม
           </span>
         ) : (
-          <span className="bg-blue-600 text-white px-2 py-0.5 rounded text-[9px] font-semibold tracking-wide">
+          <span className="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-xs">
             {prop.tag || 'ทั่วไป'}
           </span>
         )}
-        <span className="bg-slate-900/80 text-white px-2 py-0.5 rounded text-[9px] font-semibold tracking-wide">
+        <span className="bg-slate-900/80 backdrop-blur-xs text-white px-2 py-0.5 rounded-lg text-[10px] font-semibold tracking-wide">
           {prop.type}
         </span>
       </div>
 
       {/* ลิงก์ห่อหุ้มรูปภาพและรายละเอียดบ้าน */}
       <Link href={`/property/${prop.id}`} className="block flex-grow">
-        {/* รูปภาพหลักของอสังหาริมทรัพย์ พร้อม Blur Placeholder ป้องกัน Layout Shift (CLS = 0) */}
-        <div className="relative h-40 overflow-hidden bg-slate-100">
-          {/* Skeleton Shimmer Background ขณะรอรูปดาวน์โหลด */}
+        {/* รูปภาพหลักของอสังหาริมทรัพย์ */}
+        <div className="relative h-48 overflow-hidden bg-slate-100">
           {!isImageLoaded && (
             <div className="absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-pulse" />
           )}
           <Image 
-            src={prop.image} 
+            src={prop.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600&auto=format&fit=crop'} 
             alt={prop.title}
-            width={320}
-            height={160}
+            width={400}
+            height={220}
             onLoad={() => setIsImageLoaded(true)}
-            className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-[1.03] ${
-              isImageLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-sm scale-105'
+            className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
+              isImageLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-xs'
             }`}
           />
+
+          {/* ป้ายราคาต่อ ตร.ม. บนมุมล่างซ้ายรูปภาพ */}
+          {pricePerSqm && (
+            <div className="absolute bottom-2.5 left-2.5 bg-slate-900/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+              ฿{pricePerSqm.toLocaleString()} /ตร.ม.
+            </div>
+          )}
         </div>
 
         {/* ข้อมูลรายละเอียด: ราคา, ชื่อเรื่อง, ทำเล, และสเปกห้อง */}
-        <div className="p-4 space-y-2">
-          {/* ราคา */}
-          <div className="text-lg font-extrabold text-blue-700 leading-none">
-            {prop.price}
+        <div className="p-4 space-y-2.5">
+          {/* แถวราคา + ยอดผ่อนประเมิน */}
+          <div className="flex items-baseline justify-between gap-2">
+            <div className="text-xl font-black text-blue-700 leading-none tracking-tight">
+              {prop.price}
+            </div>
+            {estimatedMonthly && (
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md truncate">
+                ผ่อน ~฿{estimatedMonthly.toLocaleString()}/ด.
+              </span>
+            )}
           </div>
           
           {/* ชื่อทรัพย์ */}
-          <h3 className="text-sm font-semibold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors">
+          <h3 className="text-sm font-extrabold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors">
             {prop.title}
           </h3>
 
-          {/* ทำเลที่ตั้ง (แสดง ตำบล, อำเภอ, จังหวัด) */}
-          <p className="text-slate-400 text-[11px] font-medium flex items-center gap-1">
-            <PinIcon className="w-3 h-3 shrink-0" />
-            {prop.districtName && prop.amphureName && prop.provinceName
-              ? `${prop.districtName}, ${prop.amphureName}, ${prop.provinceName}`
-              : prop.location.replace("📍 ", "")}
+          {/* ทำเลที่ตั้ง */}
+          <p className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="truncate">{displayLocation}</span>
           </p>
 
-          {/* สเปกบ้าน: จำนวนห้องนอน, ห้องน้ำ, ขนาดพื้นที่ */}
-          <div className="flex items-center justify-between text-slate-400 py-1 text-[11px] font-medium">
-            <span className="inline-flex items-center gap-1"><BedIcon className="w-3.5 h-3.5" /> {prop.bedrooms} นอน</span>
-            <div className="w-px h-3 bg-slate-200"></div>
-            <span className="inline-flex items-center gap-1"><BathIcon className="w-3.5 h-3.5" /> {prop.bathrooms} น้ำ</span>
-            <div className="w-px h-3 bg-slate-200"></div>
-            <span className="inline-flex items-center gap-1"><AreaIcon className="w-3.5 h-3.5" /> {prop.area} ตร.ม.</span>
+          {/* สเปกบ้าน: ห้องนอน, ห้องน้ำ, ขนาดพื้นที่, ที่จอดรถ */}
+          <div className="flex items-center justify-between text-slate-600 py-1.5 px-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs font-bold">
+            <span className="inline-flex items-center gap-1">
+              <Bed className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>{prop.bedrooms}</span>
+            </span>
+            <div className="w-px h-3 bg-slate-200" />
+            <span className="inline-flex items-center gap-1">
+              <Bath className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>{prop.bathrooms}</span>
+            </span>
+            <div className="w-px h-3 bg-slate-200" />
+            <span className="inline-flex items-center gap-1">
+              <Maximize2 className="w-3 h-3 text-blue-600 shrink-0" />
+              <span>{prop.area} ตร.ม.</span>
+            </span>
+            {prop.parking && prop.parking > 0 && (
+              <>
+                <div className="w-px h-3 bg-slate-200" />
+                <span className="inline-flex items-center gap-1">
+                  <Car className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>{prop.parking}</span>
+                </span>
+              </>
+            )}
           </div>
         </div>
       </Link>
 
       {/* ส่วนแสดงข้อมูลนายหน้าผู้ดูแล (Footer ของการ์ด) */}
-      <div className={`px-4 pb-4 pt-3 border-t flex items-center justify-between ${
-        prop.isPremium ? 'bg-amber-50/40 border-amber-200/50' : 'bg-slate-50/50 border-slate-100'
+      <div className={`px-4 py-3 border-t flex items-center justify-between gap-2 ${
+        prop.isPremium ? 'bg-amber-50/40 border-amber-200/50' : 'bg-slate-50/60 border-slate-100'
       }`}>
         {/* รูปโปรไฟล์และชื่อนายหน้า */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <Image
             src={prop.agentImage || getInitialsAvatar(prop.agentName)}
             alt={prop.agentName}
             width={28}
             height={28}
             unoptimized={!prop.agentImage}
-            className={`w-7 h-7 rounded-full object-cover ${prop.isPremium ? 'ring-2 ring-amber-400' : ''}`}
+            className={`w-7 h-7 rounded-full object-cover shrink-0 shadow-2xs ${
+              prop.isPremium ? 'ring-2 ring-amber-400' : 'ring-1 ring-slate-200'
+            }`}
           />
-          <div>
-            <div className="text-[10px] font-bold text-slate-700 leading-none">{prop.agentName}</div>
-            <div className={`text-[8px] font-semibold mt-0.5 uppercase tracking-wider flex items-center gap-1 ${
-              prop.isVerifiedPro || prop.isPremium ? 'text-amber-600 font-extrabold' : 'text-blue-600 font-medium'
+          <div className="min-w-0">
+            <div className="text-[11px] font-bold text-slate-800 truncate flex items-center gap-1">
+              <span className="truncate">{prop.agentName}</span>
+              {prop.agentRating && (
+                <span className="flex items-center gap-0.5 text-[9px] text-amber-600 font-extrabold bg-amber-50 px-1 rounded shrink-0">
+                  <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                  {Number(prop.agentRating).toFixed(1)}
+                </span>
+              )}
+            </div>
+            <div className={`text-[9px] font-semibold uppercase tracking-wider truncate flex items-center gap-1 ${
+              prop.isVerifiedPro || prop.isPremium ? 'text-amber-600 font-extrabold' : 'text-slate-400'
             }`}>
               {prop.isVerifiedPro ? (
                 <BadgeCheck className="w-2.5 h-2.5 shrink-0" />
               ) : prop.isPremium ? (
-                <CrownIcon className="w-2.5 h-2.5" />
+                <Crown className="w-2.5 h-2.5 shrink-0" />
               ) : null}
-              {prop.isVerifiedPro ? 'Verified PRO Agent' : prop.isPremium ? 'Premium Agent' : 'Verified Agent'}
+              <span>{prop.isVerifiedPro ? 'Verified PRO' : prop.isPremium ? 'Premium' : 'Agent'}</span>
             </div>
           </div>
         </div>
 
-        {/* ลิงก์กดดูรายละเอียดเพิ่มเติม */}
+        {/* ปุ่มลัดนัดชมบ้าน */}
         <Link 
-          href={`/property/${prop.id}`}
-          className="text-[10px] text-blue-600 font-semibold hover:text-blue-700 transition flex items-center gap-0.5"
+          href={`/book-appointment?propertyId=${prop.id}`}
+          className="text-xs font-bold text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-transparent px-3 py-1.5 rounded-xl transition-all shadow-2xs flex items-center gap-1 shrink-0 cursor-pointer"
         >
-          รายละเอียด &rarr;
+          <Calendar className="w-3.5 h-3.5" />
+          <span>นัดชม</span>
         </Link>
       </div>
     </div>

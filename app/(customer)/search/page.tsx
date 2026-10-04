@@ -4,15 +4,18 @@
  * ==============================================================================
  * หน้าค้นหาอสังหาริมทรัพย์ (Search Page)
  * ==============================================================================
- * ปรับปรุงใหม่:
- * - ใช้ Lucide Icons สวยงาม เป็นมืออาชีพ ไม่ใช้ Emoji
- * - ตัวกรองที่จอดรถ (Parking) และสัตว์เลี้ยงเข้าได้ (Pet-Friendly)
- * - Quick Filter Pills ใต้ Search Bar (ปุ่มลัดคลิกเดียว)
- * - Active Filter Chips เหนือตารางผลลัพธ์ พร้อมปุ่มกดยกเลิกทีละตัว
+ * ออกแบบใหม่เพื่อความสะดวก เรียบง่าย ใช้งานได้จริง และเหมาะสมสำหรับลูกค้า:
+ * 1. ระบบค้นหาอัจฉริยะแบบแยกคำ (Multi-keyword Token Search) พิมพ์หาพร้อมกันได้หลายคำ
+ * 2. แนะนำคำค้นหายอดนิยม และประวัติการค้นหาล่าสุด (Recent Searches)
+ * 3. ตัวเลือกการเรียงลำดับที่ตอบโจทย์: ล่าสุด, ราคา, ราคาต่อ ตร.ม. คุ้มสุด, พื้นที่มากสุด, คะแนนรีวิวนายหน้า
+ * 4. สลับมุมมองตาราง (Grid View) และแนวนอน (List View)
+ * 5. Skeleton Loading สวยงามนุ่มนวลระหว่างรอโหลดข้อมูล
+ * 6. Smart Empty State พร้อมแนะนำทรัพย์เด่นแทนการปล่อยให้หน้าว่าง
+ * 7. ใช้ไอคอน Lucide React ถูกต้องตามมาตรฐาน ไม่ใช้อิโมจิดิบ
  * ==============================================================================
  */
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import SearchSidebar, { FilterState } from '@/components/customer/SearchSidebar';
@@ -28,14 +31,18 @@ import {
   RotateCcw, 
   ChevronLeft, 
   ChevronRight, 
-  SearchX,
-  Waves,
-  Dumbbell,
-  ShieldCheck,
-  Bed,
-  Bath,
-  ChevronDown,
-  Check
+  SearchX, 
+  Waves, 
+  Dumbbell, 
+  ShieldCheck, 
+  Bed, 
+  Bath, 
+  ChevronDown, 
+  Check,
+  LayoutGrid,
+  List,
+  Clock,
+  TrendingUp
 } from 'lucide-react';
 
 /**
@@ -81,7 +88,7 @@ function HeroCustomSelect<T extends string>({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1.5 min-w-[170px] w-full bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute left-0 top-full mt-1.5 min-w-[190px] w-full bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150">
           {options.map((opt) => {
             const isSelected = opt.value === value;
             return (
@@ -109,6 +116,50 @@ function HeroCustomSelect<T extends string>({
   );
 }
 
+// โครงจำลอง Shimmer ระหว่างโหลดข้อมูล (Skeleton Loading)
+function PropertyCardSkeleton({ viewMode = 'grid' }: { viewMode?: 'grid' | 'list' }) {
+  if (viewMode === 'list') {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 flex flex-col sm:flex-row gap-4 animate-pulse">
+        <div className="sm:w-72 h-44 bg-slate-200 rounded-xl shrink-0" />
+        <div className="flex-1 space-y-3 py-1">
+          <div className="h-5 bg-slate-200 rounded-md w-3/4" />
+          <div className="h-4 bg-slate-100 rounded-md w-1/2" />
+          <div className="h-4 bg-slate-100 rounded-md w-1/3" />
+          <div className="flex gap-2 pt-2">
+            <div className="h-6 w-16 bg-slate-100 rounded-lg" />
+            <div className="h-6 w-16 bg-slate-100 rounded-lg" />
+            <div className="h-6 w-20 bg-slate-100 rounded-lg" />
+          </div>
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <div className="h-8 w-28 bg-slate-200 rounded-md" />
+            <div className="h-8 w-20 bg-slate-200 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs animate-pulse">
+      <div className="h-48 bg-slate-200 w-full" />
+      <div className="p-4 space-y-3">
+        <div className="h-6 bg-slate-200 rounded-md w-1/2" />
+        <div className="h-4 bg-slate-100 rounded-md w-4/5" />
+        <div className="h-3 bg-slate-100 rounded-md w-3/5" />
+        <div className="h-8 bg-slate-50 rounded-xl border border-slate-100" />
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-slate-200 rounded-full" />
+            <div className="h-3 w-16 bg-slate-200 rounded-md" />
+          </div>
+          <div className="h-7 w-16 bg-slate-200 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const DEFAULT_FILTERS: FilterState = {
   province: '',
   amphure: '',
@@ -130,12 +181,32 @@ const DEFAULT_FILTERS: FilterState = {
   },
 };
 
+const POPULAR_SEARCH_TAGS = [
+  'บ้านเดี่ยว 3 นอน',
+  'คอนโดใกล้ BTS',
+  'ทาวน์โฮมเลี้ยงสัตว์ได้',
+  'บ้านพร้อมสระว่ายน้ำ',
+  'ต่ำกว่า 3 ล้าน'
+];
+
+type SortKey = 'latest' | 'price_asc' | 'price_desc' | 'price_sqm_asc' | 'area_desc' | 'rating_desc';
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'latest', label: 'ล่าสุด (Newest)' },
+  { value: 'price_asc', label: 'ราคา: ต่ำ → สูง' },
+  { value: 'price_desc', label: 'ราคา: สูง → ต่ำ' },
+  { value: 'price_sqm_asc', label: 'ราคา/ตร.ม. คุ้มที่สุด' },
+  { value: 'area_desc', label: 'พื้นที่ใช้สอยมากสุด' },
+  { value: 'rating_desc', label: 'คะแนนรีวิวนายหน้าสูงสุด' },
+];
+
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const resultsRef = useRef<HTMLDivElement>(null);
-  const { properties, favorites, toggleFavorite } = useApp();
+  const searchInputContainerRef = useRef<HTMLDivElement>(null);
+  const { properties, propertiesLoading, favorites, toggleFavorite } = useApp();
 
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
@@ -164,15 +235,70 @@ function SearchPageContent() {
     },
   }));
 
-  const [sortBy, setSortBy] = useState<'latest' | 'price_asc' | 'price_desc'>('latest');
+  const [sortBy, setSortBy] = useState<SortKey>('latest');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 400);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  // Suggestions & Recent Searches
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem('srichai_recent_searches');
+      return stored ? JSON.parse(stored).slice(0, 5) : [];
+    } catch {
+      return [];
+    }
+  });
 
+  // บันทึกคำค้นหาล่าสุดลง LocalStorage
+  const saveRecentSearch = useCallback((query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    try {
+      const updated = [trimmed, ...recentSearches.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
+      setRecentSearches(updated);
+      localStorage.setItem('srichai_recent_searches', JSON.stringify(updated));
+    } catch {
+      // Ignore storage errors
+    }
+  }, [recentSearches]);
+
+  const removeRecentSearch = (itemToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const updated = recentSearches.filter(s => s !== itemToRemove);
+      setRecentSearches(updated);
+      localStorage.setItem('srichai_recent_searches', JSON.stringify(updated));
+    } catch {
+      // Ignore
+    }
+  };
+
+  // ปิด Dropdown คำแนะนำเมื่อคลิกข้างนอก
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchInputContainerRef.current && !searchInputContainerRef.current.contains(e.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      if (searchTerm.trim().length >= 2) {
+        saveRecentSearch(searchTerm);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm, saveRecentSearch]);
+
+  // ซิงค์ URL Query Parameters
   useEffect(() => {
     const params = new URLSearchParams();
     
@@ -211,6 +337,8 @@ function SearchPageContent() {
   const triggerSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setDebouncedSearchTerm(searchTerm);
+    if (searchTerm.trim()) saveRecentSearch(searchTerm);
+    setIsSearchFocused(false);
     resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -223,193 +351,255 @@ function SearchPageContent() {
     setCurrentPage(1);
   };
 
-  const filteredProperties = properties.filter((prop) => {
-    if (activeTab === 'rent' && prop.listingType !== 'rent') return false;
-    if (activeTab === 'buy' && prop.listingType !== 'sale') return false;
+  // ----------------------------------------------------------------------------
+  // ระบบกรองอัจฉริยะ (Smart Filter Engine) รองรับการค้นหาคำสำคัญแบบ Token
+  // ----------------------------------------------------------------------------
+  const filteredProperties = useMemo(() => {
+    return properties.filter((prop) => {
+      // กรอง ซื้อ / เช่า
+      if (activeTab === 'rent' && prop.listingType !== 'rent') return false;
+      if (activeTab === 'buy' && prop.listingType !== 'sale') return false;
 
-    if (agentId && prop.agent_id !== agentId) return false;
+      // กรองเฉพาะนายหน้าที่เลือก
+      if (agentId && prop.agent_id !== agentId) return false;
 
-    if (filters.isPremiumOnly && !prop.isPremium) return false;
+      // กรองทรัพย์พรีเมียม
+      if (filters.isPremiumOnly && !prop.isPremium) return false;
 
-    const s = debouncedSearchTerm.toLowerCase().trim();
-    if (s && ![prop.title, prop.location, prop.amphureName, prop.provinceName, prop.districtName, prop.agentName].some(f => (f || '').toLowerCase().includes(s))) {
-      return false;
-    }
+      // ค้นหาคำสำคัญแบบ Multi-keyword Token: พิมพ์ "บ้าน เชียงใหม่ 3 นอน" จะเจอได้
+      const s = debouncedSearchTerm.toLowerCase().trim();
+      if (s) {
+        const tokens = s.split(/\s+/).filter(Boolean);
+        const searchableBag = [
+          prop.title,
+          prop.location,
+          prop.amphureName,
+          prop.provinceName,
+          prop.districtName,
+          prop.agentName,
+          prop.type,
+          prop.description,
+          prop.tag,
+          ...(prop.amenities || [])
+        ].map(f => (f || '').toLowerCase()).join(' ');
 
-    if (filters.province && prop.province_id !== parseInt(filters.province)) return false;
-    if (filters.amphure && prop.amphure_id !== parseInt(filters.amphure)) return false;
-    if (filters.district && prop.district_id !== parseInt(filters.district)) return false;
+        const matchesAll = tokens.every(token => searchableBag.includes(token));
+        if (!matchesAll) return false;
+      }
 
-    const typeMap: Record<string, string> = { house: 'บ้าน', condo: 'คอนโด', townhome: 'ทาวน์โฮม', land: 'ที่ดิน' };
-    if (propertyType !== 'all' && typeMap[propertyType] && !prop.type.includes(typeMap[propertyType]) && !(propertyType === 'land' && prop.type.toLowerCase().includes('land'))) {
-      return false;
-    }
+      // กรองทำเล จังหวัด / อำเภอ / ตำบล
+      if (filters.province && prop.province_id !== parseInt(filters.province, 10)) return false;
+      if (filters.amphure && prop.amphure_id !== parseInt(filters.amphure, 10)) return false;
+      if (filters.district && prop.district_id !== parseInt(filters.district, 10)) return false;
 
-    const price = parseInt(prop.price.replace(/[^\d]/g, '')) || 0;
-    if (filters.priceMin && price < parseInt(filters.priceMin)) return false;
-    if (filters.priceMax && price > parseInt(filters.priceMax)) return false;
+      // กรองประเภททรัพย์
+      const typeMap: Record<string, string> = { house: 'บ้าน', condo: 'คอนโด', townhome: 'ทาวน์โฮม', land: 'ที่ดิน' };
+      if (propertyType !== 'all' && typeMap[propertyType] && !prop.type.includes(typeMap[propertyType]) && !(propertyType === 'land' && prop.type.toLowerCase().includes('land'))) {
+        return false;
+      }
 
-    if (filters.bedrooms !== 'any' && (prop.bedrooms || 0) < parseInt(filters.bedrooms)) return false;
-    if (filters.bathrooms !== 'any' && (prop.bathrooms || 0) < parseInt(filters.bathrooms)) return false;
+      // กรองราคา
+      const price = parseInt(prop.price.replace(/[^\d]/g, ''), 10) || 0;
+      if (filters.priceMin && price < parseInt(filters.priceMin, 10)) return false;
+      if (filters.priceMax && price > parseInt(filters.priceMax, 10)) return false;
 
-    if (filters.parking !== 'any' && (prop.parking || 0) < parseInt(filters.parking)) return false;
+      // กรองห้องนอน / ห้องน้ำ / ที่จอดรถ
+      if (filters.bedrooms !== 'any' && (prop.bedrooms || 0) < parseInt(filters.bedrooms, 10)) return false;
+      if (filters.bathrooms !== 'any' && (prop.bathrooms || 0) < parseInt(filters.bathrooms, 10)) return false;
+      if (filters.parking !== 'any' && (prop.parking || 0) < parseInt(filters.parking, 10)) return false;
 
-    if (filters.areaMin && (prop.area || 0) < parseFloat(filters.areaMin)) return false;
-    if (filters.areaMax && (prop.area || 0) > parseFloat(filters.areaMax)) return false;
+      // กรองพื้นที่ใช้สอย
+      if (filters.areaMin && (prop.area || 0) < parseFloat(filters.areaMin)) return false;
+      if (filters.areaMax && (prop.area || 0) > parseFloat(filters.areaMax)) return false;
 
-    const desc = prop.description || '';
-    const propAmenities = prop.amenities || [];
-    const hasAmenity = (pattern: RegExp) => propAmenities.some(a => pattern.test(a)) || pattern.test(desc);
+      // กรองสิ่งอำนวยความสะดวก
+      const desc = prop.description || '';
+      const propAmenities = prop.amenities || [];
+      const hasAmenity = (pattern: RegExp) => propAmenities.some(a => pattern.test(a)) || pattern.test(desc);
 
-    if (filters.facilities.petFriendly && !hasAmenity(/สัตว์เลี้ยง|pet/i)) return false;
-    if (filters.facilities.pool && !hasAmenity(/สระ|pool/i)) return false;
-    if (filters.facilities.gym && !hasAmenity(/ฟิตเนส|ยิม|gym/i)) return false;
-    if (filters.facilities.parking && !hasAmenity(/ที่จอดรถ|จอดรถ|parking/i) && (prop.parking || 0) <= 0) return false;
-    if (filters.facilities.security && !hasAmenity(/รักษาความปลอดภัย|cctv|รปภ|security/i)) return false;
+      if (filters.facilities.petFriendly && !hasAmenity(/สัตว์เลี้ยง|pet/i)) return false;
+      if (filters.facilities.pool && !hasAmenity(/สระ|pool/i)) return false;
+      if (filters.facilities.gym && !hasAmenity(/ฟิตเนส|ยิม|gym/i)) return false;
+      if (filters.facilities.parking && !hasAmenity(/ที่จอดรถ|จอดรถ|parking/i) && (prop.parking || 0) <= 0) return false;
+      if (filters.facilities.security && !hasAmenity(/รักษาความปลอดภัย|cctv|รปภ|security/i)) return false;
 
-    return true;
-  });
+      return true;
+    });
+  }, [properties, activeTab, agentId, filters, debouncedSearchTerm, propertyType]);
 
-  const sortedProperties = [...filteredProperties].sort((a, b) => {
-    if (sortBy === 'latest') return 0;
-    const priceA = parseInt(a.price.replace(/[^\d]/g, '')) || 0;
-    const priceB = parseInt(b.price.replace(/[^\d]/g, '')) || 0;
-    return sortBy === 'price_asc' ? priceA - priceB : priceB - priceA;
-  });
+  // ----------------------------------------------------------------------------
+  // ระบบเรียงลำดับผลลัพธ์ (Sort Engine)
+  // ----------------------------------------------------------------------------
+  const sortedProperties = useMemo(() => {
+    return [...filteredProperties].sort((a, b) => {
+      const priceA = parseInt(a.price.replace(/[^\d]/g, ''), 10) || 0;
+      const priceB = parseInt(b.price.replace(/[^\d]/g, ''), 10) || 0;
 
-  const itemsPerPage = 6;
+      switch (sortBy) {
+        case 'price_asc':
+          return priceA - priceB;
+        case 'price_desc':
+          return priceB - priceA;
+        case 'price_sqm_asc': {
+          const sqmA = a.area && a.area > 0 ? priceA / a.area : Infinity;
+          const sqmB = b.area && b.area > 0 ? priceB / b.area : Infinity;
+          return sqmA - sqmB;
+        }
+        case 'area_desc':
+          return (b.area || 0) - (a.area || 0);
+        case 'rating_desc':
+          return (b.agentRating || 0) - (a.agentRating || 0);
+        case 'latest':
+        default:
+          return Number(b.id) - Number(a.id);
+      }
+    });
+  }, [filteredProperties, sortBy]);
+
+  // แบ่งหน้า (Pagination) 8 รายการต่อหน้า
+  const itemsPerPage = 8;
   const totalPages = Math.max(1, Math.ceil(sortedProperties.length / itemsPerPage));
   const validCurrentPage = Math.min(currentPage, totalPages);
   const paginatedProperties = sortedProperties.slice((validCurrentPage - 1) * itemsPerPage, validCurrentPage * itemsPerPage);
 
+  // ทรัพย์แนะนำเมื่อค้นหาไม่เจอ (Recommended Properties)
+  const recommendedProperties = useMemo(() => {
+    if (sortedProperties.length > 0) return [];
+    return properties.filter(p => p.isPremium || p.isVerifiedPro).slice(0, 4);
+  }, [sortedProperties.length, properties]);
+
   // รายการ Active Filter Chips
-  const activeChips: { id: string; label: string; icon?: React.ReactNode; onRemove: () => void }[] = [];
+  const activeChips = useMemo(() => {
+    const chips: { id: string; label: string; icon?: React.ReactNode; onRemove: () => void }[] = [];
 
-  if (debouncedSearchTerm) {
-    activeChips.push({
-      id: 'search',
-      label: `"${debouncedSearchTerm}"`,
-      icon: <Search className="w-3 h-3 text-slate-500" />,
-      onRemove: () => { setSearchTerm(''); setDebouncedSearchTerm(''); },
-    });
-  }
-
-  if (propertyType !== 'all') {
-    const typeMap: Record<string, string> = { house: 'บ้านเดี่ยว', condo: 'คอนโด', townhome: 'ทาวน์โฮม', land: 'ที่ดิน' };
-    activeChips.push({
-      id: 'type',
-      label: typeMap[propertyType] || propertyType,
-      onRemove: () => setPropertyType('all'),
-    });
-  }
-
-  if (agentId) {
-    const matchedAgentProp = properties.find(p => p.agent_id === agentId);
-    const agentLabel = matchedAgentProp?.agentName ? `นายหน้า: ${matchedAgentProp.agentName}` : 'นายหน้าที่เลือก';
-    activeChips.push({
-      id: 'agentId',
-      label: agentLabel,
-      onRemove: () => setAgentId(''),
-    });
-  }
-
-  if (filters.priceMin || filters.priceMax) {
-    let label = 'งบ: ';
-    if (filters.priceMin && filters.priceMax) {
-      label += `฿${Number(filters.priceMin).toLocaleString()} - ฿${Number(filters.priceMax).toLocaleString()}`;
-    } else if (filters.priceMin) {
-      label += `>= ฿${Number(filters.priceMin).toLocaleString()}`;
-    } else {
-      label += `<= ฿${Number(filters.priceMax).toLocaleString()}`;
+    if (debouncedSearchTerm) {
+      chips.push({
+        id: 'search',
+        label: `"${debouncedSearchTerm}"`,
+        icon: <Search className="w-3 h-3 text-slate-500" />,
+        onRemove: () => { setSearchTerm(''); setDebouncedSearchTerm(''); },
+      });
     }
-    activeChips.push({
-      id: 'price',
-      label,
-      icon: <Banknote className="w-3 h-3 text-emerald-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, priceMin: '', priceMax: '' })),
-    });
-  }
 
-  if (filters.bedrooms !== 'any') {
-    activeChips.push({
-      id: 'bedrooms',
-      label: `${filters.bedrooms}+ นอน`,
-      icon: <Bed className="w-3 h-3 text-blue-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, bedrooms: 'any' })),
-    });
-  }
+    if (propertyType !== 'all') {
+      const typeMap: Record<string, string> = { house: 'บ้านเดี่ยว', condo: 'คอนโด', townhome: 'ทาวน์โฮม', land: 'ที่ดิน' };
+      chips.push({
+        id: 'type',
+        label: typeMap[propertyType] || propertyType,
+        onRemove: () => setPropertyType('all'),
+      });
+    }
 
-  if (filters.bathrooms !== 'any') {
-    activeChips.push({
-      id: 'bathrooms',
-      label: `${filters.bathrooms}+ น้ำ`,
-      icon: <Bath className="w-3 h-3 text-blue-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, bathrooms: 'any' })),
-    });
-  }
+    if (agentId) {
+      const matchedAgentProp = properties.find(p => p.agent_id === agentId);
+      const agentLabel = matchedAgentProp?.agentName ? `นายหน้า: ${matchedAgentProp.agentName}` : 'นายหน้าที่เลือก';
+      chips.push({
+        id: 'agentId',
+        label: agentLabel,
+        onRemove: () => setAgentId(''),
+      });
+    }
 
-  if (filters.parking !== 'any') {
-    activeChips.push({
-      id: 'parking',
-      label: `${filters.parking}+ จอดรถ`,
-      icon: <Car className="w-3 h-3 text-blue-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, parking: 'any' })),
-    });
-  }
+    if (filters.priceMin || filters.priceMax) {
+      let label = 'งบ: ';
+      if (filters.priceMin && filters.priceMax) {
+        label += `฿${Number(filters.priceMin).toLocaleString()} - ฿${Number(filters.priceMax).toLocaleString()}`;
+      } else if (filters.priceMin) {
+        label += `>= ฿${Number(filters.priceMin).toLocaleString()}`;
+      } else {
+        label += `<= ฿${Number(filters.priceMax).toLocaleString()}`;
+      }
+      chips.push({
+        id: 'price',
+        label,
+        icon: <Banknote className="w-3 h-3 text-emerald-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, priceMin: '', priceMax: '' })),
+      });
+    }
 
-  if (filters.facilities.petFriendly) {
-    activeChips.push({
-      id: 'petFriendly',
-      label: 'สัตว์เลี้ยงได้',
-      icon: <PawPrint className="w-3 h-3 text-amber-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, petFriendly: false } })),
-    });
-  }
+    if (filters.bedrooms !== 'any') {
+      chips.push({
+        id: 'bedrooms',
+        label: `${filters.bedrooms}+ นอน`,
+        icon: <Bed className="w-3 h-3 text-blue-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, bedrooms: 'any' })),
+      });
+    }
 
-  if (filters.facilities.pool) {
-    activeChips.push({
-      id: 'pool',
-      label: 'สระว่ายน้ำ',
-      icon: <Waves className="w-3 h-3 text-cyan-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, pool: false } })),
-    });
-  }
+    if (filters.bathrooms !== 'any') {
+      chips.push({
+        id: 'bathrooms',
+        label: `${filters.bathrooms}+ น้ำ`,
+        icon: <Bath className="w-3 h-3 text-blue-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, bathrooms: 'any' })),
+      });
+    }
 
-  if (filters.facilities.gym) {
-    activeChips.push({
-      id: 'gym',
-      label: 'ฟิตเนส',
-      icon: <Dumbbell className="w-3 h-3 text-purple-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, gym: false } })),
-    });
-  }
+    if (filters.parking !== 'any') {
+      chips.push({
+        id: 'parking',
+        label: `${filters.parking}+ จอดรถ`,
+        icon: <Car className="w-3 h-3 text-blue-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, parking: 'any' })),
+      });
+    }
 
-  if (filters.facilities.parking) {
-    activeChips.push({
-      id: 'facParking',
-      label: 'ที่จอดรถ',
-      icon: <Car className="w-3 h-3 text-slate-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, parking: false } })),
-    });
-  }
+    if (filters.facilities.petFriendly) {
+      chips.push({
+        id: 'petFriendly',
+        label: 'สัตว์เลี้ยงได้',
+        icon: <PawPrint className="w-3 h-3 text-amber-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, petFriendly: false } })),
+      });
+    }
 
-  if (filters.facilities.security) {
-    activeChips.push({
-      id: 'security',
-      label: 'รปภ./CCTV',
-      icon: <ShieldCheck className="w-3 h-3 text-emerald-600" />,
-      onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, security: false } })),
-    });
-  }
+    if (filters.facilities.pool) {
+      chips.push({
+        id: 'pool',
+        label: 'สระว่ายน้ำ',
+        icon: <Waves className="w-3 h-3 text-cyan-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, pool: false } })),
+      });
+    }
 
-  if (filters.isPremiumOnly) {
-    activeChips.push({
-      id: 'premium',
-      label: 'ทรัพย์พรีเมียม',
-      icon: <Sparkles className="w-3 h-3 text-amber-500" />,
-      onRemove: () => setFilters(prev => ({ ...prev, isPremiumOnly: false })),
-    });
-  }
+    if (filters.facilities.gym) {
+      chips.push({
+        id: 'gym',
+        label: 'ฟิตเนส',
+        icon: <Dumbbell className="w-3 h-3 text-purple-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, gym: false } })),
+      });
+    }
+
+    if (filters.facilities.parking) {
+      chips.push({
+        id: 'facParking',
+        label: 'ที่จอดรถ',
+        icon: <Car className="w-3 h-3 text-slate-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, parking: false } })),
+      });
+    }
+
+    if (filters.facilities.security) {
+      chips.push({
+        id: 'security',
+        label: 'รปภ./CCTV',
+        icon: <ShieldCheck className="w-3 h-3 text-emerald-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, security: false } })),
+      });
+    }
+
+    if (filters.isPremiumOnly) {
+      chips.push({
+        id: 'premium',
+        label: 'ทรัพย์พรีเมียม',
+        icon: <Sparkles className="w-3 h-3 text-amber-500" />,
+        onRemove: () => setFilters(prev => ({ ...prev, isPremiumOnly: false })),
+      });
+    }
+
+    return chips;
+  }, [debouncedSearchTerm, propertyType, agentId, properties, filters]);
 
   return (
     <div className="font-sans bg-slate-50 min-h-screen text-slate-800 antialiased text-sm pb-16">
@@ -427,69 +617,136 @@ function SearchPageContent() {
           </p>
 
           {/* แถบค้นหาหลัก */}
-          <div className="bg-white p-2 sm:p-2.5 rounded-2xl md:rounded-full shadow-2xl border border-slate-200/20 max-w-4xl mx-auto flex flex-col md:flex-row items-stretch md:items-center gap-2">
-            <div className="flex-1 flex bg-slate-50 rounded-xl md:rounded-full px-4 py-2 border border-slate-100 focus-within:border-blue-500 transition-colors items-center">
-              <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
-                placeholder="ระบุทำเล, โครงการ, รหัสไปรษณีย์..."
-                className="w-full bg-transparent border-none p-0 focus:ring-0 text-slate-800 text-xs font-bold placeholder-slate-400 outline-none"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => { setSearchTerm(''); setDebouncedSearchTerm(''); }}
-                  className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer rounded-full hover:bg-slate-200 transition"
-                  aria-label="ล้างคำค้นหา"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+          <div className="relative max-w-4xl mx-auto" ref={searchInputContainerRef}>
+            <div className="bg-white p-2 sm:p-2.5 rounded-2xl md:rounded-full shadow-2xl border border-slate-200/20 flex flex-col md:flex-row items-stretch md:items-center gap-2">
+              <div className="flex-1 flex bg-slate-50 rounded-xl md:rounded-full px-4 py-2 border border-slate-100 focus-within:border-blue-500 transition-colors items-center">
+                <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
+                  placeholder="ระบุทำเล, ชื่อโครงการ, รถไฟฟ้า, รหัสไปรษณีย์..."
+                  className="w-full bg-transparent border-none p-0 focus:ring-0 text-slate-800 text-xs font-bold placeholder-slate-400 outline-none"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchTerm(''); setDebouncedSearchTerm(''); }}
+                    className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer rounded-full hover:bg-slate-200 transition"
+                    aria-label="ล้างคำค้นหา"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="w-px bg-slate-200 hidden md:block h-6" />
+
+              {/* ดรอปดาวน์ ซื้อ / เช่า */}
+              <div className="w-full md:w-36">
+                <HeroCustomSelect
+                  value={activeTab}
+                  onChange={(val) => setActiveTab(val as 'buy' | 'rent')}
+                  options={[
+                    { value: 'buy', label: 'ซื้อ (Buy)' },
+                    { value: 'rent', label: 'เช่า (Rent)' },
+                  ]}
+                />
+              </div>
+
+              <div className="w-px bg-slate-200 hidden md:block h-6" />
+
+              {/* ดรอปดาวน์ ประเภทอสังหาฯ */}
+              <div className="w-full md:w-44">
+                <HeroCustomSelect
+                  value={propertyType}
+                  onChange={(val) => setPropertyType(val)}
+                  options={[
+                    { value: 'all', label: 'ประเภททั้งหมด' },
+                    { value: 'house', label: 'บ้านเดี่ยว (House)' },
+                    { value: 'condo', label: 'คอนโดมิเนียม (Condo)' },
+                    { value: 'townhome', label: 'ทาวน์โฮม (Townhome)' },
+                    { value: 'land', label: 'ที่ดิน (Land)' },
+                  ]}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => triggerSearch()}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-2.5 rounded-xl md:rounded-full transition-all text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+              >
+                <span>ค้นหา</span>
+              </button>
             </div>
 
-            <div className="w-px bg-slate-200 hidden md:block h-6" />
+            {/* Dropdown แสดงคำค้นหายอดนิยม และประวัติการค้นหาล่าสุด */}
+            {isSearchFocused && (
+              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 text-left z-50 animate-in fade-in zoom-in-95 duration-150">
+                {/* ประวัติการค้นหาล่าสุด */}
+                {recentSearches.length > 0 && (
+                  <div className="mb-3.5">
+                    <div className="text-[11px] font-bold text-slate-400 mb-2 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span>ค้นหาล่าสุด</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {recentSearches.map((s, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setSearchTerm(s);
+                            setDebouncedSearchTerm(s);
+                            setIsSearchFocused(false);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold cursor-pointer flex items-center gap-1.5 transition"
+                        >
+                          <span>{s}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => removeRecentSearch(s, e)}
+                            className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                            title="ลบ"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* ดรอปดาวน์ ซื้อ / เช่า (Custom Dropdown) */}
-            <div className="w-full md:w-36">
-              <HeroCustomSelect
-                value={activeTab}
-                onChange={(val) => setActiveTab(val as 'buy' | 'rent')}
-                options={[
-                  { value: 'buy', label: 'ซื้อ (Buy)' },
-                  { value: 'rent', label: 'เช่า (Rent)' },
-                ]}
-              />
-            </div>
-
-            <div className="w-px bg-slate-200 hidden md:block h-6" />
-
-            {/* ดรอปดาวน์ ประเภทอสังหาฯ (Custom Dropdown) */}
-            <div className="w-full md:w-44">
-              <HeroCustomSelect
-                value={propertyType}
-                onChange={(val) => setPropertyType(val)}
-                options={[
-                  { value: 'all', label: 'ประเภททั้งหมด' },
-                  { value: 'house', label: 'บ้านเดี่ยว (House)' },
-                  { value: 'condo', label: 'คอนโดมิเนียม (Condo)' },
-                  { value: 'townhome', label: 'ทาวน์โฮม (Townhome)' },
-                  { value: 'land', label: 'ที่ดิน (Land)' },
-                ]}
-              />
-            </div>
-
-            <button
-              onClick={() => triggerSearch()}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-2.5 rounded-xl md:rounded-full transition-all text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
-            >
-              ค้นหา
-            </button>
+                {/* คำค้นหายอดนิยม */}
+                <div>
+                  <div className="text-[11px] font-bold text-slate-400 mb-2 flex items-center gap-1.5">
+                    <TrendingUp className="w-3 h-3 text-blue-600" />
+                    <span>คำค้นหายอดนิยม</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {POPULAR_SEARCH_TAGS.map((tag, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setSearchTerm(tag);
+                          setDebouncedSearchTerm(tag);
+                          saveRecentSearch(tag);
+                          setIsSearchFocused(false);
+                        }}
+                        className="px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition cursor-pointer"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Quick Filter Pills (ปุ่มลัดคลิกเดียว ใช้ Lucide Icons สวยงาม) */}
+          {/* Quick Filter Pills */}
           <div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-2xl mx-auto text-xs">
             <span className="text-slate-400 font-medium text-[11px] mr-1 hidden sm:inline">ปุ่มลัด:</span>
             
@@ -568,10 +825,10 @@ function SearchPageContent() {
         </div>
       </header>
 
-      {/* Main Content (ขยายพื้นที่ให้กว้างขึ้นและอ่านง่าย สบายตา) */}
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Sidebar (กว้างขึ้น 4 ใน 12 ส่วน) */}
+          {/* Sidebar (4 ใน 12 ส่วน) */}
           <div className="lg:col-span-4 xl:col-span-4">
             <SearchSidebar
               filters={filters}
@@ -585,34 +842,62 @@ function SearchPageContent() {
 
           {/* Results Column (8 ใน 12 ส่วน) */}
           <div ref={resultsRef} className="lg:col-span-8 xl:col-span-8 space-y-5">
-            {/* Header + Sort */}
+            {/* Header + Sort + View Mode Switcher */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h2 className="font-extrabold text-slate-900 text-base">รายการอสังหาริมทรัพย์</h2>
-                <p className="text-[11px] text-slate-400 font-medium mt-0.5">พบ {sortedProperties.length} รายการที่ตรงกับเงื่อนไข</p>
+                <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                  พบ <span className="font-bold text-blue-600">{sortedProperties.length}</span> รายการที่ตรงกับเงื่อนไข
+                </p>
               </div>
 
-              <div className="flex items-center gap-3 self-end sm:self-auto">
+              <div className="flex flex-wrap items-center gap-2.5 self-end sm:self-auto">
+                {/* ปุ่มเปิดตัวกรองบนมือถือ */}
                 <button
+                  type="button"
                   onClick={() => setIsMobileDrawerOpen(true)}
                   className="lg:hidden flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors border border-slate-200 cursor-pointer"
                 >
                   <SlidersHorizontal className="w-4 h-4" />
-                  ตัวกรอง {activeChips.length > 0 && `(${activeChips.length})`}
+                  <span>ตัวกรอง</span>
+                  {activeChips.length > 0 && <span className="text-blue-600 font-extrabold">({activeChips.length})</span>}
                 </button>
 
+                {/* สลับมุมมอง Grid / List */}
+                <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/60">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      viewMode === 'grid' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                    title="มุมมองตาราง"
+                    aria-label="มุมมองตาราง"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('list')}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      viewMode === 'list' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                    title="มุมมองรายการ"
+                    aria-label="มุมมองรายการ"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* เรียงลำดับ */}
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-slate-400 font-medium whitespace-nowrap">เรียงตาม:</span>
+                  <span className="text-slate-400 font-medium whitespace-nowrap hidden sm:inline">เรียงตาม:</span>
                   <HeroCustomSelect
                     value={sortBy}
-                    onChange={(val) => setSortBy(val as 'latest' | 'price_asc' | 'price_desc')}
-                    className="w-36"
+                    onChange={(val) => setSortBy(val as SortKey)}
+                    className="w-40 sm:w-44"
                     buttonClassName="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5"
-                    options={[
-                      { value: 'latest', label: 'ล่าสุด' },
-                      { value: 'price_asc', label: 'ราคา: ต่ำ → สูง' },
-                      { value: 'price_desc', label: 'ราคา: สูง → ต่ำ' },
-                    ]}
+                    options={SORT_OPTIONS}
                   />
                 </div>
               </div>
@@ -642,38 +927,104 @@ function SearchPageContent() {
                 <button
                   type="button"
                   onClick={handleClearFilters}
-                  className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-bold ml-auto hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 font-bold ml-auto hover:underline cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
-                  ล้างทั้งหมด
+                  <span>ล้างทั้งหมด</span>
                 </button>
               </div>
             )}
 
-            {/* Empty State หรือ Grid การ์ด */}
-            {sortedProperties.length === 0 ? (
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-xs space-y-4">
-                <SearchX className="w-12 h-12 mx-auto text-slate-300" />
-                <h3 className="font-extrabold text-slate-800 text-sm">ไม่พบอสังหาริมทรัพย์ที่ตรงกับเงื่อนไข</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                  กรุณาลองปรับลดตัวกรอง หรือล้างตัวเลือกตัวกรองทั้งหมดแล้วลองค้นหาใหม่อีกครั้ง
-                </p>
-                <button
-                  onClick={handleClearFilters}
-                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-5 py-2 rounded-full text-xs shadow-sm transition cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  ล้างค่าตัวกรองทั้งหมด
-                </button>
+            {/* Skeleton Loading ขณะดึงข้อมูล */}
+            {propertiesLoading ? (
+              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-5' : 'flex flex-col gap-4'}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <PropertyCardSkeleton key={i} viewMode={viewMode} />
+                ))}
+              </div>
+            ) : sortedProperties.length === 0 ? (
+              /* Smart Empty State เมื่อค้นหาไม่พบ */
+              <div className="space-y-8">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-10 text-center shadow-xs space-y-4">
+                  <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+                    <SearchX className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-black text-slate-900 text-base">ไม่พบอสังหาริมทรัพย์ที่ตรงกับทุกเงื่อนไข</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                    ลองปรับลดเงื่อนไขตัวกรองบางข้อ เช่น ขยายช่วงราคา หรือเลือกดูทุกประเภททรัพย์เพื่อค้นหาผลลัพธ์ที่หลากหลายขึ้น
+                  </p>
+                  
+                  {/* ปุ่มช่วยคลายตัวกรอง */}
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                    {debouncedSearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => { setSearchTerm(''); setDebouncedSearchTerm(''); }}
+                        className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition"
+                      >
+                        ล้างคำค้นหา &quot;{debouncedSearchTerm}&quot;
+                      </button>
+                    )}
+                    {(filters.priceMin || filters.priceMax) && (
+                      <button
+                        type="button"
+                        onClick={() => setFilters(prev => ({ ...prev, priceMin: '', priceMax: '' }))}
+                        className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition"
+                      >
+                        ปลดล็อกช่วงงบประมาณ
+                      </button>
+                    )}
+                    {propertyType !== 'all' && (
+                      <button
+                        type="button"
+                        onClick={() => setPropertyType('all')}
+                        className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition"
+                      >
+                        ดูทุกประเภทอสังหาฯ
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleClearFilters}
+                      className="px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs cursor-pointer shadow-xs transition flex items-center gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>ล้างตัวกรองทั้งหมด</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* แนะนำทรัพย์เด่นที่ลูกค้าน่าจะสนใจ */}
+                {recommendedProperties.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <h4 className="font-black text-slate-900 text-sm">อสังหาริมทรัพย์แนะนำที่คุณอาจสนใจ</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {recommendedProperties.map((prop) => (
+                        <PropertyCard
+                          key={prop.id}
+                          prop={prop}
+                          isFav={favorites.includes(prop.id)}
+                          toggleFavorite={toggleFavorite}
+                          viewMode="grid"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              /* แสดงรายการอสังหาริมทรัพย์ */
+              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-5' : 'flex flex-col gap-4'}>
                 {paginatedProperties.map((prop) => (
                   <PropertyCard
                     key={prop.id}
                     prop={prop}
                     isFav={favorites.includes(prop.id)}
                     toggleFavorite={toggleFavorite}
+                    viewMode={viewMode}
                   />
                 ))}
               </div>
@@ -683,7 +1034,11 @@ function SearchPageContent() {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-1.5 pt-6 text-xs font-bold">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  type="button"
+                  onClick={() => {
+                    setCurrentPage(prev => Math.max(1, prev - 1));
+                    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
                   disabled={validCurrentPage === 1}
                   className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 text-slate-500 disabled:opacity-40 cursor-pointer"
                   aria-label="หน้าก่อนหน้า"
@@ -694,7 +1049,11 @@ function SearchPageContent() {
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                   <button
                     key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
+                    type="button"
+                    onClick={() => {
+                      setCurrentPage(pageNum);
+                      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
                     className={`w-8 h-8 rounded-lg font-bold transition cursor-pointer flex items-center justify-center ${
                       validCurrentPage === pageNum
                         ? 'bg-blue-600 text-white shadow-xs'
@@ -706,7 +1065,11 @@ function SearchPageContent() {
                 ))}
 
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  type="button"
+                  onClick={() => {
+                    setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
                   disabled={validCurrentPage === totalPages}
                   className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 text-slate-500 disabled:opacity-40 cursor-pointer"
                   aria-label="หน้าถัดไป"
