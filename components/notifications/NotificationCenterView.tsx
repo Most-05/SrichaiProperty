@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { getPusherClient } from '@/lib/pusher-client';
+import { notificationChannelName } from '@/lib/notificationChannel';
 import { toast } from '@/components/ui/toast';
 import {
   Bell,
@@ -73,26 +76,47 @@ export default function NotificationCenterView({
   // Delete Confirm ID
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | 'all' | null>(null);
 
+  const { data: session } = useSession();
+  const userId = (session?.user as { id?: string })?.id;
+
   // ดึงรายการแจ้งเตือนจาก API ครั้งแรกเมื่อเปิดหน้า
-  useEffect(() => {
-    let isCancelled = false;
+  const fetchNotifications = useCallback(() => {
     fetch('/api/notifications?limit=100')
       .then(res => res.json())
       .then(data => {
-        if (!isCancelled && data.success) {
+        if (data.success) {
           setNotifications(data.notifications || []);
           setUnreadCount(data.unreadCount || 0);
         }
       })
-      .catch(err => console.error('Fetch error:', err))
+      .catch(err => console.error('Fetch notifications error:', err))
       .finally(() => {
-        if (!isCancelled) setLoading(false);
+        setLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // เชื่อมต่อ Pusher แบบ Real-time บนหน้าศูนย์แจ้งเตือนจอใหญ่
+  useEffect(() => {
+    if (!userId) return;
+    const pusher = getPusherClient();
+    const channel = pusher.subscribe(notificationChannelName(userId));
+
+    channel.bind('new-notification', (item: NotificationItem) => {
+      setNotifications(prev => [item, ...prev.filter(n => n.id !== item.id)]);
+      setUnreadCount(prev => prev + 1);
+    });
+
+    channel.bind('notifications-changed', fetchNotifications);
 
     return () => {
-      isCancelled = true;
+      channel.unbind_all();
+      pusher.unsubscribe(notificationChannelName(userId));
     };
-  }, []);
+  }, [userId, fetchNotifications]);
 
   // รีเฟรชข้อมูลเมื่อผู้ใช้กดปุ่ม
   const handleRefresh = useCallback(async () => {
