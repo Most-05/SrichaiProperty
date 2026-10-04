@@ -164,8 +164,9 @@ export async function PUT(request: Request) {
     if (kycDoc !== undefined && typeof kycDoc === 'string' && kycDoc.trim() !== '' && kycDoc !== targetUser.kyc_doc) {
       updateData.kyc_doc = kycDoc.trim();
       kycUpdated = true;
-      // หากบัญชีเคยโดนระงับ/ตีกลับ (banned/rejected) ให้ปรับสถานะกลับมาเป็น pending เพื่อส่งเข้าคิวตรวจใหม่
-      if (targetUser.status === 'banned' || targetUser.status === 'pending') {
+      // เอกสาร KYC ไม่ผ่าน (rejected) แล้วส่งใหม่ → กลับเข้าคิวตรวจ (pending)
+      // เดิมรวม banned ด้วย → บัญชีที่ถูกแบนจริงจะ "ปลดแบนตัวเอง" ได้แค่อัปโหลดรูปใหม่ (BUG-29)
+      if (targetUser.status === 'rejected' || targetUser.status === 'pending') {
         updateData.status = 'pending';
       }
     }
