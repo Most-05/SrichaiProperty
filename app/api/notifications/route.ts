@@ -96,7 +96,7 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { notificationId, markAll, isRead } = body;
+    const { notificationId, markAll } = body;
 
     if (markAll) {
       await db.notifications.updateMany({
@@ -108,13 +108,12 @@ export async function PATCH(req: Request) {
     }
 
     if (notificationId) {
-      const targetReadState = isRead !== undefined ? Boolean(isRead) : true;
       await db.notifications.updateMany({
         where: { id: notificationId, user_id: user.id },
-        data: { is_read: targetReadState }
+        data: { is_read: true }
       });
       await notifySync(user.id);
-      return NextResponse.json({ success: true, message: targetReadState ? "อ่านการแจ้งเตือนสำเร็จ" : "ตั้งค่าเป็นยังไม่ได้อ่านสำเร็จ" });
+      return NextResponse.json({ success: true, message: "อ่านการแจ้งเตือนสำเร็จ" });
     }
 
     return NextResponse.json({ error: "กรุณาระบุ notificationId หรือ markAll" }, { status: 400 });

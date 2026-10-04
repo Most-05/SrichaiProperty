@@ -16,7 +16,6 @@ import {
   AlertCircle,
   CheckCheck,
   CheckCircle2,
-  Mail,
   ArrowRight
 } from 'lucide-react';
 import {
@@ -32,7 +31,7 @@ interface NotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDelete?: (id: string) => void;
-  onToggleRead?: (id: string, isRead: boolean) => void;
+  onToggleRead?: (id: string, isRead?: boolean) => void;
 }
 
 function getIcon(categoryKey: string) {
@@ -160,26 +159,15 @@ export default function NotificationModal({
         {/* ปุ่มดำเนินการ */}
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
-            {onToggleRead && (
-              !notification.isRead ? (
-                <button
-                  type="button"
-                  onClick={() => onToggleRead(notification.id, true)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 border border-blue-200 transition cursor-pointer flex items-center gap-1.5"
-                >
-                  <CheckCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>ทำเครื่องหมายว่าอ่านแล้ว</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onToggleRead(notification.id, false)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 transition cursor-pointer flex items-center gap-1.5"
-                >
-                  <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span>เปลี่ยนเป็นยังไม่อ่าน</span>
-                </button>
-              )
+            {onToggleRead && !notification.isRead && (
+              <button
+                type="button"
+                onClick={() => onToggleRead(notification.id, true)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 border border-blue-200 transition cursor-pointer flex items-center gap-1.5"
+              >
+                <CheckCheck className="w-3.5 h-3.5 text-blue-600" />
+                <span>ทำเครื่องหมายว่าอ่านแล้ว</span>
+              </button>
             )}
 
             {onDelete && (

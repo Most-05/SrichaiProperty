@@ -139,19 +139,19 @@ export default function NotificationBell({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ทำเครื่องหมายอ่านแล้ว / ยังไม่อ่าน
-  const markAsRead = (id?: string, isRead: boolean = true) => {
+  // ทำเครื่องหมายอ่านแล้ว
+  const markAsRead = (id?: string) => {
     fetch('/api/notifications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(id ? { notificationId: id, isRead } : { markAll: true })
+      body: JSON.stringify(id ? { notificationId: id, isRead: true } : { markAll: true })
     }).then(() => {
       if (id) {
         setNotifications(prev =>
-          prev.map(n => (n.id === id ? { ...n, isRead } : n))
+          prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
         );
-        setSelectedNotification(prev => (prev && prev.id === id ? { ...prev, isRead } : prev));
-        setUnreadCount(v => (isRead ? Math.max(0, v - 1) : v + 1));
+        setSelectedNotification(prev => (prev && prev.id === id ? { ...prev, isRead: true } : prev));
+        setUnreadCount(v => Math.max(0, v - 1));
       } else {
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         setSelectedNotification(prev => (prev ? { ...prev, isRead: true } : prev));
@@ -284,7 +284,7 @@ export default function NotificationBell({
                   <div
                     key={n.id}
                     onClick={() => {
-                      if (!n.isRead) markAsRead(n.id, true);
+                      if (!n.isRead) markAsRead(n.id);
                       setSelectedNotification(n);
                       setOpen(false);
                     }}
@@ -363,7 +363,7 @@ export default function NotificationBell({
         isOpen={Boolean(selectedNotification)}
         onClose={() => setSelectedNotification(null)}
         onDelete={deleteNotification}
-        onToggleRead={(id, isRead) => markAsRead(id, isRead)}
+        onToggleRead={id => markAsRead(id)}
       />
     </div>
   );

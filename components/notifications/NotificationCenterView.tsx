@@ -23,8 +23,7 @@ import {
   ArrowRight,
   RefreshCw,
   X,
-  ExternalLink,
-  Mail
+  ExternalLink
 } from 'lucide-react';
 import {
   NotificationItem,
@@ -138,21 +137,23 @@ export default function NotificationCenterView({
   }, []);
 
   // ทำเครื่องหมายอ่านแล้ว
-  const markAsRead = async (id?: string, isRead = true) => {
+  const markAsRead = async (id?: string) => {
     try {
       await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(id ? { notificationId: id, isRead } : { markAll: true })
+        body: JSON.stringify(id ? { notificationId: id, isRead: true } : { markAll: true })
       });
 
       if (id) {
         setNotifications(prev =>
-          prev.map(n => (n.id === id ? { ...n, isRead } : n))
+          prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
         );
-        setUnreadCount(v => (isRead ? Math.max(0, v - 1) : v + 1));
+        setSelectedNotification(prev => (prev && prev.id === id ? { ...prev, isRead: true } : prev));
+        setUnreadCount(v => Math.max(0, v - 1));
       } else {
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setSelectedNotification(prev => (prev ? { ...prev, isRead: true } : prev));
         setUnreadCount(0);
         toast.success('ทำเครื่องหมายอ่านการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว');
       }
@@ -548,23 +549,14 @@ export default function NotificationCenterView({
                 <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                   {/* ฝั่งซ้าย: สลับสถานะอ่าน / ลบ */}
                   <div className="flex items-center gap-2">
-                    {isUnread ? (
+                    {isUnread && (
                       <button
                         type="button"
-                        onClick={() => markAsRead(item.id, true)}
+                        onClick={() => markAsRead(item.id)}
                         className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 border border-blue-200 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
                       >
                         <CheckCheck className="w-4 h-4 shrink-0 text-blue-600" />
                         <span>ทำเครื่องหมายว่าอ่านแล้ว</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => markAsRead(item.id, false)}
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition cursor-pointer flex items-center gap-1.5"
-                      >
-                        <Mail className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-                        <span>เปลี่ยนเป็นยังไม่อ่าน</span>
                       </button>
                     )}
 
@@ -633,7 +625,7 @@ export default function NotificationCenterView({
         isOpen={Boolean(selectedNotification)}
         onClose={() => setSelectedNotification(null)}
         onDelete={id => deleteItem(id)}
-        onToggleRead={(id, isRead) => markAsRead(id, isRead)}
+        onToggleRead={id => markAsRead(id)}
       />
     </div>
   );
