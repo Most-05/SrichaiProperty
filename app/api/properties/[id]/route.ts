@@ -132,8 +132,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     const {
       title, type_id, price, description, listing_type, listingType,
       bedrooms, bathrooms, area_sqm, location,
-      province_id, amphure_id, district_id, latitude, longitude, images, viewingSlots, status: newStatus,
-      commonFee, parking, floors, ownership 
+      province_id, amphure_id, district_id, latitude, longitude, images, viewingSlots,
+      commonFee, parking, floors, ownership
+      // ไม่รับ status จากนายหน้า — สถานะประกาศเปลี่ยนได้โดยแอดมิน (อนุมัติ/ปฏิเสธ) หรือปุ่มลบประกาศเท่านั้น (BUG-31)
     } = body;
 
     // ตรวจสอบความถูกต้องของข้อมูล (Validation)
@@ -203,7 +204,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (parking !== undefined && parking !== null && parking !== "") updateData.parking_spaces = parseInt(String(parking));
     if (floors !== undefined && floors !== null && floors !== "") updateData.floors = parseInt(String(floors));
     if (ownership !== undefined && ownership !== null && ownership !== "") updateData.ownership_type = ownership;
-    if (newStatus) updateData.status = newStatus;
     const wasRejected = property.status === "rejected";
     const wasPending = property.status === "pending";
 
