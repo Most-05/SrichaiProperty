@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { fallbackAvatarUrl } from '@/lib/utils/avatar'; // รูปโปรไฟล์สำรองแบบ PNG (ชื่อไทยบางชื่อได้ SVG ที่ next/image ไม่รับ — BUG-32)
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -28,7 +29,7 @@ export default function AgentNavbar() {
   const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const userFullName = session?.user?.name || "สมชาย นายหน้าดี";
-  const userImage = session?.user?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(userFullName)}&background=1e40af&color=fff`;
+  const userImage = session?.user?.image || fallbackAvatarUrl(userFullName);
 
   // ดึงจำนวนแชทรอตอบ / แชทยังไม่ได้อ่าน
   useEffect(() => {
