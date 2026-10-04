@@ -124,8 +124,8 @@ export async function GET(req: Request) {
     // ดึงนัดหมายที่กำลังดำเนินการอยู่ทั้งหมดของนายหน้าคนนี้
     // 1. ถ้านัดเป็นของบ้านหลังนี้ (property_id === propertyId) -> ถือเป็น isBooked ทันที (แม้ flag is_booked ในตารางจะค้างอยู่)
     // 2. ถ้านัดเป็นของบ้านหลังอื่นของนายหน้า -> ถือเป็น agentBusyElsewhere (เตือนลูกค้าว่านายหน้าติดคิวบ้านอื่น)
-    let agentBusyKeys = new Set<string>();
-    let thisPropertyBookedKeys = new Set<string>();
+    const agentBusyKeys = new Set<string>();
+    const thisPropertyBookedKeys = new Set<string>();
     if (property?.agent_id) {
       const busyAppointments = await db.appointments.findMany({
         where: {

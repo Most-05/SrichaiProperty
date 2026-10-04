@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import AgentCard, { Agent } from '@/components/customer/AgentCard';
-import { Search, MapPin, X, Users } from 'lucide-react';
+import { Search, X, Users } from 'lucide-react';
 
 export default function AgentsPage() {
   const [searchTerm, setSearchTerm] = useState('');

@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     }
 
     // ⚡ ตรวจสอบและสร้างการแจ้งเตือนเตือนความจำนัดหมายล่วงหน้า (วันนี้ / พรุ่งนี้) อัตโนมัติ
-    await checkAndSendAppointmentReminders(user.id, user.role_id).catch(err => {
+    await checkAndSendAppointmentReminders(user.id).catch(err => {
       console.error("checkAndSendAppointmentReminders error:", err);
     });
 

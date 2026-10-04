@@ -148,7 +148,7 @@ export function buildReminderMessage(apt: UpcomingAppointment, isAgent: boolean)
 /**
  * ตรวจสอบและส่งการแจ้งเตือนเตือนความจำนัดหมายล่วงหน้า (Upcoming Reminder)
  */
-export async function checkAndSendAppointmentReminders(userId: string, role?: string | null): Promise<number> {
+export async function checkAndSendAppointmentReminders(userId: string): Promise<number> {
   if (!userId) return 0;
 
   const today = getTodayDateBangkok();
