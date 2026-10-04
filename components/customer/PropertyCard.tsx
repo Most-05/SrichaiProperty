@@ -13,6 +13,7 @@
  */
 
 import React, { useState } from 'react';
+import { fallbackAvatarUrl } from '@/lib/utils/avatar'; // รูปโปรไฟล์สำรองแบบ PNG (ชื่อไทยบางชื่อได้ SVG ที่ next/image ไม่รับ — BUG-32)
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -47,7 +48,7 @@ export default function PropertyCard({
 
   // ฟังก์ชันช่วยสร้างรูป Avatar สำรองจากชื่อนายหน้า
   const getInitialsAvatar = (name: string) =>
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Agent')}&background=1d4ed8&color=fff`;
+    fallbackAvatarUrl(name || 'Agent', '1d4ed8');
 
   // คำนวณราคาเป็นตัวเลข
   const rawPriceStr = prop.price || '';
