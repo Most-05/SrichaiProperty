@@ -22,6 +22,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') || 'pending'; // pending, approved, rejected
 
+    // แท็บ "ปฏิเสธ" รวม banned ด้วย เพราะข้อมูลเก่าก่อนแก้ BUG-29 เก็บการปฏิเสธ KYC เป็น banned
     const statusFilter = status === 'rejected' ? { in: ['rejected', 'banned'] } : status;
 
     const users = await db.users.findMany({
@@ -76,12 +77,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "ผลตรวจ KYC ไม่ถูกต้อง (รับเฉพาะ approved / rejected / pending)" }, { status: 400 });
     }
 
-    // แปลงสถานะ 'rejected' เป็น 'banned' (ระบบใช้ banned แทนการปฏิเสธ KYC — ดู BUG-29)
-    const dbStatus = status === 'rejected' ? 'banned' : status;
-
+    // ปฏิเสธ KYC = เอกสารไม่ผ่าน → บันทึกเป็น 'rejected' (ไม่ใช่ 'banned')
+    // เดิมแปลงเป็น 'banned' → นายหน้าเห็น "บัญชีถูกระงับ" ล็อกอินไม่ได้ และส่งเอกสารใหม่ไม่ได้ (BUG-29)
+    // นายหน้าที่ถูกปฏิเสธ: ล็อกอินได้ แต่เข้าได้แค่หน้าโปรไฟล์เพื่อส่งเอกสารใหม่ (ดู proxy.ts)
     const updatedUser = await db.users.update({
       where: { id: userId },
-      data: { status: dbStatus },
+      data: { status },
       // ส่งกลับเฉพาะฟิลด์ที่ปลอดภัย — ห้ามส่งทั้งแถว (มี password_hash) กลับไปที่ browser (BUG-15)
       select: { id: true, email: true, first_name: true, last_name: true, role_id: true, status: true }
     });
