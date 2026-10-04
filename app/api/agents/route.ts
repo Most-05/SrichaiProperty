@@ -75,7 +75,10 @@ export async function GET(req: Request) {
         phone: agent.phone || "08X-XXX-XXXX",
         email: agent.email,
         isVerified: agent.is_verified ?? true,
-        isPro: isProActive(agent.plan_type, agent.plan_expired_at)
+        isPro: isProActive(agent.plan_type, agent.plan_expired_at),
+        experience: agent.experience && agent.experience !== 'none'
+          ? (agent.experience === '1-3' ? '1 - 3 ปี' : agent.experience === '3-5' ? '3 - 5 ปี' : agent.experience === '5+' ? 'มากกว่า 5 ปี' : (/^\d+$/.test(agent.experience.trim()) ? `${agent.experience.trim()} ปี` : agent.experience.trim()))
+          : null
       };
     });
 

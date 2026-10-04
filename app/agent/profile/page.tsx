@@ -421,14 +421,33 @@ export default function AgentProfilePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">ประสบการณ์ทำงาน</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">ประสบการณ์ทำงาน (ปี / เดือน)</label>
+                    <span className="text-[10px] text-slate-400">แสดงบนการ์ดและโปรไฟล์</span>
+                  </div>
                   <input
                     type="text"
-                    placeholder="เช่น 3 ปี, 5 ปีในวงการอสังหาฯ"
+                    placeholder="เช่น 5 ปี 6 เดือน หรือ 3 ปี"
                     value={form.experience}
                     onChange={e => setForm({ ...form, experience: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition"
                   />
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {['1 ปี', '2 ปี', '3 ปี', '5 ปี', '5 ปี 6 เดือน', '8 ปี', '10 ปี+'].map(chip => (
+                      <button
+                        type="button"
+                        key={chip}
+                        onClick={() => setForm({ ...form, experience: chip })}
+                        className={`text-[10px] px-2 py-0.5 rounded-lg border transition ${
+                          form.experience === chip
+                            ? 'bg-amber-500 text-slate-950 font-bold border-amber-600'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-1">
