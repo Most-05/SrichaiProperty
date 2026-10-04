@@ -14,6 +14,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { fallbackAvatarUrl } from '@/lib/utils/avatar'; // รูปโปรไฟล์สำรองแบบ PNG (ชื่อไทยบางชื่อได้ SVG ที่ next/image ไม่รับ — BUG-32)
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -1027,7 +1028,7 @@ export default function PropertyDetailPage() {
               <div className="text-center pb-4 border-b border-slate-100 space-y-3">
                 <div className="relative inline-block">
                   <Image 
-                    src={property.agentImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(property.agentName)}&background=1e40af&color=fff`} 
+                    src={property.agentImage || fallbackAvatarUrl(property.agentName)} 
                     width={64}
                     height={64}
                     unoptimized

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fallbackAvatarUrl } from '@/lib/utils/avatar'; // รูปโปรไฟล์สำรองแบบ PNG (ชื่อไทยบางชื่อได้ SVG ที่ next/image ไม่รับ — BUG-32)
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับค้นหารายชื่อนายหน้าที่ได้รับการอนุมัติ
 import { isProActive } from '@/lib/pro'; // ตรวจสิทธิ์ Verified PRO ที่ยังไม่หมดอายุ
 
@@ -65,7 +66,7 @@ export async function GET(req: Request) {
       return {
         id: agent.id,
         name: `${agent.first_name} ${agent.last_name}`,
-        avatar: agent.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.first_name + ' ' + agent.last_name)}&background=1e40af&color=fff`,
+        avatar: agent.profile_image || fallbackAvatarUrl(agent.first_name + ' ' + agent.last_name),
         role: agent.specialty_type ? `ตัวแทนจำหน่าย${agent.specialty_type}` : "นายหน้าอสังหาริมทรัพย์มืออาชีพ",
         propertiesCount: agent.properties.length || 0,
         rating: ratingText,

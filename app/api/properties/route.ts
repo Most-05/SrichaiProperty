@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fallbackAvatarUrl } from '@/lib/utils/avatar'; // รูปโปรไฟล์สำรองแบบ PNG (ชื่อไทยบางชื่อได้ SVG ที่ next/image ไม่รับ — BUG-32)
 import { getServerSession } from "next-auth/next"; // ดึงเซสชันเพื่อระบุตัวนายหน้า/แอดมินที่ทำรายการ
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับดึง/สร้าง/แก้ไขประกาศอสังหาริมทรัพย์
@@ -112,7 +113,7 @@ export async function GET() {
           image: mainImage,
           images: p.property_images.map((img) => img.image_url),
           agentName,
-          agentImage: p.users?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(agentName)}&background=1e40af&color=fff`,
+          agentImage: p.users?.profile_image || fallbackAvatarUrl(agentName),
           agentRating,
           agentReviewCount,
           isPremium,

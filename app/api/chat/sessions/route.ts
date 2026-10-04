@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'; // ใช้สร้าง JSON Response ส่งกลับ Frontend พร้อม HTTP Status Code
+import { fallbackAvatarUrl } from '@/lib/utils/avatar'; // รูปโปรไฟล์สำรองแบบ PNG (ชื่อไทยบางชื่อได้ SVG ที่ next/image ไม่รับ — BUG-32)
 import { getServerSession } from 'next-auth/next'; // ดึง Session ผู้ใช้ที่เข้าสู่ระบบฝั่ง Server
 import { authOptions } from '@/lib/authOptions'; // ค่า Config สำหรับ NextAuth (Provider, Secret, ฯลฯ)
 import { db } from '@/lib/db'; // Prisma Client ตัวแทนใช้ติดต่อและสั่งงานฐานข้อมูล
@@ -127,7 +128,7 @@ export async function GET() {
       const otherName = otherUser ? `${otherUser.first_name} ${otherUser.last_name}`.trim() : (isAgent ? 'ลูกค้า' : 'นายหน้า');
       
       // รูปโปรไฟล์คู่สนทนา (ถ้าไม่มีรูปใน DB ให้ใช้อวตารชั่วคราวจาก UI-Avatars)
-      const avatarUrl = otherUser?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherName)}&background=1d4ed8&color=fff`;
+      const avatarUrl = otherUser?.profile_image || fallbackAvatarUrl(otherName, '1d4ed8');
       // รูปอสังหาริมทรัพย์ (ถ้าไม่มีรูปใน DB ให้ใช้รูปภาพตั้งต้นจาก Unsplash)
       const propImage = s.properties?.property_images[0]?.image_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80';
       
