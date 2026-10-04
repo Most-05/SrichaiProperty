@@ -5,6 +5,7 @@ import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหร�
 import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนผู้ใช้ในระบบ
 import { validateSlotInput, ACTIVE_APPOINTMENT_STATUSES } from "@/lib/services/viewingSlotService"; // ตรวจวัน+รอบของรอบว่างที่เพิ่มใหม่ (ห้ามย้อนหลัง) + สถานะนัดที่ยังค้างอยู่
 import { PROPERTY_STATUS_CLOSED } from "@/lib/constants"; // สถานะประกาศที่นายหน้าปิดแล้ว (แทนการลบจริง)
+import { describeListingChanges } from "@/lib/services/listingChangeService"; // สรุปช่องสำคัญที่ถูกแก้ (แจ้งแอดมินตรวจย้อนหลัง)
 import { findUsersToAlertForNewSlots, buildSavedPropertyAlert } from "@/lib/services/savedPropertyAlertService"; // แจ้งลูกค้าที่บันทึกบ้านไว้เมื่อมีรอบเข้าชมเพิ่ม
 
 /**
@@ -206,6 +207,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (ownership !== undefined && ownership !== null && ownership !== "") updateData.ownership_type = ownership;
     const wasRejected = property.status === "rejected";
     const wasPending = property.status === "pending";
+    const wasApproved = property.status === "approved";
+
+    // ประกาศที่เผยแพร่อยู่: จำว่าแก้ส่วนสำคัญอะไร (รวมรูป) ก่อนบันทึก เพื่อแจ้งแอดมินตรวจย้อนหลัง (Q-01 ทาง C)
+    const imagesBefore = wasApproved && Array.isArray(images)
+      ? (await db.property_images.findMany({ where: { property_id: id }, orderBy: { order_index: "asc" }, select: { image_url: true } })).map((i) => i.image_url)
+      : undefined;
+    const importantChanges = wasApproved
+      ? describeListingChanges(property, updateData, imagesBefore, Array.isArray(images) ? images : undefined)
+      : [];
 
     // กฎพิเศษ: กรณีประกาศเคยถูกตีกลับ (rejected) เมื่อนายหน้าแก้ไขและกดบันทึก ให้เปลี่ยนเป็น 'pending' เพื่อส่งกลับเข้าคิวอนุมัติใหม่อัตโนมัติ
     if (wasRejected) {
@@ -244,6 +254,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         type: "property",
         linkUrl: "/admin/moderation"
       }).catch((e) => console.error("แจ้งเตือนแอดมินหลังอัปเดตประกาศไม่สำเร็จ:", e));
+    } else if (wasApproved && importantChanges.length > 0 && admins.length > 0) {
+      // นโยบาย: แก้ประกาศที่อนุมัติแล้วไม่ต้องรออนุมัติใหม่ (นายหน้าผ่าน KYC แล้ว) แต่แอดมินต้องรู้
+      // เพื่อตรวจย้อนหลัง — ถ้าเนื้อหาไม่เหมาะสม กด "ปฏิเสธ" ในแท็บอนุมัติแล้วได้ทันที (Q-01 ทาง C)
+      notifyUsers(admins.map((a) => a.id), {
+        title: "ประกาศที่เผยแพร่อยู่ถูกแก้ไข (ตรวจย้อนหลัง)",
+        content: `นายหน้า ${agentName} แก้ไขประกาศ "${updated.title}" ที่เผยแพร่อยู่ (แก้: ${importantChanges.join(", ")}) กรุณาตรวจสอบ หากไม่เหมาะสมสามารถกดปฏิเสธได้`,
+        type: "property",
+        linkUrl: "/admin/moderation?tab=approved"
+      }).catch((e) => console.error("แจ้งเตือนแอดมินหลังแก้ประกาศที่อนุมัติแล้วไม่สำเร็จ:", e));
     }
 
     // 2.2 อัปเดตรูปภาพ: ลบรูปเดิมทั้งหมดของประกาศนี้ออก แล้วบันทึกชุดรูปภาพใหม่ตามลำดับ

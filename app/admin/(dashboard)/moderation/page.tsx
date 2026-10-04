@@ -14,7 +14,8 @@
  * ==============================================================================
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { toast } from '@/components/ui/toast';
 import QuickPreviewDrawer, { QuickPreviewProperty } from '@/components/admin/QuickPreviewDrawer';
@@ -59,7 +60,7 @@ const REJECT_PRESETS = [
   'ข้อมูลรายละเอียดทรัพย์ เช่น ขนาดพื้นที่/ห้องนอน/ห้องน้ำ ไม่ตรงกับความเป็นจริง',
 ];
 
-export default function AdminModerationPage() {
+function AdminModerationContent() {
   // ------------------------------------------------------------------------------
   // 1. STATE MANAGEMENT
   // ------------------------------------------------------------------------------
@@ -69,7 +70,12 @@ export default function AdminModerationPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Tabs & Primary Filters
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  // เปิดแท็บตาม ?tab= ได้ (เช่น แจ้งเตือน "ประกาศที่อนุมัติแล้วถูกแก้ไข" ลิงก์มาที่ ?tab=approved)
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>(() => {
+    const tab = searchParams.get('tab');
+    return tab === 'approved' || tab === 'rejected' ? tab : 'pending';
+  });
   const [listingTypeFilter, setListingTypeFilter] = useState<'all' | 'sale' | 'rent'>('all');
   const [sortBySla, setSortBySla] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1029,5 +1035,14 @@ export default function AdminModerationPage() {
         </div>
       )}
     </>
+  );
+}
+
+// useSearchParams ต้องอยู่ใน Suspense (แบบเดียวกับหน้าแชทนายหน้า) ไม่งั้น build หน้า static ไม่ผ่าน
+export default function AdminModerationPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs font-bold text-slate-500">กำลังโหลดรายการประกาศ...</div>}>
+      <AdminModerationContent />
+    </Suspense>
   );
 }
