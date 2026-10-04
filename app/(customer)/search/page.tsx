@@ -42,7 +42,9 @@ import {
   LayoutGrid,
   List,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Maximize2,
+  Sofa
 } from 'lucide-react';
 
 /**
@@ -178,6 +180,7 @@ const DEFAULT_FILTERS: FilterState = {
     gym: false,
     parking: false,
     security: false,
+    furnished: false,
   },
 };
 
@@ -232,6 +235,7 @@ function SearchPageContent() {
       gym: searchParams.get('facilities')?.includes('gym') || false,
       parking: searchParams.get('facilities')?.includes('parking') || false,
       security: searchParams.get('facilities')?.includes('security') || false,
+      furnished: searchParams.get('facilities')?.includes('furnished') || false,
     },
   }));
 
@@ -404,7 +408,16 @@ function SearchPageContent() {
       if (filters.priceMax && price > parseInt(filters.priceMax, 10)) return false;
 
       // กรองห้องนอน / ห้องน้ำ / ที่จอดรถ
-      if (filters.bedrooms !== 'any' && (prop.bedrooms || 0) < parseInt(filters.bedrooms, 10)) return false;
+      if (filters.bedrooms !== 'any') {
+        if (filters.bedrooms === '0') {
+          // ห้องสตูดิโอ (bedrooms = 0 หรือมีคำว่า สตูดิโอ / studio)
+          const isZeroBed = (prop.bedrooms === 0 || !prop.bedrooms);
+          const hasStudioWord = /สตูดิโอ|studio/i.test(`${prop.title} ${prop.description} ${prop.type}`);
+          if (!isZeroBed && !hasStudioWord) return false;
+        } else {
+          if ((prop.bedrooms || 0) < parseInt(filters.bedrooms, 10)) return false;
+        }
+      }
       if (filters.bathrooms !== 'any' && (prop.bathrooms || 0) < parseInt(filters.bathrooms, 10)) return false;
       if (filters.parking !== 'any' && (prop.parking || 0) < parseInt(filters.parking, 10)) return false;
 
@@ -417,6 +430,7 @@ function SearchPageContent() {
       const propAmenities = prop.amenities || [];
       const hasAmenity = (pattern: RegExp) => propAmenities.some(a => pattern.test(a)) || pattern.test(desc);
 
+      if (filters.facilities.furnished && !hasAmenity(/เฟอร์นิเจอร์|แต่งครบ|พร้อมอยู่|furnished|เฟอร์ฯ|เฟอร์/i)) return false;
       if (filters.facilities.petFriendly && !hasAmenity(/สัตว์เลี้ยง|pet/i)) return false;
       if (filters.facilities.pool && !hasAmenity(/สระ|pool/i)) return false;
       if (filters.facilities.gym && !hasAmenity(/ฟิตเนส|ยิม|gym/i)) return false;
@@ -520,7 +534,7 @@ function SearchPageContent() {
     if (filters.bedrooms !== 'any') {
       chips.push({
         id: 'bedrooms',
-        label: `${filters.bedrooms}+ นอน`,
+        label: filters.bedrooms === '0' ? 'สตูดิโอ' : `${filters.bedrooms}+ นอน`,
         icon: <Bed className="w-3 h-3 text-blue-600" />,
         onRemove: () => setFilters(prev => ({ ...prev, bedrooms: 'any' })),
       });
@@ -541,6 +555,32 @@ function SearchPageContent() {
         label: `${filters.parking}+ จอดรถ`,
         icon: <Car className="w-3 h-3 text-blue-600" />,
         onRemove: () => setFilters(prev => ({ ...prev, parking: 'any' })),
+      });
+    }
+
+    if (filters.areaMin || filters.areaMax) {
+      let label = 'พื้นที่: ';
+      if (filters.areaMin && filters.areaMax) {
+        label += `${Number(filters.areaMin).toLocaleString()} - ${Number(filters.areaMax).toLocaleString()} ตร.ม.`;
+      } else if (filters.areaMin) {
+        label += `>= ${Number(filters.areaMin).toLocaleString()} ตร.ม.`;
+      } else {
+        label += `<= ${Number(filters.areaMax).toLocaleString()} ตร.ม.`;
+      }
+      chips.push({
+        id: 'area',
+        label,
+        icon: <Maximize2 className="w-3 h-3 text-blue-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, areaMin: '', areaMax: '' })),
+      });
+    }
+
+    if (filters.facilities.furnished) {
+      chips.push({
+        id: 'furnished',
+        label: 'แต่งครบ / เฟอร์ฯ ครบ',
+        icon: <Sofa className="w-3 h-3 text-indigo-600" />,
+        onRemove: () => setFilters(prev => ({ ...prev, facilities: { ...prev.facilities, furnished: false } })),
       });
     }
 
@@ -837,6 +877,7 @@ function SearchPageContent() {
               isMobileDrawerOpen={isMobileDrawerOpen}
               setIsMobileDrawerOpen={setIsMobileDrawerOpen}
               handleClearFilters={handleClearFilters}
+              totalResults={sortedProperties.length}
             />
           </div>
 

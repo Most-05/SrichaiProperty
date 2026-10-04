@@ -28,7 +28,8 @@ import {
   RotateCcw, 
   X,
   ChevronDown,
-  Check
+  Check,
+  Sofa
 } from 'lucide-react';
 
 export interface FilterState {
@@ -49,6 +50,7 @@ export interface FilterState {
     gym: boolean;
     parking: boolean;
     security: boolean;
+    furnished: boolean;
   };
 }
 
@@ -65,9 +67,19 @@ interface SearchSidebarProps {
   isMobileDrawerOpen?: boolean;
   setIsMobileDrawerOpen?: (val: boolean) => void;
   handleClearFilters: () => void;
+  totalResults?: number;
 }
 
-const ROOM_OPTIONS = [
+const BEDROOM_OPTIONS = [
+  { value: 'any', label: 'ไม่ระบุ' },
+  { value: '0', label: 'สตูดิโอ' },
+  { value: '1', label: '1+' },
+  { value: '2', label: '2+' },
+  { value: '3', label: '3+' },
+  { value: '4+', label: '4+' },
+];
+
+const BATHROOM_OPTIONS = [
   { value: 'any', label: 'ไม่ระบุ' },
   { value: '1', label: '1+' },
   { value: '2', label: '2+' },
@@ -98,13 +110,28 @@ const RENT_PRICE_PRESETS = [
   { label: '40,000+', min: '40000', max: '' },
 ];
 
+const AREA_PRESETS = [
+  { label: 'ทั้งหมด', min: '', max: '' },
+  { label: '< 35 ตร.ม.', min: '', max: '35' },
+  { label: '35 - 70 ตร.ม.', min: '35', max: '70' },
+  { label: '70 - 150 ตร.ม.', min: '70', max: '150' },
+  { label: '150+ ตร.ม.', min: '150', max: '' },
+];
+
 const FACILITIES_CONFIG = [
-  { key: 'petFriendly', label: 'สัตว์เลี้ยงเข้าได้ (Pet-Friendly)', icon: PawPrint },
+  { key: 'furnished', label: 'แต่งครบ / พร้อมอยู่', icon: Sofa },
+  { key: 'petFriendly', label: 'สัตว์เลี้ยงได้', icon: PawPrint },
   { key: 'parking', label: 'ที่จอดรถส่วนกลาง', icon: Car },
   { key: 'pool', label: 'สระว่ายน้ำ', icon: Waves },
   { key: 'gym', label: 'ฟิตเนส / ยิม', icon: Dumbbell },
-  { key: 'security', label: 'รปภ. 24 ชม. / CCTV', icon: ShieldCheck },
+  { key: 'security', label: 'รปภ. / CCTV', icon: ShieldCheck },
 ] as const;
+
+function formatDisplayNumber(val: string): string {
+  if (!val) return '';
+  const num = parseInt(val.replace(/[^\d]/g, ''), 10);
+  return isNaN(num) ? '' : num.toLocaleString('th-TH');
+}
 
 /**
  * คอมโพเนนต์ Dropdown แบบพิมพ์ค้นหาได้ (Searchable Combobox)
@@ -271,6 +298,7 @@ export default function SearchSidebar({
   isMobileDrawerOpen,
   setIsMobileDrawerOpen,
   handleClearFilters,
+  totalResults,
 }: SearchSidebarProps) {
   const [provincesList, setProvincesList] = useState<LocationItem[]>([]);
   const [amphuresList, setAmphuresList] = useState<LocationItem[]>([]);
@@ -474,13 +502,14 @@ export default function SearchSidebar({
             })}
           </div>
 
-          {/* ช่องพิมพ์ตัวเลขราคา */}
+          {/* ช่องพิมพ์ตัวเลขราคา (ฟอร์แมตคอมม่าอัตโนมัติ) */}
           <div className="flex items-center gap-2.5 pt-1">
             <div className="relative flex-1">
               <input 
-                type="number" 
-                value={filters.priceMin}
-                onChange={(e) => updateFilter('priceMin', e.target.value)}
+                type="text"
+                inputMode="numeric"
+                value={formatDisplayNumber(filters.priceMin)}
+                onChange={(e) => updateFilter('priceMin', e.target.value.replace(/[^\d]/g, ''))}
                 placeholder="ต่ำสุด" 
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
               />
@@ -488,9 +517,10 @@ export default function SearchSidebar({
             <span className="text-slate-400 font-bold text-xs">-</span>
             <div className="relative flex-1">
               <input 
-                type="number" 
-                value={filters.priceMax}
-                onChange={(e) => updateFilter('priceMax', e.target.value)}
+                type="text"
+                inputMode="numeric"
+                value={formatDisplayNumber(filters.priceMax)}
+                onChange={(e) => updateFilter('priceMax', e.target.value.replace(/[^\d]/g, ''))}
                 placeholder="สูงสุด" 
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
               />
@@ -498,19 +528,19 @@ export default function SearchSidebar({
           </div>
         </div>
 
-        {/* 3. ห้องนอน */}
+        {/* 3. ห้องนอน (มีตัวเลือกสตูดิโอ) */}
         <div className="space-y-2.5">
           <div className="flex items-center gap-2">
             <Bed className="w-4 h-4 text-blue-600" />
             <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">ห้องนอน</label>
           </div>
-          <div className="grid grid-cols-5 gap-1.5">
-            {ROOM_OPTIONS.map((item) => (
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+            {BEDROOM_OPTIONS.map((item) => (
               <button
                 key={item.value}
                 type="button"
                 onClick={() => updateFilter('bedrooms', item.value)}
-                className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer text-center ${
+                className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer text-center truncate ${
                   filters.bedrooms === item.value 
                     ? 'bg-blue-600 border-blue-600 text-white shadow-xs' 
                     : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
@@ -529,7 +559,7 @@ export default function SearchSidebar({
             <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">ห้องน้ำ</label>
           </div>
           <div className="grid grid-cols-5 gap-1.5">
-            {ROOM_OPTIONS.map((item) => (
+            {BATHROOM_OPTIONS.map((item) => (
               <button
                 key={item.value}
                 type="button"
@@ -570,64 +600,114 @@ export default function SearchSidebar({
           </div>
         </div>
 
-        {/* 6. พื้นที่ใช้สอย */}
+        {/* 6. พื้นที่ใช้สอย (ปุ่มลัด + ฟอร์แมตตัวเลขคอมม่า) */}
         <div className="space-y-3 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Maximize2 className="w-4 h-4 text-blue-600" />
             <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">พื้นที่ใช้สอย (ตร.ม.)</label>
           </div>
-          <div className="flex items-center gap-2.5">
-            <input 
-              type="number" 
-              value={filters.areaMin}
-              onChange={(e) => updateFilter('areaMin', e.target.value)}
-              placeholder="ต่ำสุด" 
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-            />
+
+          {/* ชิปพื้นที่ยอดนิยม */}
+          <div className="flex flex-wrap gap-2">
+            {AREA_PRESETS.map((preset) => {
+              const isActive = (preset.min === '' && preset.max === '' && !filters.areaMin && !filters.areaMax) ||
+                (preset.min === filters.areaMin && preset.max === filters.areaMax);
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => {
+                    setFilters((prev) => ({ ...prev, areaMin: preset.min, areaMax: preset.max }));
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                      : 'border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ช่องพิมพ์ตัวเลขพื้นที่ใช้สอย */}
+          <div className="flex items-center gap-2.5 pt-1">
+            <div className="relative flex-1">
+              <input 
+                type="text"
+                inputMode="numeric"
+                value={formatDisplayNumber(filters.areaMin)}
+                onChange={(e) => updateFilter('areaMin', e.target.value.replace(/[^\d]/g, ''))}
+                placeholder="ต่ำสุด" 
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+              />
+            </div>
             <span className="text-slate-400 font-bold text-xs">-</span>
-            <input 
-              type="number" 
-              value={filters.areaMax}
-              onChange={(e) => updateFilter('areaMax', e.target.value)}
-              placeholder="สูงสุด" 
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-            />
+            <div className="relative flex-1">
+              <input 
+                type="text"
+                inputMode="numeric"
+                value={formatDisplayNumber(filters.areaMax)}
+                onChange={(e) => updateFilter('areaMax', e.target.value.replace(/[^\d]/g, ''))}
+                placeholder="สูงสุด" 
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+              />
+            </div>
           </div>
         </div>
 
-        {/* 7. สิ่งอำนวยความสะดวกสำคัญ */}
+        {/* 7. สิ่งอำนวยความสะดวกสำคัญ (2 คอลัมน์ทันสมัย + แต่งครบ/พร้อมอยู่) */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-blue-600" />
             <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">สิ่งอำนวยความสะดวก</label>
           </div>
-          <div className="space-y-1.5 text-xs font-bold text-slate-600">
-            {FACILITIES_CONFIG.map(({ key, label, icon: IconComponent }) => (
-              <label 
-                key={key} 
-                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group"
-              >
-                <input 
-                  type="checkbox" 
-                  checked={Boolean(filters.facilities[key as keyof typeof filters.facilities])}
-                  onChange={(e) => updateFilter('facilities', { ...filters.facilities, [key]: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-                />
-                <IconComponent className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors shrink-0" />
-                <span className="text-slate-700 text-xs font-semibold">{label}</span>
-              </label>
-            ))}
+          <div className="grid grid-cols-2 gap-2">
+            {FACILITIES_CONFIG.map(({ key, label, icon: IconComponent }) => {
+              const isChecked = Boolean(filters.facilities[key as keyof typeof filters.facilities]);
+              return (
+                <button 
+                  key={key} 
+                  type="button"
+                  onClick={() => updateFilter('facilities', { ...filters.facilities, [key]: !isChecked })}
+                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
+                    isChecked
+                      ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-2xs'
+                      : 'bg-slate-50/80 border-slate-200/90 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
+                    isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
+                  }`}>
+                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                  <IconComponent className={`w-3.5 h-3.5 shrink-0 ${isChecked ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span className="truncate text-[11px] leading-tight font-semibold">{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* ปุ่มดูผลลัพธ์บน Mobile Drawer */}
+        {/* ปุ่มดูผลลัพธ์บน Mobile Drawer แสดงตัวเลขเรียลไทม์ */}
         {setIsMobileDrawerOpen && (
-          <div className="pt-3 lg:hidden">
+          <div className="pt-3 sticky bottom-0 bg-white/95 backdrop-blur-xs pb-2 lg:hidden border-t border-slate-100 mt-2">
             <button
               onClick={() => setIsMobileDrawerOpen(false)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 rounded-xl shadow-md text-xs cursor-pointer transition"
+              className={`w-full font-extrabold py-3.5 px-4 rounded-xl shadow-md text-xs cursor-pointer transition flex items-center justify-center gap-2 ${
+                (totalResults ?? 1) > 0
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                  : 'bg-slate-800 hover:bg-slate-900 text-slate-200'
+              }`}
             >
-              ดูผลลัพธ์
+              <span>
+                {totalResults !== undefined
+                  ? totalResults > 0
+                    ? `ดูผลลัพธ์ (${totalResults.toLocaleString()} รายการ)`
+                    : 'ไม่พบรายการที่ตรงเงื่อนไข (ปรับตัวกรอง)'
+                  : 'ดูผลลัพธ์'}
+              </span>
             </button>
           </div>
         )}
