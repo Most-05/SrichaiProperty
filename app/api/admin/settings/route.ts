@@ -91,12 +91,9 @@ export async function GET() {
       configs[key] = dbConfigMap.get(key) ?? meta.value;
     }
 
-    // รวมคีย์อื่นๆ นอกเหนือจาก Default ถ้ามี
-    for (const c of rawConfigs) {
-      if (!configs[c.key]) {
-        configs[c.key] = c.value;
-      }
-    }
+    // ส่งกลับเฉพาะคีย์ที่หน้าตั้งค่ามีจริง (DEFAULT_CONFIGS) — ตาราง system_configs ยังเก็บข้อมูลภายในอื่น
+    // เช่น payment_agent_<txId> (เจ้าของสลิป PRO — BUG-02) เดิมคีย์พวกนี้ถูกส่งไปหน้าตั้งค่าด้วย
+    // แล้วหน้าตั้งค่าก็ส่งกลับมาเขียนทับทุกครั้งที่กดบันทึก (BUG-41)
 
     return NextResponse.json({
       success: true,
