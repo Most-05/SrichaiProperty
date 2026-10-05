@@ -24,6 +24,9 @@ import {
   FileText
 } from 'lucide-react';
 
+// ความยาวสูงสุดของค่าตั้งค่า = ขนาดคอลัมน์ system_configs.value (API ตรวจค่าเดียวกัน — BUG-41)
+const CONFIG_VALUE_MAX_LENGTH = 255;
+
 interface PackageItem {
   id: number;
   name: string;
@@ -276,6 +279,7 @@ export default function AdminSettingsPage() {
                       <input
                         type="text"
                         value={configs.site_name}
+                        maxLength={CONFIG_VALUE_MAX_LENGTH}
                         onChange={e => handleConfigChange('site_name', e.target.value)}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Srichai Property"
@@ -292,6 +296,7 @@ export default function AdminSettingsPage() {
                       <input
                         type="email"
                         value={configs.contact_email}
+                        maxLength={CONFIG_VALUE_MAX_LENGTH}
                         onChange={e => handleConfigChange('contact_email', e.target.value)}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-emerald-500"
                         placeholder="support@srichaiproperty.com"
@@ -308,6 +313,7 @@ export default function AdminSettingsPage() {
                       <input
                         type="text"
                         value={configs.contact_phone}
+                        maxLength={CONFIG_VALUE_MAX_LENGTH}
                         onChange={e => handleConfigChange('contact_phone', e.target.value)}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-amber-500"
                         placeholder="074-123-4567"
@@ -324,6 +330,7 @@ export default function AdminSettingsPage() {
                       <input
                         type="text"
                         value={configs.line_oa}
+                        maxLength={CONFIG_VALUE_MAX_LENGTH}
                         onChange={e => handleConfigChange('line_oa', e.target.value)}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs outline-none focus:ring-2 focus:ring-green-500"
                         placeholder="@srichaiproperty"
@@ -660,6 +667,7 @@ export default function AdminSettingsPage() {
                     <textarea
                       rows={2}
                       value={configs.system_banner_text}
+                      maxLength={CONFIG_VALUE_MAX_LENGTH}
                       onChange={e => handleConfigChange('system_banner_text', e.target.value)}
                       placeholder="พิมพ์ข้อความที่ต้องการประกาศ เช่น ระบบจะปิดปรับปรุงชั่วคราวเวลา 02:00 - 04:00 น...."
                       className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800"
@@ -736,6 +744,7 @@ export default function AdminSettingsPage() {
                     <textarea
                       rows={3}
                       value={configs.maintenance_message}
+                      maxLength={CONFIG_VALUE_MAX_LENGTH}
                       onChange={e => handleConfigChange('maintenance_message', e.target.value)}
                       placeholder="เช่น ระบบกำลังปิดปรับปรุงชั่วคราว..."
                       className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-slate-800"

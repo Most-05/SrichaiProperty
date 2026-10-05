@@ -69,6 +69,9 @@ const DEFAULT_CONFIGS: Record<string, { value: string; description: string }> = 
   }
 };
 
+// ความยาวสูงสุดของค่าตั้งค่า = ขนาดคอลัมน์ system_configs.value (VarChar(255) ใน prisma/schema.prisma)
+const CONFIG_VALUE_MAX_LENGTH = 255;
+
 // GET: ดึงรายการตั้งค่าระบบทั้งหมด
 export async function GET() {
   const session = await getAdminSession();
@@ -91,12 +94,9 @@ export async function GET() {
       configs[key] = dbConfigMap.get(key) ?? meta.value;
     }
 
-    // รวมคีย์อื่นๆ นอกเหนือจาก Default ถ้ามี
-    for (const c of rawConfigs) {
-      if (!configs[c.key]) {
-        configs[c.key] = c.value;
-      }
-    }
+    // ส่งกลับเฉพาะคีย์ที่หน้าตั้งค่ามีจริง (DEFAULT_CONFIGS) — ตาราง system_configs ยังเก็บข้อมูลภายในอื่น
+    // เช่น payment_agent_<txId> (เจ้าของสลิป PRO — BUG-02) เดิมคีย์พวกนี้ถูกส่งไปหน้าตั้งค่าด้วย
+    // แล้วหน้าตั้งค่าก็ส่งกลับมาเขียนทับทุกครั้งที่กดบันทึก (BUG-41)
 
     return NextResponse.json({
       success: true,
@@ -123,6 +123,29 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const { packages, configs } = body;
 
+    // ตรวจค่าตั้งค่าทั้งหมด "ก่อน" เขียนอะไรลงฐานข้อมูล — ถ้าข้อไหนผิด จะไม่มีอะไรถูกบันทึกครึ่งๆ กลางๆ
+    if (configs != null && (typeof configs !== "object" || Array.isArray(configs))) {
+      return NextResponse.json({ error: "รูปแบบข้อมูลการตั้งค่าไม่ถูกต้อง" }, { status: 400 });
+    }
+    const configEntries: [string, unknown][] = configs ? Object.entries(configs) : [];
+    // รับเฉพาะคีย์ที่หน้าตั้งค่ามีจริง — เดิมรับคีย์อะไรก็ได้ จึงเขียนทับข้อมูลภายในในตารางเดียวกันได้
+    // เช่น payment_agent_<txId> (เจ้าของสลิป PRO — BUG-02) หรือสร้างคีย์ขยะเพิ่มได้ไม่จำกัด (BUG-41)
+    const unknownKeys = configEntries.map(([key]) => key).filter((key) => !Object.hasOwn(DEFAULT_CONFIGS, key));
+    if (unknownKeys.length > 0) {
+      return NextResponse.json({ error: `ไม่รู้จักค่าตั้งค่า: ${unknownKeys.join(", ")}` }, { status: 400 });
+    }
+    // ค่าต้องเป็นข้อความ/ตัวเลข/true-false และยาวไม่เกินคอลัมน์ — เดิมยาวเกิน 255 → PostgreSQL error เป็น 500
+    // และอ็อบเจกต์ถูกแปลงเป็น "[object Object]" บันทึกลงไปเงียบๆ (BUG-41)
+    for (const [key, val] of configEntries) {
+      const label = DEFAULT_CONFIGS[key].description;
+      if (!["string", "number", "boolean"].includes(typeof val)) {
+        return NextResponse.json({ error: `ค่า "${label}" ไม่ถูกต้อง` }, { status: 400 });
+      }
+      if (String(val).length > CONFIG_VALUE_MAX_LENGTH) {
+        return NextResponse.json({ error: `ค่า "${label}" ยาวได้ไม่เกิน ${CONFIG_VALUE_MAX_LENGTH} ตัวอักษร` }, { status: 400 });
+      }
+    }
+
     // 1. อัปเดตราคาและระยะเวลาแพ็กเกจ
     if (Array.isArray(packages)) {
       for (const p of packages) {
@@ -139,9 +162,8 @@ export async function PATCH(req: Request) {
     }
 
     // 2. อัปเดตค่า System Configs ในฐานข้อมูล
-    if (configs && typeof configs === "object") {
-      const entries = Object.entries(configs);
-      for (const [key, val] of entries) {
+    if (configEntries.length > 0) {
+      for (const [key, val] of configEntries) {
         const desc = DEFAULT_CONFIGS[key]?.description || "System Setting";
         await db.system_configs.upsert({
           where: { key },
