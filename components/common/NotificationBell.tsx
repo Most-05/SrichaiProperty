@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getPusherClient } from '@/lib/pusher-client';
@@ -27,6 +28,11 @@ interface NotificationBellProps {
   theme?: 'light' | 'dark' | 'auto';
   align?: 'left' | 'right';
   className?: string;
+  /**
+   * true = แสดงกล่องแจ้งเตือนที่ระดับบนสุดของหน้า (portal ไป document.body) วางตำแหน่งตามปุ่ม
+   * ใช้เมื่อกระดิ่งอยู่ในกล่องที่ตัดของที่ล้นออก (overflow) เช่น แถบด้านข้างแอดมิน (BUG-35)
+   */
+  floating?: boolean;
 }
 
 // คืนค่าไอคอนและสีตามประเภท
@@ -57,7 +63,8 @@ function formatRelativeTime(dateStr: string) {
 export default function NotificationBell({
   theme = 'auto',
   align = 'right',
-  className = ''
+  className = '',
+  floating = false
 }: NotificationBellProps) {
   const { data: session, status } = useSession();
   const userId = (session?.user as { id?: string })?.id;
@@ -70,6 +77,9 @@ export default function NotificationBell({
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
 
   const ref = useRef<HTMLDivElement>(null);
+  // โหมด floating: กล่องแจ้งเตือนอยู่นอก ref (portal) → ต้องมี ref ของกล่องเอง + ตำแหน่งที่คำนวณจากปุ่ม
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [floatingPos, setFloatingPos] = useState<{ top: number; left: number } | null>(null);
 
   // โหลดข้อมูลการแจ้งเตือน
   const loadNotifications = useCallback(() => {
@@ -131,7 +141,8 @@ export default function NotificationBell({
   // ปิดเมื่อคลิกนอกพื้นที่
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (ref.current && !ref.current.contains(target) && !popoverRef.current?.contains(target)) {
         setOpen(false);
       }
     };
@@ -195,12 +206,30 @@ export default function NotificationBell({
         ? '/agent/notifications'
         : '/notifications';
 
+  // โหมดปกติ: แสดงต่อจากปุ่ม · โหมด floating: portal ไป document.body ตำแหน่ง fixed ใต้ปุ่ม
+  // (กล่องที่ห่อกระดิ่งตั้ง overflow ไว้จะตัดกล่องแจ้งเตือนที่กว้างกว่าทิ้ง — แถบข้างแอดมินกว้าง 256px แต่กล่องกว้าง 384px)
+  const renderPopover = (node: React.ReactNode) =>
+    floating && floatingPos
+      ? createPortal(
+          <div ref={popoverRef} className="fixed z-[1000]" style={{ top: floatingPos.top, left: floatingPos.left }}>
+            {node}
+          </div>,
+          document.body
+        )
+      : node;
+
   return (
     <div className={`relative ${className}`} ref={ref}>
       {/* ปุ่มกระดิ่ง */}
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (floating && !open && ref.current) {
+            const rect = ref.current.getBoundingClientRect();
+            setFloatingPos({ top: rect.bottom, left: rect.left });
+          }
+          setOpen(!open);
+        }}
         className={`relative p-2 rounded-xl transition cursor-pointer flex items-center justify-center ${buttonStyle}`}
         aria-label="การแจ้งเตือน"
       >
@@ -212,8 +241,8 @@ export default function NotificationBell({
         )}
       </button>
 
-      {/* กล่องรายการแจ้งเตือน Popover */}
-      {open && (
+      {/* กล่องรายการแจ้งเตือน Popover (โหมด floating ย้ายไปแสดงที่ document.body) */}
+      {open && renderPopover(
         <div
           className={`absolute ${
             align === 'left' ? 'left-0' : 'right-0'
