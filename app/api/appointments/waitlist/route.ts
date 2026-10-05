@@ -126,6 +126,16 @@ export async function POST(req: Request) {
     const slotError = validateSlotInput(date, timeSlot);
     if (slotError) return NextResponse.json({ error: slotError }, { status: 400 });
 
+    // ประกาศต้องมีจริงและเผยแพร่อยู่ (กฎเดียวกับการจองนัด) — รหัสผิดรูปแบบตอบ 400 แทน Prisma 500
+    if (typeof propertyId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId)) {
+      return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
+    }
+    const property = await db.properties.findUnique({ where: { id: propertyId }, select: { status: true } });
+    if (!property) return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์นี้" }, { status: 404 });
+    if (!["approved", "active"].includes(property.status ?? "")) {
+      return NextResponse.json({ error: "ประกาศนี้ไม่เปิดรับนัดหมายแล้ว" }, { status: 400 });
+    }
+
     // ลูกค้าที่ถูกจำกัดการจองจากประวัติเบี้ยวนัด ก็ไม่ควรลงคิวรอได้เช่นกัน
     // (ไม่งั้นพอรอบว่างก็จองไม่ได้อยู่ดี กลายเป็นแจ้งเตือนหลอกให้เสียเวลา)
     if (await isCustomerBlockedByNoShow(user.id)) {
