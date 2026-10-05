@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { toast } from '@/components/ui/toast';
 import { Star, X, Check, Loader2 } from 'lucide-react';
+import { REVIEW_COMMENT_MAX_LENGTH } from '@/lib/constants'; // ความยาวคอมเมนต์สูงสุด (ตรงกับที่ API ตรวจ)
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -116,9 +117,12 @@ export default function ReviewModal({
             rows={3}
             value={reviewComment}
             onChange={e => setReviewComment(e.target.value)}
+            maxLength={REVIEW_COMMENT_MAX_LENGTH}
             placeholder="เขียนความประทับใจ การตรงต่อเวลา และการให้บริการของนายหน้า..."
             className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-medium transition-all"
           />
+          {/* ตัวนับตัวอักษร — ให้รู้ก่อนว่าพิมพ์ได้อีกเท่าไร แทนที่จะโดน API ปฏิเสธตอนกดส่ง (BUG-41) */}
+          <p className="text-[10px] text-slate-400 text-right">{reviewComment.length.toLocaleString()} / {REVIEW_COMMENT_MAX_LENGTH.toLocaleString()}</p>
         </div>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
