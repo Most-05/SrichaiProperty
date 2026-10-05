@@ -10,6 +10,7 @@ import {
   purgeExpiredWaitlist
 } from "@/lib/services/waitlistService";
 import { NO_SHOW_LIMIT, timeSlotRange } from "@/lib/constants";
+import { validateSlotInput } from "@/lib/services/viewingSlotService"; // ตรวจวันที่ + รอบ (ตัวเดียวกับตอนจองนัด)
 
 // ==============================================================================
 // API คิวรอรอบเข้าชม (Waitlist)
@@ -110,9 +111,29 @@ export async function POST(req: Request) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน" }, { status: 401 });
 
+    // ลงคิวรอได้เฉพาะลูกค้า (กฎเดียวกับการจองนัด BUG-11) — เดิมนายหน้า/แอดมินลงคิวได้ รวมถึงบ้านของตัวเอง (BUG-37)
+    if (user.role_id !== "customer") {
+      return NextResponse.json({ error: "ลงคิวรอได้เฉพาะบัญชีลูกค้าเท่านั้น" }, { status: 403 });
+    }
+
     const { propertyId, date, timeSlot } = await req.json();
     if (!propertyId || !date || !timeSlot) {
       return NextResponse.json({ error: "ข้อมูลไม่ครบ ต้องมีบ้าน วันที่ และรอบเวลา" }, { status: 400 });
+    }
+
+    // วันที่ต้องเป็น YYYY-MM-DD ที่ยังไม่ผ่าน และรอบต้องเป็น morning/afternoon (BUG-37)
+    // เดิมไม่ตรวจ → ลงคิววันที่ผ่านแล้ว (2020-01-01) หรือรอบที่ไม่มีจริง ("evening") ได้ คิวค้างไม่มีวันถูกแจ้ง
+    const slotError = validateSlotInput(date, timeSlot);
+    if (slotError) return NextResponse.json({ error: slotError }, { status: 400 });
+
+    // ประกาศต้องมีจริงและเผยแพร่อยู่ (กฎเดียวกับการจองนัด) — รหัสผิดรูปแบบตอบ 400 แทน Prisma 500
+    if (typeof propertyId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId)) {
+      return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
+    }
+    const property = await db.properties.findUnique({ where: { id: propertyId }, select: { status: true } });
+    if (!property) return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์นี้" }, { status: 404 });
+    if (!["approved", "active"].includes(property.status ?? "")) {
+      return NextResponse.json({ error: "ประกาศนี้ไม่เปิดรับนัดหมายแล้ว" }, { status: 400 });
     }
 
     // ลูกค้าที่ถูกจำกัดการจองจากประวัติเบี้ยวนัด ก็ไม่ควรลงคิวรอได้เช่นกัน
