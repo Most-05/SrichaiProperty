@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import PolicyModal from '@/components/auth/PolicyModal'; // ป๊อปอัปนโยบาย/ข้อกำหนด (แบบเดียวกับหน้า login ลูกค้า)
+import ForgotPasswordModal from '@/components/auth/ForgotPasswordModal'; // หน้าต่าง "ลืมรหัสผ่าน" (แนะนำติดต่อทีมงาน)
 
 export default function AgentLoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -12,6 +13,7 @@ export default function AgentLoginPage() {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [policyType, setPolicyType] = useState<'privacy' | 'terms' | null>(null); // เปิดป๊อปอัปนโยบายแบบไหน (null = ปิด)
+  const [forgotOpen, setForgotOpen] = useState(false); // เปิดหน้าต่าง "ลืมรหัสผ่าน"
 
   const togglePassword = () => {
     setPasswordVisible(!passwordVisible);
@@ -204,7 +206,7 @@ export default function AgentLoginPage() {
                 <input type="checkbox" className="w-4 h-4 text-amber-500 border-slate-300 rounded focus:ring-amber-500 accent-amber-500 cursor-pointer" />
                 <span className="text-xs text-slate-500 font-medium select-none">จำฉันไว้ในเครื่องนี้</span>
               </label>
-              <a href="#" className="text-xs font-bold text-amber-600 hover:text-amber-700 transition">ลืมรหัสผ่านพนักงาน?</a>
+              <button type="button" onClick={() => setForgotOpen(true)} className="text-xs font-bold text-amber-600 hover:text-amber-700 transition cursor-pointer bg-transparent border-none p-0">ลืมรหัสผ่าน?</button>
             </div>
 
             {/* Submit Button */}
@@ -238,6 +240,7 @@ export default function AgentLoginPage() {
       </div>
       {/* ป๊อปอัปนโยบาย/ข้อกำหนด — อ่านแล้วปิด ไม่ออกจากหน้า (BUG-39) */}
       <PolicyModal policyType={policyType} onClose={() => setPolicyType(null)} />
+      <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
     </div>
   );
 }
