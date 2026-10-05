@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next"; // ดึงเซสชันเพื่อระบุตัวผู้ใช้ที่บันทึก/ยกเลิกรายการโปรด
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการตารางรายการโปรดของผู้ใช้
+import { isUuid } from "@/lib/utils/uuid"; // ตรวจรูปแบบรหัสก่อนส่งให้ Prisma (BUG-38)
 
 /**
  * ==============================================================================
@@ -89,6 +90,19 @@ export async function POST(req: Request) {
     if (!propertyId) {
       return NextResponse.json({ error: "กรุณาระบุ propertyId" }, { status: 400 });
     }
+    // รหัสผิดรูปแบบ → 400 (เดิมส่งให้ Prisma ตรงๆ แล้วได้ 500 พร้อมข้อความภายในหลุด — BUG-38)
+    if (!isUuid(propertyId)) {
+      return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
+    }
+    // บันทึกได้เฉพาะประกาศที่มีจริงและเผยแพร่อยู่ (กฎเดียวกับ GET ด้านบนและหน้าแรก/ค้นหา)
+    // เดิมบันทึกประกาศที่รอตรวจ/ถูกตีกลับ/ปิดแล้วได้ ถ้ารู้รหัส — แถวนั้นจะค้างในตารางโดยผู้ใช้มองไม่เห็น (BUG-38)
+    const property = await db.properties.findUnique({ where: { id: propertyId }, select: { status: true } });
+    if (!property) {
+      return NextResponse.json({ error: "ไม่พบข้อมูลอสังหาริมทรัพย์นี้" }, { status: 404 });
+    }
+    if (!["approved", "active"].includes(property.status ?? "")) {
+      return NextResponse.json({ error: "ประกาศนี้ยังไม่เผยแพร่หรือปิดไปแล้ว บันทึกไม่ได้" }, { status: 400 });
+    }
 
     const saved = await db.saved_properties.upsert({
       where: {
@@ -123,6 +137,9 @@ export async function DELETE(req: Request) {
 
     if (!propertyId) {
       return NextResponse.json({ error: "กรุณาระบุ propertyId" }, { status: 400 });
+    }
+    if (!isUuid(propertyId)) {
+      return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
     }
 
     await db.saved_properties.deleteMany({
