@@ -110,6 +110,11 @@ export async function POST(req: Request) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน" }, { status: 401 });
 
+    // ลงคิวรอได้เฉพาะลูกค้า (กฎเดียวกับการจองนัด BUG-11) — เดิมนายหน้า/แอดมินลงคิวได้ รวมถึงบ้านของตัวเอง (BUG-37)
+    if (user.role_id !== "customer") {
+      return NextResponse.json({ error: "ลงคิวรอได้เฉพาะบัญชีลูกค้าเท่านั้น" }, { status: 403 });
+    }
+
     const { propertyId, date, timeSlot } = await req.json();
     if (!propertyId || !date || !timeSlot) {
       return NextResponse.json({ error: "ข้อมูลไม่ครบ ต้องมีบ้าน วันที่ และรอบเวลา" }, { status: 400 });
