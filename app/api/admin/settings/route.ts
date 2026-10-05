@@ -69,6 +69,9 @@ const DEFAULT_CONFIGS: Record<string, { value: string; description: string }> = 
   }
 };
 
+// ความยาวสูงสุดของค่าตั้งค่า = ขนาดคอลัมน์ system_configs.value (VarChar(255) ใน prisma/schema.prisma)
+const CONFIG_VALUE_MAX_LENGTH = 255;
+
 // GET: ดึงรายการตั้งค่าระบบทั้งหมด
 export async function GET() {
   const session = await getAdminSession();
@@ -130,6 +133,17 @@ export async function PATCH(req: Request) {
     const unknownKeys = configEntries.map(([key]) => key).filter((key) => !Object.hasOwn(DEFAULT_CONFIGS, key));
     if (unknownKeys.length > 0) {
       return NextResponse.json({ error: `ไม่รู้จักค่าตั้งค่า: ${unknownKeys.join(", ")}` }, { status: 400 });
+    }
+    // ค่าต้องเป็นข้อความ/ตัวเลข/true-false และยาวไม่เกินคอลัมน์ — เดิมยาวเกิน 255 → PostgreSQL error เป็น 500
+    // และอ็อบเจกต์ถูกแปลงเป็น "[object Object]" บันทึกลงไปเงียบๆ (BUG-41)
+    for (const [key, val] of configEntries) {
+      const label = DEFAULT_CONFIGS[key].description;
+      if (!["string", "number", "boolean"].includes(typeof val)) {
+        return NextResponse.json({ error: `ค่า "${label}" ไม่ถูกต้อง` }, { status: 400 });
+      }
+      if (String(val).length > CONFIG_VALUE_MAX_LENGTH) {
+        return NextResponse.json({ error: `ค่า "${label}" ยาวได้ไม่เกิน ${CONFIG_VALUE_MAX_LENGTH} ตัวอักษร` }, { status: 400 });
+      }
     }
 
     // 1. อัปเดตราคาและระยะเวลาแพ็กเกจ
