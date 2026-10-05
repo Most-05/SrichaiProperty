@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next"; // ดึงเซสชันเพื่อระบุตัวผู้ใช้ที่บันทึก/ยกเลิกรายการโปรด
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการตารางรายการโปรดของผู้ใช้
+import { isUuid } from "@/lib/utils/uuid"; // ตรวจรูปแบบรหัสก่อนส่งให้ Prisma (BUG-38)
 
 /**
  * ==============================================================================
@@ -89,6 +90,10 @@ export async function POST(req: Request) {
     if (!propertyId) {
       return NextResponse.json({ error: "กรุณาระบุ propertyId" }, { status: 400 });
     }
+    // รหัสผิดรูปแบบ → 400 (เดิมส่งให้ Prisma ตรงๆ แล้วได้ 500 พร้อมข้อความภายในหลุด — BUG-38)
+    if (!isUuid(propertyId)) {
+      return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
+    }
 
     const saved = await db.saved_properties.upsert({
       where: {
@@ -123,6 +128,9 @@ export async function DELETE(req: Request) {
 
     if (!propertyId) {
       return NextResponse.json({ error: "กรุณาระบุ propertyId" }, { status: 400 });
+    }
+    if (!isUuid(propertyId)) {
+      return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
     }
 
     await db.saved_properties.deleteMany({
