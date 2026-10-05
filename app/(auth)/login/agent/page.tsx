@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
+import PolicyModal from '@/components/auth/PolicyModal'; // ป๊อปอัปนโยบาย/ข้อกำหนด (แบบเดียวกับหน้า login ลูกค้า)
 
 export default function AgentLoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -10,6 +11,7 @@ export default function AgentLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [policyType, setPolicyType] = useState<'privacy' | 'terms' | null>(null); // เปิดป๊อปอัปนโยบายแบบไหน (null = ปิด)
 
   const togglePassword = () => {
     setPasswordVisible(!passwordVisible);
@@ -229,11 +231,13 @@ export default function AgentLoginPage() {
 
         {/* Footer Links */}
         <div className="flex justify-center gap-6 text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-8">
-          <a href="#" className="hover:text-slate-600 transition">Privacy Policy</a>
+          <button type="button" onClick={(e) => { e.preventDefault(); setPolicyType('privacy'); }} className="hover:text-slate-600 transition cursor-pointer bg-transparent border-none p-0">Privacy Policy</button>
           <span>&middot;</span>
-          <a href="#" className="hover:text-slate-600 transition">Terms of Use</a>
+          <button type="button" onClick={(e) => { e.preventDefault(); setPolicyType('terms'); }} className="hover:text-slate-600 transition cursor-pointer bg-transparent border-none p-0">Terms of Use</button>
         </div>
       </div>
+      {/* ป๊อปอัปนโยบาย/ข้อกำหนด — อ่านแล้วปิด ไม่ออกจากหน้า (BUG-39) */}
+      <PolicyModal policyType={policyType} onClose={() => setPolicyType(null)} />
     </div>
   );
 }
