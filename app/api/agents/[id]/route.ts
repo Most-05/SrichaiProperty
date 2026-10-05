@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fallbackAvatarUrl } from '@/lib/utils/avatar'; // รูปโปรไฟล์สำรองแบบ PNG (ชื่อไทยบางชื่อได้ SVG ที่ next/image ไม่รับ — BUG-32)
 import { db } from '@/lib/db';
 import { isProActive } from '@/lib/pro';
+import { isUuid } from '@/lib/utils/uuid'; // ตรวจรูปแบบรหัสก่อนส่งให้ Prisma (BUG-41)
 
 /**
  * ==============================================================================
@@ -25,6 +26,10 @@ export async function GET(
 
     if (!id) {
       return NextResponse.json({ error: 'ไม่พบรหัสนายหน้า' }, { status: 400 });
+    }
+    // รหัสผิดรูปแบบ (เช่น /agents/abc) → 404 เหมือนนายหน้าที่ไม่มีอยู่ (เดิม Prisma error เป็น 500 — BUG-41)
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: 'ไม่พบข้อมูลนายหน้าท่านนี้ หรือยังไม่ได้รับการอนุมัติ' }, { status: 404 });
     }
 
     const agent = await db.users.findUnique({
