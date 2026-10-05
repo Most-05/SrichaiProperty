@@ -123,7 +123,8 @@ export default function AdminSidebar() {
             </div>
 
             <div className="flex items-center gap-1">
-              {isDesktop && <NotificationBell theme="dark" align="left" />}
+              {/* floating: กล่องแจ้งเตือนกว้างกว่าแถบข้าง (256px) และแถบข้างตัดของที่ล้น → ต้องแสดงนอกแถบ (BUG-35) */}
+              {isDesktop && <NotificationBell theme="dark" align="left" floating />}
               <button
                 type="button"
                 onClick={() => setIsMobileOpen(false)}
