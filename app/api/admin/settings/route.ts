@@ -120,6 +120,18 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const { packages, configs } = body;
 
+    // ตรวจค่าตั้งค่าทั้งหมด "ก่อน" เขียนอะไรลงฐานข้อมูล — ถ้าข้อไหนผิด จะไม่มีอะไรถูกบันทึกครึ่งๆ กลางๆ
+    if (configs != null && (typeof configs !== "object" || Array.isArray(configs))) {
+      return NextResponse.json({ error: "รูปแบบข้อมูลการตั้งค่าไม่ถูกต้อง" }, { status: 400 });
+    }
+    const configEntries: [string, unknown][] = configs ? Object.entries(configs) : [];
+    // รับเฉพาะคีย์ที่หน้าตั้งค่ามีจริง — เดิมรับคีย์อะไรก็ได้ จึงเขียนทับข้อมูลภายในในตารางเดียวกันได้
+    // เช่น payment_agent_<txId> (เจ้าของสลิป PRO — BUG-02) หรือสร้างคีย์ขยะเพิ่มได้ไม่จำกัด (BUG-41)
+    const unknownKeys = configEntries.map(([key]) => key).filter((key) => !Object.hasOwn(DEFAULT_CONFIGS, key));
+    if (unknownKeys.length > 0) {
+      return NextResponse.json({ error: `ไม่รู้จักค่าตั้งค่า: ${unknownKeys.join(", ")}` }, { status: 400 });
+    }
+
     // 1. อัปเดตราคาและระยะเวลาแพ็กเกจ
     if (Array.isArray(packages)) {
       for (const p of packages) {
@@ -136,9 +148,8 @@ export async function PATCH(req: Request) {
     }
 
     // 2. อัปเดตค่า System Configs ในฐานข้อมูล
-    if (configs && typeof configs === "object") {
-      const entries = Object.entries(configs);
-      for (const [key, val] of entries) {
+    if (configEntries.length > 0) {
+      for (const [key, val] of configEntries) {
         const desc = DEFAULT_CONFIGS[key]?.description || "System Setting";
         await db.system_configs.upsert({
           where: { key },
