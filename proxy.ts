@@ -13,7 +13,8 @@ import { getToken } from 'next-auth/jwt';
 const REJECTED_AGENT_ALLOWED_APIS = ['/api/auth', '/api/user/profile', '/api/upload', '/api/notifications', '/api/pusher/auth'];
 
 // หน้าฝั่งลูกค้าที่ต้อง login ก่อน (ต้องตรงกับ matcher ด้านล่าง)
-const CUSTOMER_PRIVATE_PATHS = ['/appointments', '/book-appointment', '/chat', '/profile', '/saved-properties', '/favorites'];
+// '/notifications' = ศูนย์แจ้งเตือนของลูกค้า (หน้าใหม่ 3 ต.ค.) — เดิมไม่อยู่ในรายการ เปิดได้ตอนไม่ล็อกอิน (BUG-40)
+const CUSTOMER_PRIVATE_PATHS = ['/appointments', '/book-appointment', '/chat', '/profile', '/saved-properties', '/favorites', '/notifications'];
 
 export default async function proxy(request: NextRequest) {
   // ดึงข้อมูล session/token ของผู้ใช้จากคุกกี้ (next-auth เป็นคนเข้ารหัส/ถอดรหัสให้)
@@ -128,6 +129,6 @@ export default async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/agent/:path*', '/admin/:path*', '/api/:path*', // /api/* ทั้งหมด: ใช้กัน API ของนายหน้าที่เอกสาร KYC ไม่ผ่าน
-    '/appointments/:path*', '/book-appointment/:path*', '/chat/:path*', '/profile/:path*', '/saved-properties/:path*', '/favorites/:path*',
+    '/appointments/:path*', '/book-appointment/:path*', '/chat/:path*', '/profile/:path*', '/saved-properties/:path*', '/favorites/:path*', '/notifications/:path*',
   ],
 };
