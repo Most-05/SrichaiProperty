@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับบันทึก/ดึงรีวิวและคำนวณคะแนนเฉลี่ย
 import { notifyUser } from "@/lib/notify"; // ส่งแจ้งเตือนไปยังนายหน้าเมื่อมีรีวิวใหม่
 import { isUuid } from "@/lib/utils/uuid"; // ตรวจรูปแบบรหัส uuid (ตัวกลางใช้ร่วมกันทุก API)
+import { REVIEW_COMMENT_MAX_LENGTH } from "@/lib/constants"; // ความยาวคอมเมนต์สูงสุด
 
 /**
  * ==============================================================================
@@ -111,6 +112,15 @@ export async function POST(req: Request) {
     const ratingNum = Number(rating);
     if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
       return NextResponse.json({ error: "คะแนนต้องเป็นตัวเลข 1 ถึง 5 ดาว" }, { status: 400 });
+    }
+
+    // คอมเมนต์ (ไม่บังคับ) ต้องเป็นข้อความและไม่ยาวเกินกำหนด — เดิมรับได้ไม่จำกัด
+    // และถูกนำไปใส่ในแจ้งเตือนถึงนายหน้าทั้งก้อนด้วย (BUG-41)
+    if (comment != null && typeof comment !== "string") {
+      return NextResponse.json({ error: "ความคิดเห็นต้องเป็นข้อความ" }, { status: 400 });
+    }
+    if (typeof comment === "string" && comment.length > REVIEW_COMMENT_MAX_LENGTH) {
+      return NextResponse.json({ error: `ความคิดเห็นยาวได้ไม่เกิน ${REVIEW_COMMENT_MAX_LENGTH.toLocaleString()} ตัวอักษร` }, { status: 400 });
     }
 
     // รหัสนัดผิดรูปแบบ (ไม่ใช่ UUID) → ตอบ 400 แทนการปล่อยให้ Prisma error เป็น 500
