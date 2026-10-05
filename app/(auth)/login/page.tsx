@@ -6,6 +6,7 @@ import { signIn } from 'next-auth/react'; // ฟังก์ชันจาก�
 import SocialLoginButtons from '@/components/auth/SocialLoginButtons'; // ปุ่ม login ผ่าน Google/Facebook ฯลฯ (แยกเป็นคอมโพเนนต์ย่อย)
 import AgentPortalBanner from '@/components/auth/AgentPortalBanner'; // แบนเนอร์แนะนำ/ลิงก์สำหรับ "นายหน้า" (agent)
 import PolicyModal from '@/components/auth/PolicyModal'; // popup แสดงเนื้อหานโยบายความเป็นส่วนตัว/ข้อตกลงการใช้งาน
+import ForgotPasswordModal from '@/components/auth/ForgotPasswordModal'; // หน้าต่าง "ลืมรหัสผ่าน" (แนะนำติดต่อทีมงาน)
 import CookieBanner from '@/components/auth/CookieBanner'; // แถบแจ้งเตือนขอความยินยอมใช้คุกกี้ (ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล)
 
 // คอมโพเนนต์หลักของหน้า "เข้าสู่ระบบ" — React จะ render ฟังก์ชันนี้เป็นหน้าเว็บ
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState(''); // เก็บค่าที่ผู้ใช้พิมพ์ในช่องรหัสผ่าน
   const [errorMsg, setErrorMsg] = useState(''); // ข้อความ error ที่จะโชว์เมื่อ login ไม่สำเร็จ (ว่าง = ไม่มี error)
   const [policyType, setPolicyType] = useState<'privacy' | 'terms' | null>(null); // ระบุว่าจะเปิด popup นโยบายแบบไหน (privacy/terms) หรือไม่เปิดเลย (null)
+  const [forgotOpen, setForgotOpen] = useState(false); // เปิดหน้าต่าง "ลืมรหัสผ่าน"
   const [showCookies, setShowCookies] = useState(true); // true = ยังโชว์แถบแจ้งเตือนคุกกี้อยู่ (เริ่มต้นให้โชว์ก่อนเสมอ)
 
     const handleLogin = async (event: React.FormEvent) => {
@@ -180,13 +182,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* แถว "จำฉันไว้" (checkbox ที่ยังไม่ผูก state/ฟังก์ชันจริง) และลิงก์ "ลืมรหัสผ่าน?" (ยังเป็น href="#" ไม่ได้ลิงก์ไปหน้าจริง) */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-1.5 cursor-pointer group">
-                <input type="checkbox" className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
-                <span className="text-xs text-slate-600 font-medium select-none">จำฉันไว้</span>
-              </label>
-              <a href="#" className="text-xs font-bold text-blue-600 hover:underline">ลืมรหัสผ่าน?</a>
+            {/* ลิงก์ "ลืมรหัสผ่าน?" → หน้าต่างแนะนำติดต่อทีมงาน (BUG-39)
+                เอาช่อง "จำฉันไว้" ออก: ไม่เคยผูกการทำงาน และระบบจำการล็อกอินไว้ 8 ชม. อยู่แล้ว (session maxAge) */}
+            <div className="flex items-center justify-end">
+              <button type="button" onClick={() => setForgotOpen(true)} className="text-xs font-bold text-blue-600 hover:underline cursor-pointer bg-transparent border-none p-0">ลืมรหัสผ่าน?</button>
             </div>
 
             {/* ปุ่มกด submit ฟอร์ม — ปิดการกด (disabled) ระหว่าง isLoading เพื่อกันผู้ใช้กดซ้ำหลายครั้ง */}
@@ -231,6 +230,7 @@ export default function LoginPage() {
       />
 
       {/* Popup แสดงเนื้อหานโยบาย — ถูกควบคุมด้วย state policyType (null = ปิดอยู่, 'privacy'/'terms' = เปิดและโชว์เนื้อหาตามประเภท) */}
+      <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
       <PolicyModal
         policyType={policyType}
         onClose={() => setPolicyType(null)}

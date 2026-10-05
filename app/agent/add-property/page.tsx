@@ -18,6 +18,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import PolicyModal from '@/components/auth/PolicyModal'; // ป๊อปอัปนโยบาย/ข้อกำหนด (แบบเดียวกับหน้า login ลูกค้า)
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -79,6 +80,7 @@ export default function AgentAddPropertyPage() {
   
   // State ยินยอมข้อตกลง PDPA และเงื่อนไขบริการ
   const [agreed1, setAgreed1] = useState(false);
+  const [policyType, setPolicyType] = useState<'privacy' | 'terms' | null>(null); // เปิดป๊อปอัปนโยบายแบบไหน (null = ปิด)
   const [agreed2, setAgreed2] = useState(false);
   
   // State อัปโหลดรูปภาพและไฟล์เอกสาร
@@ -696,7 +698,7 @@ export default function AgentAddPropertyPage() {
             </label>
             <label className="flex items-start gap-2 cursor-pointer text-[10px] text-slate-600">
               <input type="checkbox" checked={agreed2} onChange={e => setAgreed2(e.target.checked)} className="mt-0.5" required />
-              <span>ข้าพเจ้ายินยอมให้ Srichai Property ประมวลผลข้อมูลอสังหาริมทรัพย์ตาม <Link href="#" className="text-blue-600 underline">Privacy Policy</Link></span>
+              <span>ข้าพเจ้ายินยอมให้ Srichai Property ประมวลผลข้อมูลอสังหาริมทรัพย์ตาม <button type="button" onClick={(e) => { e.preventDefault(); setPolicyType('privacy'); }} className="text-blue-600 underline cursor-pointer bg-transparent border-none p-0">Privacy Policy</button></span>
             </label>
 
             <div className="flex items-center justify-end gap-3 pt-4">
@@ -714,6 +716,8 @@ export default function AgentAddPropertyPage() {
 
         </form>
       </main>
+      {/* ป๊อปอัปนโยบาย/ข้อกำหนด — อ่านแล้วปิด ไม่ออกจากหน้า (BUG-39) */}
+      <PolicyModal policyType={policyType} onClose={() => setPolicyType(null)} />
     </div>
   );
 }

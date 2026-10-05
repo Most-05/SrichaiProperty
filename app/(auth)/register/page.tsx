@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { toast } from '@/components/ui/toast';
+import PolicyModal from '@/components/auth/PolicyModal'; // ป๊อปอัปนโยบาย/ข้อกำหนด (แบบเดียวกับหน้า login ลูกค้า)
 
 export default function RegisterPage() {
   // หน้านี้สมัครได้เฉพาะ "ลูกค้า" เท่านั้น จึง fix role เป็น 'buyer' ตายตัว (ไม่มีตัวเลือกอื่น)
@@ -12,6 +13,7 @@ export default function RegisterPage() {
   const [showOtpModal, setShowOtpModal] = useState(false); // ควบคุมการเปิด/ปิด popup กรอก OTP
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']); // เก็บเลข OTP ทีละหลัก (6 ช่อง)
   const [passwordVisible, setPasswordVisible] = useState(false); // toggle โชว์/ซ่อนรหัสผ่าน
+  const [policyType, setPolicyType] = useState<'privacy' | 'terms' | null>(null); // เปิดป๊อปอัปนโยบายแบบไหน (null = ปิด)
 
   const togglePassword = () => {
     setPasswordVisible(!passwordVisible);
@@ -286,7 +288,7 @@ export default function RegisterPage() {
               <div className="flex items-start gap-2.5">
                 <input type="checkbox" id="terms-consent" className="mt-0.5 w-4 h-4 text-blue-700 border-slate-300 rounded focus:ring-blue-500 cursor-pointer accent-blue-700" required />
                 <label htmlFor="terms-consent" className="text-[11px] text-slate-600 font-semibold leading-relaxed select-none cursor-pointer">
-                  ฉันยอมรับ <a href="#" className="text-blue-700 font-bold hover:underline">ข้อกำหนดการใช้งาน</a> และ <a href="#" className="text-blue-700 font-bold hover:underline">นโยบายความเป็นส่วนตัว</a> <span className="text-red-500">*</span>
+                  ฉันยอมรับ <button type="button" onClick={(e) => { e.preventDefault(); setPolicyType('terms'); }} className="text-blue-700 font-bold hover:underline cursor-pointer bg-transparent border-none p-0">ข้อกำหนดการใช้งาน</button> และ <button type="button" onClick={(e) => { e.preventDefault(); setPolicyType('privacy'); }} className="text-blue-700 font-bold hover:underline cursor-pointer bg-transparent border-none p-0">นโยบายความเป็นส่วนตัว</button> <span className="text-red-500">*</span>
                 </label>
               </div>
 
@@ -346,6 +348,8 @@ export default function RegisterPage() {
           </div>
         </div>
       )}
+      {/* ป๊อปอัปนโยบาย/ข้อกำหนด — อ่านแล้วปิด ไม่ออกจากหน้า (BUG-39) */}
+      <PolicyModal policyType={policyType} onClose={() => setPolicyType(null)} />
     </div>
   );
 }
