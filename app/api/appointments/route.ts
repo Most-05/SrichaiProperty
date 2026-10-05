@@ -9,6 +9,7 @@ import { NO_SHOW_LIMIT, APPOINTMENT_STATUS, timeSlotRange } from "@/lib/constant
 import { findUpcomingAppointments, findRecentlyRemindedAppointmentIds, buildReminderMessage, REMINDER_TYPE } from "@/lib/services/appointmentReminderService"; // เตือนล่วงหน้าก่อนถึงวันนัด
 import { collectWaitlistToNotify, buildWaitlistAlert, removeFromWaitlist, purgeExpiredWaitlist } from "@/lib/services/waitlistService"; // คิวรอรอบเข้าชม
 import { notifyUsers } from "@/lib/notify"; // ส่งแจ้งเตือนหลายคนพร้อมกัน
+import { isUuid } from "@/lib/utils/uuid"; // ตรวจรูปแบบรหัส uuid (ตัวกลางใช้ร่วมกันทุก API)
 
 /**
  * ==============================================================================
@@ -223,7 +224,7 @@ export async function POST(request: Request) {
     }
 
     // รหัสบ้านผิดรูปแบบ → 400 แทนการปล่อยให้ Prisma error เป็น 500
-    if (typeof propertyId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId)) {
+    if (!isUuid(propertyId)) {
       return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
     }
 

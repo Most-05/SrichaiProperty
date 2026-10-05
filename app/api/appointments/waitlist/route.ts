@@ -11,6 +11,7 @@ import {
 } from "@/lib/services/waitlistService";
 import { NO_SHOW_LIMIT, timeSlotRange } from "@/lib/constants";
 import { validateSlotInput } from "@/lib/services/viewingSlotService"; // ตรวจวันที่ + รอบ (ตัวเดียวกับตอนจองนัด)
+import { isUuid } from "@/lib/utils/uuid"; // ตรวจรูปแบบรหัส uuid (ตัวกลางใช้ร่วมกันทุก API)
 
 // ==============================================================================
 // API คิวรอรอบเข้าชม (Waitlist)
@@ -127,7 +128,7 @@ export async function POST(req: Request) {
     if (slotError) return NextResponse.json({ error: slotError }, { status: 400 });
 
     // ประกาศต้องมีจริงและเผยแพร่อยู่ (กฎเดียวกับการจองนัด) — รหัสผิดรูปแบบตอบ 400 แทน Prisma 500
-    if (typeof propertyId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId)) {
+    if (!isUuid(propertyId)) {
       return NextResponse.json({ error: "รหัสอสังหาริมทรัพย์ไม่ถูกต้อง" }, { status: 400 });
     }
     const property = await db.properties.findUnique({ where: { id: propertyId }, select: { status: true } });

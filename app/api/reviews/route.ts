@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"; // ดึงเซสชั�
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับบันทึก/ดึงรีวิวและคำนวณคะแนนเฉลี่ย
 import { notifyUser } from "@/lib/notify"; // ส่งแจ้งเตือนไปยังนายหน้าเมื่อมีรีวิวใหม่
+import { isUuid } from "@/lib/utils/uuid"; // ตรวจรูปแบบรหัส uuid (ตัวกลางใช้ร่วมกันทุก API)
 
 /**
  * ==============================================================================
@@ -113,7 +114,7 @@ export async function POST(req: Request) {
     }
 
     // รหัสนัดผิดรูปแบบ (ไม่ใช่ UUID) → ตอบ 400 แทนการปล่อยให้ Prisma error เป็น 500
-    if (typeof appointmentId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentId)) {
+    if (!isUuid(appointmentId)) {
       return NextResponse.json({ error: "รหัสนัดหมายไม่ถูกต้อง" }, { status: 400 });
     }
 
