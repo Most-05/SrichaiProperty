@@ -10,6 +10,7 @@ import {
   purgeExpiredWaitlist
 } from "@/lib/services/waitlistService";
 import { NO_SHOW_LIMIT, timeSlotRange } from "@/lib/constants";
+import { validateSlotInput } from "@/lib/services/viewingSlotService"; // ตรวจวันที่ + รอบ (ตัวเดียวกับตอนจองนัด)
 
 // ==============================================================================
 // API คิวรอรอบเข้าชม (Waitlist)
@@ -119,6 +120,11 @@ export async function POST(req: Request) {
     if (!propertyId || !date || !timeSlot) {
       return NextResponse.json({ error: "ข้อมูลไม่ครบ ต้องมีบ้าน วันที่ และรอบเวลา" }, { status: 400 });
     }
+
+    // วันที่ต้องเป็น YYYY-MM-DD ที่ยังไม่ผ่าน และรอบต้องเป็น morning/afternoon (BUG-37)
+    // เดิมไม่ตรวจ → ลงคิววันที่ผ่านแล้ว (2020-01-01) หรือรอบที่ไม่มีจริง ("evening") ได้ คิวค้างไม่มีวันถูกแจ้ง
+    const slotError = validateSlotInput(date, timeSlot);
+    if (slotError) return NextResponse.json({ error: slotError }, { status: 400 });
 
     // ลูกค้าที่ถูกจำกัดการจองจากประวัติเบี้ยวนัด ก็ไม่ควรลงคิวรอได้เช่นกัน
     // (ไม่งั้นพอรอบว่างก็จองไม่ได้อยู่ดี กลายเป็นแจ้งเตือนหลอกให้เสียเวลา)
