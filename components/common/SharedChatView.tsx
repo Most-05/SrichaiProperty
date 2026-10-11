@@ -1,8 +1,37 @@
 'use client';
 
+/**
+ * ==============================================================================
+ * ไฟล์: components/common/SharedChatView.tsx
+ * ==============================================================================
+ * 
+ * [หน้าที่ของไฟล์นี้]
+ * เป็น Shared Presentation Component (คอมโพเนนต์แสดงผลส่วนกลาง) สำหรับระบบแชทแบบเรียลไทม์
+ * ถูกออกแบบให้สามารถนำกลับมาใช้ซ้ำ (Reusable) ได้ทั้ง 2 บทบาทหลักในระบบ:
+ * 1. ฝั่งลูกค้า (Customer): เรียกใช้จาก app/(customer)/chat/page.tsx
+ * 2. ฝั่งนายหน้า (Agent): เรียกใช้จาก app/agent/chat/page.tsx
+ * 
+ * [ทำไมต้องมี 'use client'?]
+ * ใน Next.js (App Router) ทุกไฟล์เริ่มต้นจะเป็น Server Component โดยค่าเริ่มต้น
+ * แต่ไฟล์นี้จำเป็นต้องเป็น Client Component เพราะ:
+ * - ใช้ React State & Lifecycle Hooks: useState, useEffect, useRef
+ * - มีการตอบสนองต่อ Event ของผู้ใช้: onClick, onChange, onSubmit, onMouseEnter
+ * - มีการเข้าถึง Web APIs ของ Browser โดยตรง: navigator.geolocation, setTimeout, clearTimeout
+ * - มีการจัดการ DOM Node โดยตรงผ่าน Ref: fileInputRef, messagesEndRef (scrollIntoView)
+ * 
+ * [รูปแบบสถาปัตยกรรม (Design Pattern)]
+ * ใช้รูปแบบ "Controlled Component" และ "Smart/Dumb Component":
+ * - ไฟล์นี้ทำหน้าที่เป็น Dumb/Presentation Component (รับข้อมูล sessions, คุม UI/UX, ดัก Event)
+ * - หน้า Page ต้นทางทำหน้าที่เป็น Smart/Container Component (จัดการดึงข้อมูลจาก API, ต่อ Pusher WebSocket)
+ * - สื่อสารกันผ่าน "Props Down, Events Up" (รับข้อมูลผ่าน Props, ส่งผลลัพธ์กลับผ่าน Callbacks)
+ * ==============================================================================
+ */
+
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+
+// นำเข้าไอคอนจาก lucide-react ตามมาตรฐาน UI Design ของโปรเจกต์ (ห้ามใช้ Raw Emojis ในโค้ด)
 import {
   Calendar,
   Home,
@@ -19,77 +48,100 @@ import {
   Check,
   CheckCheck
 } from 'lucide-react';
+
+// นำเข้า UI Primitives สำหรับเรนเดอร์บอลลูนข้อความ
 import { Message, MessageAvatar, MessageContent, MessageFooter } from '@/components/ui/message';
 import { Bubble, BubbleContent } from '@/components/ui/bubble';
 import { toast } from '@/components/ui/toast';
+
+// ฟังก์ชัน Utility สำหรับบีบอัดภาพ (Resize & Re-encode WebP/JPEG) บน Client เพื่อลดขนาดไฟล์ก่อนอัปโหลด
 import { compressImage } from '@/lib/utils/compressImage';
 
 // ==============================================================================
 // 1. INTERFACES & TYPES (กำหนดโครงสร้างข้อมูลหน้าจอแชทกลาง)
 // ==============================================================================
 
-/** โครงสร้างข้อความแชทที่ใช้งานใน SharedChatView */
+/**
+ * โครงสร้างข้อความแชทแต่ละรายการ (Message Data Structure)
+ * ใช้แสดงผลบอลลูนข้อความทั้งฝั่งเราและฝั่งคู่สนทนา
+ */
 export interface SharedChatMessage {
-  id: string | number;
-  sender: 'user' | 'other' | 'client' | 'agent';
-  text: string;
-  time: string;
-  fileUrl?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  isRead?: boolean;
+  id: string | number;                         // รหัสประจำตัวข้อความ (UUID หรือ Auto-generated ID)
+  sender: 'user' | 'other' | 'client' | 'agent'; // ผู้ส่งข้อความ เพื่อใช้คำนวณตำแหน่งบอลลูน (ซ้าย/ขวา)
+  text: string;                                // ข้อความตัวอักษร
+  time: string;                                // เวลาที่ส่งข้อความ (จัดรูปแบบพร้อมแสดงผล เช่น "14:30")
+  fileUrl?: string | null;                     // URL ของรูปภาพหรือไฟล์เอกสารแนบ (ถ้ามี)
+  latitude?: number | null;                    // พิกัดละติจูด กรณีส่งตำแหน่ง GPS
+  longitude?: number | null;                   // พิกัดลองจิจูด กรณีส่งตำแหน่ง GPS
+  isRead?: boolean;                            // สถานะเปิดอ่านแล้วหรือไม่ (true = อ่านแล้ว, false = ยังไม่อ่าน)
 }
 
-/** โครงสร้างห้องแชทแต่ละห้อง */
+/**
+ * โครงสร้างข้อมูลห้องสนทนาแต่ละห้อง (Chat Session Structure)
+ * แสดงใน Sidebar ทางซ้าย และเป็น Context สำหรับห้องที่กำลังเปิดใช้งาน
+ */
 export interface SharedChatSession {
-  id: string;
-  name: string;
-  avatar?: string;
-  avatarLetter?: string;
-  lastMessage: string;
-  time: string;
-  unreadCount?: number;
-  hasMoreMessages?: boolean;
-  propertyId?: string;
-  propertyTitle?: string;
-  propertyPrice?: string;
-  propertyCode?: string;
-  messages: SharedChatMessage[];
+  id: string;                                  // รหัสประจำตัวห้องแชท (UUID)
+  name: string;                                // ชื่อคู่สนทนา (เช่น ชื่อลูกค้า หรือ ชื่อนายหน้า)
+  avatar?: string;                             // URL รูปภาพโปรไฟล์ของคู่สนทนา
+  avatarLetter?: string;                       // ตัวอักษรย่อสำหรับใช้เป็น Fallback เมื่อไม่มีรูปภาพ
+  lastMessage: string;                         // ข้อความล่าสุดในห้องสนทนา สำหรับพรีวิวใน Sidebar
+  time: string;                                // เวลาของข้อความล่าสุด
+  unreadCount?: number;                        // จำนวนข้อความที่ยังไม่ได้อ่านในห้องนี้ (badge ตัวเลขสีน้ำเงิน)
+  hasMoreMessages?: boolean;                   // ธงบอกว่ายังมีข้อความเก่าให้โหลดเพิ่มเติมได้อีกหรือไม่
+  propertyId?: string;                         // รหัสอสังหาฯ ที่กำลังสอบถาม (UUID)
+  propertyTitle?: string;                      // ชื่อหัวข้อประกาศอสังหาริมทรัพย์
+  propertyPrice?: string;                      // ราคาประกาศอสังหาริมทรัพย์
+  propertyCode?: string;                       // รหัสทรัพย์ (Property Code) สำหรับอ้างอิง
+  messages: SharedChatMessage[];               // รายการข้อความทั้งหมดที่โหลดมาแล้วในห้องนี้
 }
 
-/** ข้อมูลข้อความใหม่ที่กำลังจะส่งออก */
+/**
+ * โครงสร้างข้อมูลข้อความใหม่ที่ผู้ใช้กำลังจะส่งออกไปยัง Server
+ * (ส่งผ่าน Callback: onSendMessage)
+ */
 export interface OutgoingChatPayload {
-  text?: string;
-  fileUrl?: string;
-  latitude?: number;
-  longitude?: number;
+  text?: string;                               // เนื้อหาข้อความ
+  fileUrl?: string;                            // URL ของไฟล์ที่อัปโหลดเสร็จแล้ว
+  latitude?: number;                           // ละติจูด
+  longitude?: number;                          // ลองจิจูด
 }
 
-/** Props สำหรับ SharedChatView Component */
+/**
+ * Props ทั้งหมดที่ SharedChatView รับเข้ามาจาก Container Page
+ */
 export interface SharedChatViewProps {
-  role?: 'customer' | 'agent';
-  sessions: SharedChatSession[];
-  selectedSessionId: string | null;
-  onSelectSession: (id: string) => void;
-  onSendMessage: (payload: OutgoingChatPayload) => Promise<void> | void;
-  onDeleteMessage?: (messageId: string | number) => Promise<void> | void;
-  onDeleteSession?: (sessionId: string) => Promise<void> | void;
-  onReportSession?: (sessionId: string, reason: string, details?: string) => Promise<void> | void;
-  onOpenSession?: (sessionId: string) => void;
-  onTyping?: (isTyping: boolean) => void;
-  onLoadOlderMessages?: (sessionId: string, oldestMessageId: string | number) => Promise<void> | void;
-  isTyping?: boolean;
-  quickActions?: { label: string; action: () => void }[];
-  connectionError?: boolean;
+  role?: 'customer' | 'agent';                 // กำหนดมุมมองบทบาท ('customer' หรือ 'agent')
+  sessions: SharedChatSession[];               // รายการห้องแชททั้งหมดของผู้ใช้งานคนนี้
+  selectedSessionId: string | null;            // รหัสห้องแชทที่ถูกเลือกอยู่ในปัจจุบัน
+  onSelectSession: (id: string) => void;       // ฟังก์ชัน Callback เมื่อผู้ใช้คลิกเลือกห้องแชทใหม่
+  onSendMessage: (payload: OutgoingChatPayload) => Promise<void> | void; // Callback ส่งข้อความใหม่
+  onDeleteMessage?: (messageId: string | number) => Promise<void> | void; // Callback ลบข้อความเดียว
+  onDeleteSession?: (sessionId: string) => Promise<void> | void;         // Callback ลบทั้งห้องแชท
+  onReportSession?: (sessionId: string, reason: string, details?: string) => Promise<void> | void; // Callback รายงานพฤติกรรม
+  onOpenSession?: (sessionId: string) => void; // Callback เมื่อเปิดห้องแชท (เพื่อยิง Mark as Read ไปยัง Backend)
+  onTyping?: (isTyping: boolean) => void;      // Callback แจ้งสถานะกำลังพิมพ์แบบเรียลไทม์
+  onLoadOlderMessages?: (sessionId: string, oldestMessageId: string | number) => Promise<void> | void; // Callback โหลดข้อความเก่า (Cursor Pagination)
+  isTyping?: boolean;                          // สถานะว่าคู่สนทนากำลังพิมพ์อยู่หรือไม่ (รับมาจาก Pusher Event)
+  quickActions?: { label: string; action: () => void }[]; // ปุ่มลัดคำสั่งด่วนด้านล่างกล่องแชท
+  connectionError?: boolean;                   // แจ้งเตือนเมื่อการเชื่อมต่อ Real-time ขัดข้อง
 }
 
+// ระยะเวลาหน่วง (มิลลิวินาที) หลังจากผู้ใช้หยุดพิมพ์ ก่อนจะยกเลิกสถานะ "กำลังพิมพ์..."
 const TYPING_IDLE_MS = 2000;
+
+// Regular Expression ตรวจสอบนามสกุลไฟล์รูปภาพ เพื่อแยกการเรนเดอร์ระหว่าง Image และ Document
 const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif)$/i;
 
 // ==============================================================================
-// 2. HELPER COMPONENTS (รูปโปรไฟล์อวตาร)
+// 2. HELPER COMPONENTS (คอมโพเนนต์ย่อยสำหรับเรนเดอร์อวตาร)
 // ==============================================================================
 
+/**
+ * UserAvatar: เรนเดอร์รูปโปรไฟล์ของคู่สนทนา
+ * - ถ้ามีรูปภาพ (avatar URL) จะใช้ <Image> จาก Next.js พร้อมคลาส rounded-full
+ * - ถ้าไม่มีรูปภาพ จะใช้ตัวอักษรย่อ (avatarLetter หรือตัวแรกของชื่อ) แสดงในวงกลมพื้นหลังสีเทา
+ */
 function UserAvatar({ sessionItem, size = 40 }: { sessionItem: SharedChatSession; size?: number }) {
   return (
     <div className="relative shrink-0">
@@ -116,8 +168,9 @@ function UserAvatar({ sessionItem, size = 40 }: { sessionItem: SharedChatSession
 }
 
 // ==============================================================================
-// 3. MAIN SHARED CHAT VIEW COMPONENT (หน้าจอโต้ตอบแชทกลาง)
+// 3. MAIN COMPONENT: SharedChatView
 // ==============================================================================
+
 export default function SharedChatView({
   role = 'customer',
   sessions,
@@ -137,28 +190,33 @@ export default function SharedChatView({
   // ----------------------------------------------------------------------------
   // 3.1 States สำหรับฟอร์ม ค้นหา การอัปโหลด และสถานะ UI
   // ----------------------------------------------------------------------------
-  const [searchQuery, setSearchQuery] = useState('');
-  const [messageInput, setMessageInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [loadingOlder, setLoadingOlder] = useState(false);
-  // บนจอมือถือ: หากมี selectedSessionId เปิดเข้ามาให้แสดงห้องแชททันที
+  const [searchQuery, setSearchQuery] = useState('');           // คำค้นหาสำหรับฟิลเตอร์รายการห้องสนทนา
+  const [messageInput, setMessageInput] = useState('');         // ข้อความที่กำลังพิมพ์อยู่ใน Input Box
+  const [sending, setSending] = useState(false);                 // Flag ล็อกปุ่มส่งเพื่อป้องกันการกดเบิ้ล (Double Submit)
+  const [uploading, setUploading] = useState(false);             // Flag แสดงสถานะ Spinner กำลังอัปโหลดไฟล์/รูปภาพ
+  const [loadingOlder, setLoadingOlder] = useState(false);       // Flag ป้องกันการกดโหลดข้อความย้อนหลังซ้ำซ้อน
+
+  // บนจอมือถือ (Responsive): สลับระหว่างหน้ารายการห้องแชท (Sidebar) กับหน้าต่างข้อความ (Chat Room)
+  // หากมี selectedSessionId ถูกเลือกมา จะเปิดหน้าต่างข้อความทันที
   const [mobileShowMessages, setMobileShowMessages] = useState<boolean>(Boolean(selectedSessionId));
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isTypingRef = useRef(false);
+  // Refs สำหรับการควบคุม DOM โดยไม่ทำให้เกิด Re-render
+  const fileInputRef = useRef<HTMLInputElement>(null);          // อ้างอิงถึง <input type="file"> ที่ซ่อนอยู่
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // เก็บ Timer สำหรับ Debounce Typing
+  const isTypingRef = useRef(false);                             // ตัวแปรเช็กว่าเราได้ยิงสัญญาณ "กำลังพิมพ์" ไปหรือยัง
 
-  const [showMenu, setShowMenu] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportReason, setReportReason] = useState('สแปม / ข้อความหลอกลวง');
-  const [reportDetails, setReportDetails] = useState('');
-  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
-  const [hoveredMessageId, setHoveredMessageId] = useState<string | number | null>(null);
+  // States สำหรับเมนูตัวเลือกและป๊อบอัพรายงาน (Report Modal)
+  const [showMenu, setShowMenu] = useState(false);              // เปิด/ปิด Dropdown Menu ที่มุมขวาบน
+  const [showReportModal, setShowReportModal] = useState(false);// เปิด/ปิด Modal ร้องเรียนความประพฤติ
+  const [reportReason, setReportReason] = useState('สแปม / ข้อความหลอกลวง'); // สาเหตุที่เลือกร้องเรียน
+  const [reportDetails, setReportDetails] = useState('');       // รายละเอียดเพิ่มเติมของผู้ร้องเรียน
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false); // สถานะกำลังส่งคำร้องเรียน
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | number | null>(null); // ข้อความที่เมาส์กำลังชี้อยู่ (สำหรับปุ่มลบ)
 
+  // Ref ชี้ไปยังตำแหน่งล่างสุดของรายการข้อความ เพื่อใช้สั่ง scrollIntoView
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // อัปเดตให้แสดงข้อความบนมือถือเมื่อ prop selectedSessionId เปลี่ยน
+  // ตรวจจับเมื่อ prop selectedSessionId เปลี่ยนแปลงจากภายนอก เพื่อปรับ UI ฝั่งมือถือให้แสดงห้องแชท
   const [prevSelectedId, setPrevSelectedId] = useState(selectedSessionId);
   if (selectedSessionId !== prevSelectedId) {
     setPrevSelectedId(selectedSessionId);
@@ -168,23 +226,28 @@ export default function SharedChatView({
   }
 
   // ----------------------------------------------------------------------------
-  // 3.2 กรองข้อมูลห้องแชทตามคำค้นหา
+  // 3.2 กรองข้อมูลห้องแชทตามคำค้นหา (Filtered Sessions)
   // ----------------------------------------------------------------------------
+  // ค้นหาได้ทั้งจาก: ชื่อคู่สนทนา, ชื่อทรัพย์สิน, หรือรหัสทรัพย์ (Case-insensitive)
   const filteredSessions = sessions.filter(s =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (s.propertyTitle && s.propertyTitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (s.propertyCode && s.propertyCode.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  // หาห้องสนทนาที่กำลังเลือกใช้งานอยู่ (ถ้าหาไม่เจอให้เลือกห้องแรกเป็นค่าเริ่มต้น)
   const activeSession = sessions.find(s => s.id === selectedSessionId) || sessions[0] || null;
 
   // ----------------------------------------------------------------------------
   // 3.3 Effects: สกรอลล์ไปข้อความล่าสุดอัตโนมัติ และ แจ้งเปิดอ่านห้องแชท
   // ----------------------------------------------------------------------------
+
+  // เลื่อนหน้าจอลงไปล่างสุดแบบนุ่มนวล (Smooth Scroll) เมื่อมีข้อความใหม่เข้ามาหรือเมื่อเปลี่ยนห้องสนทนา
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeSession?.messages.length, selectedSessionId]);
 
+  // แจ้ง Container Page ว่าผู้ใช้กำลังเปิดดูห้องแชทนี้ เพื่อให้อัปเดตสถานะข้อความว่า "อ่านแล้ว" (Mark as Read)
   useEffect(() => {
     if (activeSession && onOpenSession) {
       onOpenSession(activeSession.id);
@@ -192,9 +255,13 @@ export default function SharedChatView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSession?.id]);
 
+  
   // ----------------------------------------------------------------------------
-  // 3.4 ฟังก์ชันจัดการสถานะ "กำลังพิมพ์..."
+  // 3.4 ฟังก์ชันจัดการสถานะ "กำลังพิมพ์..." (Typing Debounce Mechanism)
   // ----------------------------------------------------------------------------
+  // ป้องกันการยิง Event รัวทุกตัวอักษร:
+  // - ยิง onTyping(true) ครั้งแรกเมื่อเริ่มพิมพ์
+  // - ตั้ง Timer นับถอยหลัง 2 วินาที (TYPING_IDLE_MS) ถ้าหยุดพิมพ์เกิน 2 วินาที จะยิง onTyping(false)
   const handleMessageInputChange = (value: string) => {
     setMessageInput(value);
     if (!onTyping) return;
@@ -210,6 +277,7 @@ export default function SharedChatView({
     }, TYPING_IDLE_MS);
   };
 
+  // เคลียร์ Timer ทิ้งเมื่อ Component ถูก Unmount เพื่อป้องกัน Memory Leak
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -217,18 +285,22 @@ export default function SharedChatView({
   }, []);
 
   // ----------------------------------------------------------------------------
-  // 3.5 ฟังก์ชันส่งข้อความ
+  // 3.5 ฟังก์ชันส่งข้อความตัวหนังสือ (handleFormSubmit)
   // ----------------------------------------------------------------------------
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageInput.trim() || sending) return;
+    if (!messageInput.trim() || sending) return; // ไม่ส่งข้อความว่าง หรือขณะกำลังส่งอันเดิมอยู่
+    
     const txt = messageInput;
-    setMessageInput('');
+    setMessageInput(''); // เคลียร์ช่องพิมพ์ทันทีเพื่อให้ UI ตอบสนองรวดเร็ว (Optimistic feeling)
+    
+    // ยกเลิกสถานะกำลังพิมพ์ทันทีเมื่อกดส่งข้อความ
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     if (isTypingRef.current) {
       isTypingRef.current = false;
       onTyping?.(false);
     }
+
     setSending(true);
     try {
       await onSendMessage({ text: txt });
@@ -238,19 +310,27 @@ export default function SharedChatView({
   };
 
   // ----------------------------------------------------------------------------
-  // 3.6 ฟังก์ชันอัปโหลดและส่งไฟล์แนบ/รูปภาพ
+  // 3.6 ฟังก์ชันอัปโหลดและส่งไฟล์แนบ/รูปภาพ (handleFileSelected)
   // ----------------------------------------------------------------------------
+  // ขั้นตอนการทำงาน:
+  // 1. ดึงไฟล์จาก Event
+  // 2. บีบอัดรูปภาพด้วย compressImage เพื่อประหยัด Bandwidth ก่อนส่ง
+  // 3. แนบ FormData ยิง POST ไปยัง /api/upload
+  // 4. ได้ URL กลับมา นำไปส่งต่อผ่าน onSendMessage({ fileUrl: data.url })
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = '';
+    e.target.value = ''; // รีเซ็ต input file เพื่อให้เลือกไฟล์เดิมซ้ำได้ในครั้งต่อไป
     if (!file) return;
+
     setUploading(true);
     try {
       const compressed = await compressImage(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
       const formData = new FormData();
       formData.append('file', compressed.file);
+
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
+
       if (res.ok && data.success && data.url) {
         await onSendMessage({ fileUrl: data.url });
       } else {
@@ -264,8 +344,9 @@ export default function SharedChatView({
   };
 
   // ----------------------------------------------------------------------------
-  // 3.7 ฟังก์ชันดึงประวัติข้อความเก่าเพิ่มเติม
+  // 3.7 ฟังก์ชันดึงประวัติข้อความเก่าเพิ่มเติม (Cursor-based Pagination)
   // ----------------------------------------------------------------------------
+  // ส่ง oldestMessageId (ข้อความแรกสุดที่แสดงอยู่ด้านบน) ไปให้ API ดึงข้อความที่เก่ากว่านั้นมาต่อ
   const handleLoadOlderMessages = async () => {
     if (!activeSession || !onLoadOlderMessages || activeSession.messages.length === 0 || loadingOlder) return;
     setLoadingOlder(true);
@@ -277,8 +358,9 @@ export default function SharedChatView({
   };
 
   // ----------------------------------------------------------------------------
-  // 3.8 ฟังก์ชันแชร์ตำแหน่งพิกัดปัจจุบัน
+  // 3.8 ฟังก์ชันแชร์ตำแหน่งพิกัด GPS ปัจจุบัน (handleShareLocation)
   // ----------------------------------------------------------------------------
+  // ดึงพิกัดจากเบราว์เซอร์ผ่าน Geolocation API แล้วส่งไปเป็นข้อความที่มีพิกัดแผนที่
   const handleShareLocation = () => {
     if (!navigator.geolocation) {
       toast.warning('อุปกรณ์นี้ไม่รองรับการแชร์ตำแหน่ง');
@@ -295,8 +377,10 @@ export default function SharedChatView({
   };
 
   // ----------------------------------------------------------------------------
-  // 3.9 ฟังก์ชันลบข้อความเดียวและการลบห้องแชท
+  // 3.9 ฟังก์ชันลบข้อความเดียวและการลบห้องแชท (Delete Actions)
   // ----------------------------------------------------------------------------
+  // ถ้า Parent ส่ง Callback มา ให้เรียก Callback ก่อน
+  // แต่ถ้าไม่มี Callback ส่งมา จะมี Fallback ยิงตรงไปยัง API Route ให้โดยอัตโนมัติ
   const handleDeleteSingleMessage = async (msgId: string | number) => {
     if (!confirm('ลบข้อความนี้ใช่หรือไม่?')) return;
     if (onDeleteMessage) {
@@ -331,7 +415,7 @@ export default function SharedChatView({
   };
 
   // ----------------------------------------------------------------------------
-  // 3.10 ฟังก์ชันส่งรายงานพฤติกรรมไม่เหมาะสม
+  // 3.10 ฟังก์ชันส่งรายงานพฤติกรรมไม่เหมาะสม (handleReportSubmit)
   // ----------------------------------------------------------------------------
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,6 +456,7 @@ export default function SharedChatView({
         {/* =================================================================== */}
         {/* 4.1 SIDEBAR: รายการห้องแชทฝั่งซ้าย */}
         {/* =================================================================== */}
+        {/* บนมือถือ: ซ่อน Sidebar เมื่อ mobileShowMessages = true */}
         <div className={`w-full md:w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200/80 flex flex-col overflow-hidden h-full shrink-0 ${mobileShowMessages ? 'hidden md:flex' : 'flex'}`}>
           {/* Header ค้นหาห้องแชท */}
           <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3">
@@ -379,6 +464,7 @@ export default function SharedChatView({
               <h2 className="text-sm font-extrabold text-slate-900">{role === 'agent' ? 'กล่องข้อความเอเย่นต์' : 'กล่องข้อความ'}</h2>
               <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">{filteredSessions.length} รายการ</span>
             </div>
+            {/* ช่อง Input ค้นหาห้องสนทนา */}
             <input
               type="text"
               value={searchQuery}
@@ -388,7 +474,7 @@ export default function SharedChatView({
             />
           </div>
 
-          {/* รายการห้องแชท */}
+          {/* รายการห้องแชทแบบ Scrollable List */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {filteredSessions.length === 0 ? (
               <div className="text-center py-10 text-slate-400 font-bold text-xs">ยังไม่มีบทสนทนา</div>
@@ -407,10 +493,12 @@ export default function SharedChatView({
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-slate-500 truncate text-[11px] font-normal flex-1">{session.lastMessage}</p>
+                      {/* Badge แสดงจำนวนข้อความที่ยังไม่ได้อ่าน */}
                       {!!session.unreadCount && (
                         <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">{session.unreadCount}</span>
                       )}
                     </div>
+                    {/* Badge แสดงข้อมูลอสังหาฯ ที่เชื่อมโยงกับห้องแชท */}
                     {(session.propertyTitle || session.propertyCode) && (
                       <span className="inline-flex items-center gap-1 text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold mt-1 truncate max-w-full">
                         <Home className="w-2.5 h-2.5 shrink-0" />
@@ -434,6 +522,7 @@ export default function SharedChatView({
               <div className="border-b border-slate-100 flex flex-col bg-slate-50/80 backdrop-blur-sm z-10 shrink-0">
                 <div className="h-14 px-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
+                    {/* ปุ่มย้อนกลับแสดงเฉพาะจอมือถือ (เพื่อกลับไปหน้า Sidebar) */}
                     <button
                       onClick={() => setMobileShowMessages(false)}
                       className="md:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition font-bold text-xs mr-1 flex items-center gap-1"
@@ -447,7 +536,7 @@ export default function SharedChatView({
                     </div>
                   </div>
 
-                  {/* ปุ่มเมนูตัวเลือก (รายงาน / ลบห้องแชท) */}
+                  {/* ปุ่มเมนูตัวเลือก Dropdown (รายงาน / ลบห้องแชท) */}
                   <div className="relative">
                     <button
                       onClick={() => setShowMenu(!showMenu)}
@@ -477,7 +566,7 @@ export default function SharedChatView({
                   </div>
                 </div>
 
-                {/* การ์ดสรุปข้อมูลทรัพย์สินที่กำลังสอบถาม */}
+                {/* การ์ดสรุปข้อมูลทรัพย์สินที่กำลังสอบถาม พร้อมปุ่มลัดนัดหมายเข้าชม */}
                 {(activeSession.propertyTitle || activeSession.propertyCode) && (
                   <div className="px-4 py-2 bg-[#f8fafc] border-t border-slate-100 flex items-center justify-between text-xs gap-3">
                     <div className="truncate pr-2">
@@ -512,7 +601,7 @@ export default function SharedChatView({
 
               {/* พื้นที่แสดงบอลลูนข้อความ (Messages List) */}
               <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/30">
-                {/* ปุ่มโหลดข้อความประวัติย้อนหลัง */}
+                {/* ปุ่มโหลดข้อความประวัติย้อนหลัง (Cursor Pagination) */}
                 {activeSession.hasMoreMessages && onLoadOlderMessages && (
                   <div className="flex justify-center pb-2">
                     <button
@@ -525,8 +614,9 @@ export default function SharedChatView({
                   </div>
                 )}
 
-                {/* ลูปแสดงผลข้อความแชท */}
+                {/* วนลูปแสดงผลข้อความแชทแต่ละรายการ */}
                 {activeSession.messages.map((msg) => {
+                  // เช็กว่าเป็นข้อความฝั่งผู้ส่ง (Outgoing / ฝั่งขวา) หรือฝั่งคู่สนทนา (Incoming / ฝั่งซ้าย)
                   const isOutgoing = msg.sender === 'user' || msg.sender === 'agent';
                   return (
                     <div
@@ -536,6 +626,7 @@ export default function SharedChatView({
                       onMouseLeave={() => setHoveredMessageId(null)}
                     >
                       <Message align={isOutgoing ? 'end' : 'start'}>
+                        {/* อวตารแสดงเฉพาะข้อความของคู่สนทนา (ฝั่งซ้าย) */}
                         {!isOutgoing && (
                           <MessageAvatar
                             src={activeSession.avatar}
@@ -544,7 +635,7 @@ export default function SharedChatView({
                         )}
                         <MessageContent>
                           <div className="relative group/bubble flex items-center gap-2">
-                            {/* ปุ่มลบข้อความเมื่อโฮเวอร์ (เฉพาะผู้ส่ง) */}
+                            {/* ปุ่มลบข้อความเมื่อเอาเมาส์ชี้ (เฉพาะข้อความที่เราเป็นผู้ส่งเองเท่านั้น) */}
                             {hoveredMessageId === msg.id && isOutgoing && (
                               <button
                                 onClick={() => handleDeleteSingleMessage(msg.id)}
@@ -555,9 +646,10 @@ export default function SharedChatView({
                               </button>
                             )}
 
+                            {/* บอลลูนข้อความ (สีน้ำเงินสำหรับฝั่งเรา, สีขาวกรอบเทาสำหรับคู่สนทนา) */}
                             <Bubble variant={isOutgoing ? 'primary' : 'outline'}>
                               <BubbleContent className="space-y-1.5">
-                                {/* รูปภาพแนบ */}
+                                {/* แสดงผลรูปภาพแนบ */}
                                 {msg.fileUrl && IMAGE_EXT_RE.test(msg.fileUrl) && (
                                   <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="block">
                                     <Image
@@ -571,7 +663,7 @@ export default function SharedChatView({
                                   </a>
                                 )}
 
-                                {/* ไฟล์เอกสารอื่น (เช่น PDF) */}
+                                {/* แสดงผลไฟล์เอกสารอื่น (เช่น PDF) */}
                                 {msg.fileUrl && !IMAGE_EXT_RE.test(msg.fileUrl) && (
                                   <a
                                     href={msg.fileUrl}
@@ -584,7 +676,7 @@ export default function SharedChatView({
                                   </a>
                                 )}
 
-                                {/* พิกัดตำแหน่งสถานที่ */}
+                                {/* แสดงผลพิกัดตำแหน่งสถานที่ (ลิงก์เปิด Google Maps) */}
                                 {msg.latitude != null && msg.longitude != null && (
                                   <a
                                     href={`https://www.google.com/maps?q=${msg.latitude},${msg.longitude}`}
@@ -605,7 +697,7 @@ export default function SharedChatView({
                             </Bubble>
                           </div>
 
-                          {/* Footer เวลา และ สถานะการอ่าน */}
+                          {/* Footer แสดงเวลาส่งข้อความ และสถานะการอ่าน (Read Receipts) */}
                           <MessageFooter className="flex items-center gap-1 text-[10px]">
                             <span>{msg.time}</span>
                             {isOutgoing && (
@@ -627,7 +719,7 @@ export default function SharedChatView({
                   );
                 })}
 
-                {/* สัญญาณข้อความ "กำลังพิมพ์..." */}
+                {/* ข้อความบอกสถานะ "กำลังพิมพ์..." (Typing Indicator) */}
                 {isTyping && (
                   <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold px-2 py-1">
                     <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" />
@@ -635,6 +727,7 @@ export default function SharedChatView({
                   </div>
                 )}
 
+                {/* Element เปล่าที่ปลายทางสำหรับใช้สั่ง scrollIntoView */}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -642,7 +735,7 @@ export default function SharedChatView({
               {/* 4.3 INPUT AREA: แถบพิมพ์ข้อความและส่งไฟล์ด้านล่าง */}
               {/* =================================================================== */}
               <div className="p-3 border-t border-slate-100 bg-white space-y-2 shrink-0">
-                {/* แถบคำสั่งด่วน (Quick Actions) */}
+                {/* แถบปุ่มคำสั่งด่วน (Quick Actions) เช่น ตอบกลับด่วน */}
                 {quickActions.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {quickActions.map((qa, idx) => (
@@ -660,6 +753,7 @@ export default function SharedChatView({
 
                 {/* ฟอร์มป้อนข้อความและปุ่มแนบไฟล์ */}
                 <form onSubmit={handleFormSubmit} className="flex gap-2 items-center">
+                  {/* Input File ที่ถูกซ่อนไว้ (คลิกผ่านปุ่ม Paperclip) */}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -721,6 +815,7 @@ export default function SharedChatView({
               </div>
             </>
           ) : (
+            /* กรณีที่ยังไม่มีห้องสนทนาถูกเลือก */
             <div className="flex-1 flex items-center justify-center text-slate-400 font-bold text-xs">
               กรุณาเลือกบทสนทนาจากรายการทางซ้าย
             </div>

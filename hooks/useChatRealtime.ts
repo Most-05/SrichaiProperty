@@ -1,108 +1,147 @@
 'use client';
 
+/**
+ * ==============================================================================
+ * ไฟล์: hooks/useChatRealtime.ts
+ * ==============================================================================
+ * 
+ * [หน้าที่ของไฟล์นี้]
+ * เป็น Custom React Hook สำหรับจัดการระบบ Real-Time WebSockets ผ่าน Pusher Client
+ * ถูกแชร์ใช้งานร่วมกันระหว่าง Container Pages ทั้ง 2 บทบาท:
+ * 1. ฝั่งลูกค้า: app/(customer)/chat/page.tsx
+ * 2. ฝั่งนายหน้า: app/agent/chat/page.tsx
+ * 
+ * [ฟังก์ชันการทำงานหลัก (Core Responsibilities)]
+ * 1. Channel Lifecycle Management:
+ *    - Subscribe ไปยัง Private Channel ตาม sessionId ของห้องที่กำลังเปิดใช้งาน
+ *    - Unsubscribe และ Unbind Events ทั้งหมดโดยอัตโนมัติเมื่อเปลี่ยนห้องหรือปิดหน้าจอ (Cleanup)
+ * 2. Event Binding:
+ *    - 'new-message': ดักฟังเมื่อมีข้อความใหม่ถูกส่งเข้ามา แล้วกระตุ้น onNewMessage()
+ *    - 'messages-read': ดักฟังเมื่ออีกฝ่ายเปิดอ่านข้อความ แล้วกระตุ้น onMessagesRead()
+ *    - 'client-typing': ตรวจสอบสัญญาณว่าอีกฝ่ายกำลังพิมพ์ข้อความอยู่หรือไม่ (กรอง userId ของตัวเองออก)
+ * 3. Connection Health Monitoring:
+ *    - ตรวจจับข้อผิดพลาดการเชื่อมต่อ ('pusher:subscription_error') เพื่อคืนค่า connectionError ให้ UI แสดงแบนเนอร์เตือน
+ * 4. Typing Dispatcher:
+ *    - ให้ฟังก์ชัน sendTyping(boolean) สำหรับยิง HTTP POST /api/chat/typing ไปยังเซิร์ฟเวอร์
+ * ==============================================================================
+ */
+
 import { useCallback, useEffect, useState } from 'react';
 import { getPusherClient } from '@/lib/pusher-client';
 import { chatChannelName } from '@/lib/chatChannel';
 
+/**
+ * พารามิเตอร์ Options ที่ส่งเข้ามาใน Hook useChatRealtime
+ */
 interface UseChatRealtimeOptions {
-  /** subscribe เมื่อผู้ใช้ล็อกอินแล้วเท่านั้น (เช่น status === 'authenticated') */
+  /** ควบคุมการเปิด/ปิดการทำงานของ Hook (เช่น ทำงานเฉพาะเมื่อ status === 'authenticated') */
   enabled: boolean;
+  /** รหัสประจำห้องแชทที่กำลังเลือกเปิดอยู่ (UUID) หากเป็น null จะยังไม่ Subscribe */
   sessionId: string | null;
+  /** รหัสผู้ใช้งานปัจจุบัน (User ID) เพื่อใช้กรองไม่ให้แจ้งสถานะกำลังพิมพ์ของตัวเอง */
   currentUserId?: string;
-  /** เรียกเมื่อมีข้อความใหม่เข้าห้องนี้ */
+  /** Callback ฟังก์ชันที่จะถูกเรียกเมื่อมีข้อความใหม่ส่งเข้ามาในห้องนี้ */
   onNewMessage: () => void;
-  /** เรียกเมื่ออีกฝ่ายอ่านข้อความที่เราส่งไปแล้ว (ไม่บังคับ) */
+  /** Callback ฟังก์ชันที่จะถูกเรียกเมื่ออีกฝ่ายเปิดอ่านข้อความของเราแล้ว (Optional) */
   onMessagesRead?: () => void;
 }
 
 /**
- * Hook กลางสำหรับเชื่อมต่อ Pusher ของห้องแชทที่กำลังเปิดอยู่ ใช้ร่วมกันทั้งหน้าแชทฝั่งนายหน้าและลูกค้า
- * subscribe/unsubscribe channel อัตโนมัติตาม sessionId ที่เปลี่ยน และคืนสถานะ typing/connection error ให้ UI ใช้
+ * Custom Hook: useChatRealtime
+ * คืนค่า State และ Handler สำหรับการสื่อสารแบบ Real-time ของห้องแชท
  */
-// Custom Hook: useChatRealtime
-// ใช้จัดการการเชื่อมต่อ Realtime (ผ่าน Pusher) สำหรับฟีเจอร์แชท
-// ทำหน้าที่: ฟังข้อความใหม่, สถานะอ่านแล้ว, สถานะกำลังพิมพ์ และส่งสถานะพิมพ์ของตัวเองออกไป
 export function useChatRealtime({ 
-  enabled,          // เปิด/ปิดการทำงานของ hook นี้ (เช่น เปิดเฉพาะตอนแชทหน้าต่างเปิดอยู่)
-  sessionId,        // รหัสห้องแชท/บทสนทนา ใช้ระบุว่าจะ subscribe channel ไหน
-  currentUserId,    // รหัสผู้ใช้ปัจจุบัน ใช้กรองไม่ให้สนใจ event ที่ตัวเองเป็นคนส่ง
-  onNewMessage,      // callback เรียกเมื่อมีข้อความใหม่เข้ามา
-  onMessagesRead     // callback เรียกเมื่อข้อความถูกอ่านแล้ว (optional)
+  enabled,          // เปิด/ปิดการทำงานของ Hook
+  sessionId,        // รหัสห้องแชท ใช้ระบุชื่อ Channel
+  currentUserId,    // รหัสผู้ใช้ปัจจุบัน ใช้กรอง Event ตัวเอง
+  onNewMessage,     // Callback เมื่อมีข้อความใหม่
+  onMessagesRead    // Callback เมื่อข้อความถูกเปิดอ่าน
 }: UseChatRealtimeOptions) {
 
-  // ===== State ภายใน Hook =====
-  const [isTyping, setIsTyping] = useState(false);           // สถานะว่าอีกฝ่ายกำลังพิมพ์อยู่หรือไม่
-  const [connectionError, setConnectionError] = useState(false); // สถานะว่าเชื่อมต่อ realtime มีปัญหาหรือไม่
+  // ----------------------------------------------------------------------------
+  // 1. States ภายใน Hook
+  // ----------------------------------------------------------------------------
+  // สถานะว่าคู่สนทนาในห้องนี้กำลังพิมพ์ข้อความอยู่หรือไม่ (true/false)
+  const [isTyping, setIsTyping] = useState(false);
+  
+  // สถานะแจ้งเตือนว่าการเชื่อมต่อ WebSocket มีปัญหาหรือไม่ (เช่น Token หมดอายุ หรืออินเทอร์เน็ตหลุด)
+  const [connectionError, setConnectionError] = useState(false);
 
-  // ===== Effect: จัดการ subscribe/unsubscribe channel ของ Pusher =====
+  // ----------------------------------------------------------------------------
+  // 2. Effect: จัดการ Subscription และ Event Listeners ของ Pusher Channel
+  // ----------------------------------------------------------------------------
   useEffect(() => {
-    // ถ้ายังไม่เปิดใช้งาน หรือยังไม่มี sessionId → ไม่ทำอะไร (ยังไม่ connect)
+    // หากปิดการทำงาน (enabled === false) หรือยังไม่ได้เลือกห้องแชท (sessionId === null) -> ไม่ต้องทำอะไร
     if (!enabled || !sessionId) return;
 
-    // ดึง Pusher client instance (น่าจะเป็น singleton ใช้ตัวเดียวทั้งแอป)
+    // ดึง Instance ของ Pusher Client (แบบ Singleton เพื่อใช้ Socket Connection เดียวกันทั้งแอป)
     const pusher = getPusherClient();
 
-    // สร้างชื่อ channel เฉพาะของห้องแชทนี้ เช่น "private-chat-session-abc123"
-    const channelName = chatChannelName(sessionId); // private-chat-session-{sessionId}
+    // สร้างชื่อ Private Channel สำหรับห้องนี้ เช่น "private-chat-session-3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    const channelName = chatChannelName(sessionId);
 
-    // สมัครสมาชิก (subscribe) เข้า channel นี้ เพื่อเริ่มรับ event
+    // สมัครรับข้อมูล (Subscribe) เข้า Channel ของห้องแชทนี้
     const channel = pusher.subscribe(channelName);
 
-    // เมื่อมี event "new-message" เข้ามา → เรียก callback onNewMessage
-    // (ไม่ได้ส่งข้อมูลข้อความมาด้วย เดี๋ยวให้ผู้เรียกไป fetch ข้อมูลใหม่เอง)
+    // [Event 1: ข้อความใหม่] เมื่อเซิร์ฟเวอร์ยิง Event 'new-message' มา
+    // ให้สั่งเรียก Callback onNewMessage เพื่อให้ Parent Component ไปดึงข้อมูลหรืออัปเดต State
     channel.bind('new-message', () => onNewMessage());
 
-    // เมื่อมี event "messages-read" เข้ามา → เรียก callback onMessagesRead (ถ้ามีการส่งมา)
+    // [Event 2: อ่านข้อความแล้ว] เมื่อเซิร์ฟเวอร์ยิง Event 'messages-read' มา
+    // แสดงว่าอีกฝ่ายเปิดอ่านข้อความแล้ว ให้เรียก onMessagesRead เพื่ออัปเดตไอคอนเป็น "อ่านแล้ว" (CheckCheck)
     channel.bind('messages-read', () => onMessagesRead?.());
 
-    // เมื่อมี event "client-typing" (อีกฝ่ายกำลังพิมพ์/หยุดพิมพ์)
+    // [Event 3: สถานะกำลังพิมพ์] เมื่อเซิร์ฟเวอร์กระจายสัญญาณการพิมพ์
     channel.bind('client-typing', (data: { isTyping: boolean; userId?: string }) => {
-      // ถ้า event นี้มาจากตัวเราเอง (userId ตรงกับ currentUserId) → ไม่ต้องทำอะไร
-      // (ป้องกันไม่ให้เห็นสถานะ "กำลังพิมพ์" ของตัวเอง)
+      // ป้องกันการแจ้งเตือนตัวเอง: ถ้าคนที่พิมพ์คือ User ID ของเราเอง ให้ข้ามไป
       if (data.userId === currentUserId) return;
 
-      // อัปเดตสถานะว่าอีกฝ่ายกำลังพิมพ์อยู่หรือไม่
+      // อัปเดต State ว่าคู่สนทนากำลังพิมพ์อยู่หรือไม่
       setIsTyping(data.isTyping);
     });
 
-    // ถ้า subscribe channel ไม่สำเร็จ (เช่น auth ล้มเหลว) → ตั้ง connectionError = true
+    // [Event 4: ตรวจสอบข้อผิดพลาด] หากยืนยันตัวตนสิทธิ์เข้า Channel ล้มเหลว (เช่น ไม่ใช่คู่สนทนาในห้อง)
     channel.bind('pusher:subscription_error', () => setConnectionError(true));
 
-    // ถ้า subscribe channel สำเร็จ → เคลียร์ error (เผื่อเคย error มาก่อนแล้วเชื่อมต่อใหม่ได้)
+    // [Event 5: เชื่อมต่อสำเร็จ] หากเชื่อมต่อและยืนยันสิทธิ์สำเร็จ ให้เคลียร์สถานะ Error
     channel.bind('pusher:subscription_succeeded', () => setConnectionError(false));
 
-    // ===== Cleanup function: ทำงานตอน component unmount หรือ dependency เปลี่ยน =====
+    // --------------------------------------------------------------------------
+    // 3. Cleanup Function (การยกเลิกการเชื่อมต่อเมื่อเปลี่ยนห้องหรือปิดหน้าจอ)
+    // --------------------------------------------------------------------------
+    // ทำงานอัตโนมัติเมื่อ:
+    // 1) ผู้ใช้เปลี่ยนห้องแชท (sessionId เปลี่ยน)
+    // 2) ผู้ใช้ปิดหน้าจอแชท (Component Unmount)
     return () => {
-      channel.unbind_all();           // ยกเลิกการฟัง event ทั้งหมดของ channel นี้
-      pusher.unsubscribe(channelName); // ออกจาก channel เพื่อไม่ให้รับ event อีก
-      setIsTyping(false);              // รีเซ็ตสถานะพิมพ์กลับเป็นค่าเริ่มต้น
+      channel.unbind_all();            // ยกเลิก Listener ทุกตัวของ Channel นี้เพื่อกัน Memory Leak
+      pusher.unsubscribe(channelName); // ยกเลิกการ Subscribe เพื่อหยุดรับข้อมูล
+      setIsTyping(false);               // รีเซ็ตสถานะการพิมพ์กลับเป็น false
     };
 
-    // effect นี้จะทำงานใหม่ (unsubscribe เก่า + subscribe ใหม่) เมื่อค่าพวกนี้เปลี่ยน
-    // หมายเหตุ: ไม่ได้ใส่ onNewMessage, onMessagesRead ใน dependency array
-    // (อาจตั้งใจไม่ใส่เพื่อป้องกัน re-subscribe บ่อยเกินไปถ้า callback เปลี่ยน reference ทุก render)
   }, [enabled, sessionId, currentUserId, onNewMessage, onMessagesRead]);
 
-  // ===== ฟังก์ชันสำหรับส่งสถานะ "กำลังพิมพ์" ของตัวเองไปยังเซิร์ฟเวอร์ =====
-  // ใช้ useCallback เพื่อไม่ให้ function reference เปลี่ยนทุก render (เผื่อ component ที่ใช้เอาไปใส่ dependency array ที่อื่น)
+  // ----------------------------------------------------------------------------
+  // 4. ฟังก์ชันส่งสัญญาณ "กำลังพิมพ์" ของตัวเองไปยังเซิร์ฟเวอร์ (sendTyping)
+  // ----------------------------------------------------------------------------
+  // ใช้ useCallback เพื่อรักษา Function Reference ไม่ให้เปลี่ยนทุกครั้งที่ Component Re-render
   const sendTyping = useCallback((typing: boolean) => {
-    if (!sessionId) return; // ไม่มีห้องแชทให้ส่งสถานะ ก็ไม่ต้องทำอะไร
+    if (!sessionId) return; // หากไม่มีห้องแชท ไม่ต้องทำอะไร
 
-    // ยิง POST request ไปบอก backend ว่ากำลังพิมพ์อยู่หรือไม่
-    // backend น่าจะรับหน้าที่ trigger event 'client-typing' ผ่าน Pusher กระจายไปยังอีกฝ่ายต่อ
+    // ส่งคำขอแบบ Asynchronous (Fire-and-forget) ไปยัง API Route /api/chat/typing
+    // เซิร์ฟเวอร์จะตรวจสอบความปลอดภัย และยิง Pusher Event 'client-typing' ไปยัง Channel ของห้องนี้
     fetch('/api/chat/typing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId, isTyping: typing })
     });
-    // หมายเหตุ: ไม่มีการจัดการ error ของ fetch นี้ (ไม่ await, ไม่ catch)
-    // ถ้า request ล้มเหลวจะไม่มีการแจ้งเตือนใดๆ (fire-and-forget)
   }, [sessionId]);
 
-  // ===== ค่าที่ hook นี้ return ให้ component นำไปใช้ =====
+  // ----------------------------------------------------------------------------
+  // 5. ส่งค่าออกไปให้ Component ภายนอกนำไปใช้งาน
+  // ----------------------------------------------------------------------------
   return { 
-    isTyping,        // อีกฝ่ายกำลังพิมพ์อยู่หรือไม่
-    connectionError, // เชื่อมต่อ realtime มีปัญหาหรือไม่ (เอาไปโชว์ banner แจ้งเตือนได้)
-    sendTyping       // ฟังก์ชันเรียกเพื่อบอกว่าตัวเองกำลังพิมพ์/หยุดพิมพ์
+    isTyping,        // Boolean: คู่สนทนากำลังพิมพ์อยู่หรือไม่
+    connectionError, // Boolean: การเชื่อมต่อ WebSocket มีปัญหาหรือไม่
+    sendTyping       // Function: ฟังก์ชันสำหรับแจ้งเซิร์ฟเวอร์ว่าเรากำลังพิมพ์/หยุดพิมพ์
   };
 }

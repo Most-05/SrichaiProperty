@@ -203,6 +203,12 @@ export async function checkAndSendAppointmentReminders(userId: string): Promise<
       ? `/appointments?aptId=${apt.id}`
       : `/agent/appointments?aptId=${apt.id}`;
 
+    const customer = apt.users_appointments_customer_idTousers;
+    const agent = apt.users_appointments_agent_idTousers;
+    const counterpartName = isCustomerRecipient
+      ? (agent ? `${agent.first_name || ''} ${agent.last_name || ''}`.trim() : 'นายหน้าผู้ดูแล')
+      : (customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : 'ลูกค้า');
+
     let title = '';
     let content = '';
 
@@ -212,12 +218,10 @@ export async function checkAndSendAppointmentReminders(userId: string): Promise<
         : `เตือนความจำ: วันพรุ่งนี้คุณมีนัดหมายเข้าชมโครงการ`;
       content = `${dayLabel}คุณมีนัดหมายเข้าชม "${propertyTitle}" (${timeSlotLabel}) กรุณาเตรียมตัวและตรวจสอบเส้นทางการเดินทาง`;
     } else {
-      const customer = apt.users_appointments_customer_idTousers;
-      const customerName = customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : 'ลูกค้า';
       title = isToday
         ? `เตือนความจำ: วันนี้คุณมีคิวนำชมโครงการ`
         : `เตือนความจำ: วันพรุ่งนี้คุณมีคิวนำชมโครงการ`;
-      content = `${dayLabel}คุณมีคิวนำชม "${propertyTitle}" กับคุณ ${customerName} (${timeSlotLabel})`;
+      content = `${dayLabel}คุณมีคิวนำชม "${propertyTitle}" กับคุณ ${counterpartName} (${timeSlotLabel})`;
     }
 
     await notifyUser({
@@ -225,7 +229,15 @@ export async function checkAndSendAppointmentReminders(userId: string): Promise<
       title,
       content,
       type: REMINDER_NOTIFICATION_TYPE,
-      linkUrl: targetUrl
+      linkUrl: targetUrl,
+      metadata: {
+        propertyTitle,
+        date: aptDateKey,
+        timeSlot: timeSlotLabel,
+        counterpartName,
+        role: isCustomerRecipient ? 'customer' : 'agent',
+        eventType: 'reminder',
+      }
     }).catch(err => console.error('Error sending appointment reminder:', err));
 
     alertedAppointmentIds.add(apt.id);

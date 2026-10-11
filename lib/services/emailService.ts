@@ -146,16 +146,29 @@ export async function sendEmail({
       };
     }
 
+    // ตรวจสอบกรณีผู้รับเป็นโดเมนจำลอง (เช่น @srichaiproperty.com ที่ยังไม่ได้จดทะเบียนรับอีเมลจริง)
+    // ส่งต่อไปยัง DEV_TEST_EMAIL หรือ SMTP_USER เพื่อให้แจ้งเตือนเข้า Inbox จริงและไม่ถูก Gmail ตีกลับ
+    let targetTo = to;
+    let finalSubject = subject;
+    const isMockDomain = to.toLowerCase().endsWith('@srichaiproperty.com') || to.toLowerCase().endsWith('@example.com');
+    const devTestEmail = (process.env.DEV_TEST_EMAIL || process.env.SMTP_USER || '').trim();
+
+    if (isMockDomain && devTestEmail) {
+      console.log(`[EmailService] 🔀 ตรวจพบอีเมลจำลอง "${to}" -> ส่งต่อไปยัง "${devTestEmail}" เพื่อให้ได้รับแจ้งเตือนจริงใน Inbox`);
+      targetTo = devTestEmail;
+      finalSubject = `[ทดสอบส่งถึง ${to.split('@')[0]}] ${subject}`;
+    }
+
     // กรณีมี SMTP จริง -> ส่งออกไปยังเครือข่ายอินเทอร์เน็ต
     const info = await mailer.sendMail({
       from: effectiveFrom,
-      to,
-      subject,
+      to: targetTo,
+      subject: finalSubject,
       html,
-      text: text || subject,
+      text: text || finalSubject,
     });
 
-    console.log(`[EmailService] ส่งอีเมลสำเร็จถึง ${to} (MessageId: ${info.messageId})`);
+    console.log(`[EmailService] ส่งอีเมลสำเร็จถึง ${targetTo} (ต้นทางระบุ: ${to}, MessageId: ${info.messageId})`);
     return {
       success: true,
       messageId: info.messageId,

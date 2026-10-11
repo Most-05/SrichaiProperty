@@ -11,18 +11,42 @@ import {
   getGeneralNotificationEmailTemplate,
 } from '@/lib/templates/emailTemplates';
 
+export interface AppointmentNotificationMetadata {
+  appointmentId?: string;
+  propertyTitle?: string;
+  propertyLocation?: string;
+  propertyPrice?: number | string;
+  propertyUrl?: string;
+  date?: string;
+  timeSlot?: string;
+  role?: 'agent' | 'customer';
+  eventType?: 'new' | 'confirmed' | 'cancelled' | 'rescheduled' | 'reminder';
+  counterpartName?: string;
+  counterpartPhone?: string;
+  counterpartEmail?: string;
+  otherPartyName?: string;
+  otherPartyPhone?: string;
+  otherPartyEmail?: string;
+  notes?: string;
+  reason?: string;
+  oldDate?: string;
+  oldTimeSlot?: string;
+  [key: string]: unknown;
+}
+
 export interface NotifyInput {
   userId: string;
   title: string;
   content: string;
   type: string;
   linkUrl?: string | null;
+  metadata?: AppointmentNotificationMetadata | Record<string, unknown>;
 }
 
 /**
  * ส่งการแจ้งเตือนไปยังผู้ใช้ (Realtime Pusher + Database + Automated Email Notification)
  */
-export async function notifyUser({ userId, title, content, type, linkUrl }: NotifyInput) {
+export async function notifyUser({ userId, title, content, type, linkUrl, metadata }: NotifyInput) {
   // 1. บันทึกลงตาราง notifications ในฐานข้อมูล PostgreSQL
   const notification = await db.notifications.create({
     data: { user_id: userId, title, content, type, link_url: linkUrl ?? null, is_read: false }
@@ -40,7 +64,7 @@ export async function notifyUser({ userId, title, content, type, linkUrl }: Noti
   }).catch(err => console.error('Pusher trigger error (notification):', err));
 
   // 3. ส่งอีเมลแจ้งเตือนอัตโนมัติแบบ Asynchronous Non-blocking (ไม่ถ่วงเวลาการโหลดหน้าเว็บ)
-  dispatchEmailNotification({ userId, title, content, type, linkUrl })
+  dispatchEmailNotification({ userId, title, content, type, linkUrl, metadata })
     .catch(err => console.error('Email dispatch error (notifyUser):', err));
 
   return notification;
@@ -53,7 +77,7 @@ export async function notifyUsers(userIds: string[], data: Omit<NotifyInput, 'us
 /**
  * ผู้ช่วยส่งอีเมลแจ้งเตือนโดยคัดเลือกเทมเพลตตามประเภท (Email Notification Dispatcher)
  */
-async function dispatchEmailNotification({ userId, title, content, type, linkUrl }: NotifyInput) {
+async function dispatchEmailNotification({ userId, title, content, type, linkUrl, metadata }: NotifyInput) {
   try {
     // ดึงข้อมูลอีเมลและชื่อของผู้รับจากตาราง users
     const recipient = await db.users.findUnique({
@@ -104,25 +128,100 @@ async function dispatchEmailNotification({ userId, title, content, type, linkUrl
     // B. กรณีเป็นการนัดหมาย / เตือนนัด / คิวรอ (Appointment & Waitlist)
     // --------------------------------------------------------------------------
     else if (type === 'appointment' || type === 'reminder' || type === 'waitlist') {
-      const isReminder = type === 'reminder' || title.includes('เตือน');
-      const isCancelled = title.includes('ยกเลิก') || title.includes('ปฏิเสธ');
-      const isConfirmed = title.includes('ยืนยัน') || title.includes('ตอบรับ');
-      const isRescheduled = title.includes('เลื่อน');
+      const meta = (metadata || {}) as AppointmentNotificationMetadata;
+      const isReminder = type === 'reminder' || title.includes('เตือน') || meta.eventType === 'reminder';
+      const isCancelled = title.includes('ยกเลิก') || title.includes('ปฏิเสธ') || meta.eventType === 'cancelled';
+      const isConfirmed = title.includes('ยืนยัน') || title.includes('ตอบรับ') || meta.eventType === 'confirmed';
+      const isRescheduled = title.includes('เลื่อน') || meta.eventType === 'rescheduled';
 
       let eventType: 'new' | 'confirmed' | 'cancelled' | 'rescheduled' | 'reminder' = 'new';
-      if (isReminder) eventType = 'reminder';
+      if (meta.eventType) eventType = meta.eventType;
+      else if (isReminder) eventType = 'reminder';
       else if (isCancelled) eventType = 'cancelled';
       else if (isConfirmed) eventType = 'confirmed';
       else if (isRescheduled) eventType = 'rescheduled';
 
+      // 1. ดึงข้อมูลจาก metadata เป็นอันดับแรก
+      let propertyTitle = typeof meta.propertyTitle === 'string' ? meta.propertyTitle : '';
+      let date = typeof meta.date === 'string' ? meta.date : '';
+      let timeSlot = typeof meta.timeSlot === 'string' ? meta.timeSlot : '';
+      let counterpartName = typeof meta.counterpartName === 'string' ? meta.counterpartName : (typeof meta.otherPartyName === 'string' ? meta.otherPartyName : '');
+      const counterpartPhone = typeof meta.counterpartPhone === 'string' ? meta.counterpartPhone : (typeof meta.otherPartyPhone === 'string' ? meta.otherPartyPhone : undefined);
+      const counterpartEmail = typeof meta.counterpartEmail === 'string' ? meta.counterpartEmail : (typeof meta.otherPartyEmail === 'string' ? meta.otherPartyEmail : undefined);
+      const propertyLocation = typeof meta.propertyLocation === 'string' ? meta.propertyLocation : (typeof meta.location === 'string' ? meta.location : undefined);
+      const propertyPrice = typeof meta.propertyPrice === 'string' || typeof meta.propertyPrice === 'number' ? meta.propertyPrice : (typeof meta.price === 'string' || typeof meta.price === 'number' ? meta.price : undefined);
+      let notes = typeof meta.notes === 'string' ? meta.notes : (typeof meta.reason === 'string' ? meta.reason : '');
+      const oldDate = typeof meta.oldDate === 'string' ? meta.oldDate : undefined;
+      const oldTimeSlot = typeof meta.oldTimeSlot === 'string' ? meta.oldTimeSlot : undefined;
+      const appointmentId = typeof meta.appointmentId === 'string' ? meta.appointmentId : undefined;
+
+      // 2. ถ้าไม่มีใน metadata ให้ใช้ Smart Regex Fallback สกัดจากข้อความ content
+      if (!propertyTitle) {
+        const titleMatch = content.match(/เข้าชม\s+"([^"]+)"/) || content.match(/"([^"]+)"/);
+        if (titleMatch) {
+          propertyTitle = titleMatch[1].trim();
+        } else if (content.length <= 50 && !content.includes('คุณ')) {
+          propertyTitle = content;
+        } else {
+          propertyTitle = 'โครงการอสังหาริมทรัพย์';
+        }
+      }
+
+      if (!date) {
+        const dateMatch =
+          content.match(/(?:สำหรับวันที่|ประจำวันที่|วันที่)\s+([0-9\-\/]{8,10})/i) ||
+          content.match(/เป็นวันที่\s+([0-9\-\/]{8,10})/i);
+        if (dateMatch) {
+          date = dateMatch[1].trim();
+        } else {
+          date = 'ตามกำหนดการในระบบ';
+        }
+      }
+
+      if (!timeSlot) {
+        const slotMatch = content.match(/(ช่วง(?:เช้า|บ่าย)(?:\s*\([^)]+\))?)/);
+        if (slotMatch) {
+          timeSlot = slotMatch[1].trim();
+        } else {
+          timeSlot = 'กรุณาดูรายละเอียดในใบนัด';
+        }
+      }
+
+      if (!counterpartName) {
+        const nameMatch =
+          content.match(/คุณ\s+([^ได้ยื่น\s]+(?:\s+[^ได้ยื่น\s]+)?)\s+ได้ยื่น/) ||
+          content.match(/ผู้ใช้\s+\(([^)]+)\)\s+ได้ยกเลิก/) ||
+          content.match(/คุณ\s+([^\s]+(?:\s+[^\s]+)?)\s+ยืนยันวันนัด/);
+        if (nameMatch) {
+          counterpartName = nameMatch[1].trim();
+        } else {
+          counterpartName = recipient.role_id === 'agent' ? 'ลูกค้าผู้ขอนัดหมาย' : 'นายหน้าผู้ดูแล';
+        }
+      }
+
+      if (!notes) {
+        const reasonMatch = content.match(/\(เหตุผล:\s*([^)]+)\)/);
+        if (reasonMatch) notes = reasonMatch[1].trim();
+      }
+
+      const role: 'agent' | 'customer' = meta.role || (recipient.role_id === 'agent' ? 'agent' : 'customer');
+
       emailPayload = getAppointmentEmailTemplate({
-        role: recipient.role_id === 'agent' ? 'agent' : 'customer',
+        role,
         eventType,
         recipientName,
-        propertyTitle: content.length > 60 ? content.slice(0, 60) + '…' : content,
-        date: 'ตามกำหนดการในระบบ',
-        timeSlot: 'กรุณาดูรายละเอียดในใบนัด',
-        otherPartyName: recipient.role_id === 'agent' ? 'ลูกค้าผู้ขอนัดหมาย' : 'นายหน้าผู้ดูแล',
+        propertyTitle,
+        propertyLocation,
+        propertyPrice,
+        date,
+        timeSlot,
+        otherPartyName: counterpartName,
+        otherPartyPhone: counterpartPhone,
+        otherPartyEmail: counterpartEmail,
+        notes: notes || undefined,
+        oldDate,
+        oldTimeSlot,
+        appointmentId,
         actionUrl: fullActionUrl,
       });
     }

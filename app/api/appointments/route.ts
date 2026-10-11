@@ -35,8 +35,8 @@ async function getAuthUser() {
 
 // Helper 3: ฟังก์ชันส่งการแจ้งเตือน (Notifications) ไปยังฐานข้อมูลแบบไม่ขัดจังหวะกระบวนการหลัก
 // (ใช้ .catch() ดักจับความผิดพลาดไว้เพื่อไม่ให้กระทบกับการทำธุรกรรมหลักข้างบน)
-const sendNotification = (userId: string, title: string, content: string, type = "appointment", linkUrl?: string | null) =>
-  notifyUser({ userId, title, content, type, linkUrl }).catch(() => {});
+const sendNotification = (userId: string, title: string, content: string, type = "appointment", linkUrl?: string | null, metadata?: Record<string, unknown>) =>
+  notifyUser({ userId, title, content, type, linkUrl, metadata }).catch(() => {});
 
 // ==============================================================================
 // 1. GET: ดึงรายการนัดหมาย (รองรับมุมมองลูกค้า และ มุมมองนายหน้า)
@@ -337,6 +337,8 @@ export async function POST(request: Request) {
     // 2.8 ส่งการแจ้งเตือนไปยังนายหน้าผู้ดูแลและลูกค้าที่ทำรายการ
     const customerName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "ลูกค้า";
     const timeLabel = dbTimeSlot === "morning" ? `ช่วงเช้า (${timeSlotRange("morning")} น.)` : `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)`;
+    const agent = property.agent_id ? await db.users.findUnique({ where: { id: property.agent_id }, select: { first_name: true, last_name: true, phone: true, email: true } }) : null;
+    const agentName = agent ? `${agent.first_name || ""} ${agent.last_name || ""}`.trim() || "นายหน้าผู้ดูแล" : "นายหน้าผู้ดูแล";
 
     if (property.agent_id) {
       sendNotification(
@@ -344,7 +346,21 @@ export async function POST(request: Request) {
         "คำขอนัดหมายเข้าชมโครงการ",
         `คุณ ${customerName} ได้ยื่นคำขอนัดหมายเข้าชม "${property.title}" สำหรับวันที่ ${date} ${timeLabel}`,
         "appointment",
-        "/agent/appointments"
+        "/agent/appointments",
+        {
+          appointmentId: newAppointment.id,
+          propertyTitle: property.title,
+          propertyLocation: property.location,
+          propertyPrice: property.price ? Number(property.price) : undefined,
+          date,
+          timeSlot: timeLabel,
+          role: 'agent',
+          eventType: 'new',
+          counterpartName: customerName,
+          counterpartPhone: user.phone || undefined,
+          counterpartEmail: user.email || undefined,
+          notes: note || undefined,
+        }
       );
     }
     sendNotification(
@@ -352,7 +368,21 @@ export async function POST(request: Request) {
       "บันทึกคำขอนัดหมายเข้าชมโครงการ",
       `ยื่นคำขอนัดหมายเข้าชม "${property.title}" ประจำวันที่ ${date} เรียบร้อยแล้ว ระบบอยู่ระหว่างส่งเรื่องให้นายหน้าพิจารณา`,
       "appointment",
-      "/appointments"
+      "/appointments",
+      {
+        appointmentId: newAppointment.id,
+        propertyTitle: property.title,
+        propertyLocation: property.location,
+        propertyPrice: property.price ? Number(property.price) : undefined,
+        date,
+        timeSlot: timeLabel,
+        role: 'customer',
+        eventType: 'new',
+        counterpartName: agentName,
+        counterpartPhone: agent?.phone || undefined,
+        counterpartEmail: agent?.email || undefined,
+        notes: note || undefined,
+      }
     );
 
     return NextResponse.json({ success: true, data: newAppointment });
@@ -489,15 +519,31 @@ export async function PATCH(request: Request) {
 
         // แจ้งลูกค้าทันทีว่านายหน้าขอเลื่อน พร้อมบอกวันเก่า -> วันใหม่ ให้เห็นชัดว่าเปลี่ยนไปเป็นอะไร
         if (appointment.customer_id) {
-          const prop = await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } });
+          const prop = await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true, location: true } });
           const oldLabel = `${toDateKey(appointment.appointment_date)} (${appointment.time_slot === "afternoon" ? "ช่วงบ่าย" : "ช่วงเช้า"})`;
+          const newSlotLabel = timeSlot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : `ช่วงเช้า (${timeSlotRange("morning")} น.)`;
           const newLabel = `${date} (${timeSlot === "afternoon" ? "ช่วงบ่าย" : "ช่วงเช้า"})`;
           sendNotification(
             appointment.customer_id,
             "นายหน้าขอเลื่อนวันนัดหมาย",
             `นายหน้าขอเลื่อนนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" จากวันที่ ${oldLabel} เป็นวันที่ ${newLabel} กรุณาเข้าไปกดยืนยันวันใหม่ หรือยกเลิกนัดหากไม่สะดวก`,
             "appointment",
-            "/appointments"
+            "/appointments",
+            {
+              appointmentId: appointment.id,
+              propertyTitle: prop?.title || "อสังหาริมทรัพย์",
+              propertyLocation: prop?.location,
+              date,
+              timeSlot: newSlotLabel,
+              oldDate: toDateKey(appointment.appointment_date),
+              oldTimeSlot: appointment.time_slot === "afternoon" ? "ช่วงบ่าย" : "ช่วงเช้า",
+              role: 'customer',
+              eventType: 'rescheduled',
+              counterpartName: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "นายหน้าผู้ดูแล",
+              counterpartPhone: user.phone || undefined,
+              counterpartEmail: user.email || undefined,
+              notes: reason || undefined,
+            }
           );
         }
 
@@ -587,15 +633,35 @@ export async function PATCH(request: Request) {
       }
 
       // ส่งแจ้งเตือนผลการตอบรับไปยังลูกค้า
-      const property = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } }) : null;
+      const property = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true, location: true } }) : null;
       const propertyTitle = property?.title || "อสังหาริมทรัพย์";
+      const timeLabel = appointment.time_slot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : `ช่วงเช้า (${timeSlotRange("morning")} น.)`;
 
       if (appointment.customer_id) {
         const notiTitle = action === "confirm" ? "ยืนยันคำขอนัดหมายเข้าชมโครงการ" : "แจ้งเปลี่ยนแปลงคำขอนัดหมาย";
         const notiContent = action === "confirm"
           ? `รายการนัดหมายเข้าชม "${propertyTitle}" ได้รับการยืนยันจากนายหน้าเรียบร้อยแล้ว`
           : `รายการนัดหมายเข้าชม "${propertyTitle}" ถูกปฏิเสธโดยนายหน้า (เหตุผล: ${rejectReason}) รอบเวลานี้เปิดให้จองใหม่แล้ว หรือเลือกช่วงเวลาอื่นได้`;
-        sendNotification(appointment.customer_id, notiTitle, notiContent, "appointment", "/appointments");
+        sendNotification(
+          appointment.customer_id,
+          notiTitle,
+          notiContent,
+          "appointment",
+          "/appointments",
+          {
+            appointmentId: appointment.id,
+            propertyTitle,
+            propertyLocation: property?.location,
+            date: toDateKey(appointment.appointment_date),
+            timeSlot: timeLabel,
+            role: 'customer',
+            eventType: action === "confirm" ? 'confirmed' : 'cancelled',
+            counterpartName: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "นายหน้าผู้ดูแล",
+            counterpartPhone: user.phone || undefined,
+            counterpartEmail: user.email || undefined,
+            notes: action === "reject" ? rejectReason : undefined,
+          }
+        );
       }
 
       return NextResponse.json({ success: true, data: updated });
@@ -618,21 +684,46 @@ export async function PATCH(request: Request) {
       });
 
       if (appointment.agent_id) {
-        const prop = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } }) : null;
+        const prop = appointment.property_id ? await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true, location: true } }) : null;
         const customerName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "ลูกค้า";
+        const dateKey = toDateKey(appointment.appointment_date);
+        const timeLabel = appointment.time_slot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : `ช่วงเช้า (${timeSlotRange("morning")} น.)`;
+
         sendNotification(
           appointment.agent_id,
           "ลูกค้ายืนยันวันนัดใหม่แล้ว",
-          `คุณ ${customerName} ยืนยันวันนัดใหม่สำหรับ "${prop?.title || "อสังหาริมทรัพย์"}" วันที่ ${toDateKey(appointment.appointment_date)} เรียบร้อยแล้ว`,
+          `คุณ ${customerName} ยืนยันวันนัดใหม่สำหรับ "${prop?.title || "อสังหาริมทรัพย์"}" วันที่ ${dateKey} เรียบร้อยแล้ว`,
           "appointment",
-          "/agent/appointments"
+          "/agent/appointments",
+          {
+            appointmentId: appointment.id,
+            propertyTitle: prop?.title || "อสังหาริมทรัพย์",
+            propertyLocation: prop?.location,
+            date: dateKey,
+            timeSlot: timeLabel,
+            role: 'agent',
+            eventType: 'confirmed',
+            counterpartName: customerName,
+            counterpartPhone: user.phone || undefined,
+            counterpartEmail: user.email || undefined,
+          }
         );
         sendNotification(
           user.id,
           "ยืนยันรับวันนัดใหม่สำเร็จ",
-          `คุณได้ยืนยันรับวันนัดเข้าชมใหม่สำหรับ "${prop?.title || "อสังหาริมทรัพย์"}" ในวันที่ ${toDateKey(appointment.appointment_date)} เรียบร้อยแล้ว`,
+          `คุณได้ยืนยันรับวันนัดเข้าชมใหม่สำหรับ "${prop?.title || "อสังหาริมทรัพย์"}" ในวันที่ ${dateKey} เรียบร้อยแล้ว`,
           "appointment",
-          "/appointments"
+          "/appointments",
+          {
+            appointmentId: appointment.id,
+            propertyTitle: prop?.title || "อสังหาริมทรัพย์",
+            propertyLocation: prop?.location,
+            date: dateKey,
+            timeSlot: timeLabel,
+            role: 'customer',
+            eventType: 'confirmed',
+            counterpartName: "นายหน้าผู้ดูแล",
+          }
         );
       }
 
@@ -714,7 +805,7 @@ export async function PATCH(request: Request) {
 
       // แจ้งเตือนไปยังนายหน้าผู้ดูแลเมื่อลูกค้าขอเปลี่ยนวันเวลา
       if (appointment.agent_id) {
-        const prop = await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true } });
+        const prop = await db.properties.findUnique({ where: { id: appointment.property_id }, select: { title: true, location: true } });
         const customerName = `${user.first_name || ""}`.trim() + (user.last_name ? ` ${user.last_name}` : "") || "ลูกค้า";
         const timeLabel = timeSlot === "morning" ? `ช่วงเช้า (${timeSlotRange("morning")} น.)` : timeSlot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : timeSlot;
         sendNotification(
@@ -722,14 +813,35 @@ export async function PATCH(request: Request) {
           "ลูกค้าขอเปลี่ยนวันเวลานัดหมาย",
           `คุณ ${customerName} ได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} ${timeLabel}`,
           "appointment",
-          "/agent/appointments"
+          "/agent/appointments",
+          {
+            appointmentId: appointment.id,
+            propertyTitle: prop?.title || "อสังหาริมทรัพย์",
+            propertyLocation: prop?.location,
+            date,
+            timeSlot: timeLabel,
+            role: 'agent',
+            eventType: 'rescheduled',
+            counterpartName: customerName,
+            counterpartPhone: user.phone || undefined,
+            counterpartEmail: user.email || undefined,
+          }
         );
         sendNotification(
           user.id,
           "ส่งคำขอเปลี่ยนวันเวลานัดหมายแล้ว",
           `คุณได้ขอเปลี่ยนวันนัดเข้าชม "${prop?.title || "อสังหาริมทรัพย์"}" เป็นวันที่ ${date} (${timeLabel}) เรียบร้อยแล้ว อยู่ระหว่างรอนายหน้ายืนยัน`,
           "appointment",
-          "/appointments"
+          "/appointments",
+          {
+            appointmentId: appointment.id,
+            propertyTitle: prop?.title || "อสังหาริมทรัพย์",
+            propertyLocation: prop?.location,
+            date,
+            timeSlot: timeLabel,
+            role: 'customer',
+            eventType: 'rescheduled',
+          }
         );
       }
 
@@ -820,7 +932,20 @@ export async function DELETE(request: Request) {
           "แจ้งยกเลิกรายการนัดหมาย",
           `ผู้ใช้ (${customerName}) ได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr}${reasonText}`,
           "appointment",
-          "/agent/appointments"
+          "/agent/appointments",
+          {
+            appointmentId: appointment.id,
+            propertyTitle,
+            propertyLocation: appointment.properties?.location,
+            date: dateStr,
+            timeSlot: appointment.time_slot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : `ช่วงเช้า (${timeSlotRange("morning")} น.)`,
+            role: 'agent',
+            eventType: 'cancelled',
+            counterpartName: customerName,
+            counterpartPhone: user.phone || undefined,
+            counterpartEmail: user.email || undefined,
+            notes: reason || undefined,
+          }
         );
       }
       sendNotification(
@@ -828,7 +953,17 @@ export async function DELETE(request: Request) {
         "ยกเลิกนัดหมายสำเร็จ",
         `คุณได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr} เรียบร้อยแล้ว${reasonText}`,
         "appointment",
-        "/appointments"
+        "/appointments",
+        {
+          appointmentId: appointment.id,
+          propertyTitle,
+          propertyLocation: appointment.properties?.location,
+          date: dateStr,
+          timeSlot: appointment.time_slot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : `ช่วงเช้า (${timeSlotRange("morning")} น.)`,
+          role: 'customer',
+          eventType: 'cancelled',
+          notes: reason || undefined,
+        }
       );
     } else if (isAgent) {
       if (appointment.customer_id) {
@@ -837,7 +972,20 @@ export async function DELETE(request: Request) {
           "แจ้งยกเลิกรายการนัดหมาย",
           `นายหน้าผู้ดูแลโครงการได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr}${reasonText}`,
           "appointment",
-          "/appointments"
+          "/appointments",
+          {
+            appointmentId: appointment.id,
+            propertyTitle,
+            propertyLocation: appointment.properties?.location,
+            date: dateStr,
+            timeSlot: appointment.time_slot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : `ช่วงเช้า (${timeSlotRange("morning")} น.)`,
+            role: 'customer',
+            eventType: 'cancelled',
+            counterpartName: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "นายหน้าผู้ดูแล",
+            counterpartPhone: user.phone || undefined,
+            counterpartEmail: user.email || undefined,
+            notes: reason || undefined,
+          }
         );
       }
       sendNotification(
@@ -845,7 +993,17 @@ export async function DELETE(request: Request) {
         "ยกเลิกนัดหมายสำเร็จ",
         `คุณได้ยกเลิกรายการนัดหมายเข้าชม "${propertyTitle}" ประจำวันที่ ${dateStr} เรียบร้อยแล้ว${reasonText}`,
         "appointment",
-        "/agent/appointments"
+        "/agent/appointments",
+        {
+          appointmentId: appointment.id,
+          propertyTitle,
+          propertyLocation: appointment.properties?.location,
+          date: dateStr,
+          timeSlot: appointment.time_slot === "afternoon" ? `ช่วงบ่าย (${timeSlotRange("afternoon")} น.)` : `ช่วงเช้า (${timeSlotRange("morning")} น.)`,
+          role: 'agent',
+          eventType: 'cancelled',
+          notes: reason || undefined,
+        }
       );
     }
 

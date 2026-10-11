@@ -1,10 +1,37 @@
 'use client';
 
+/**
+ * ==============================================================================
+ * ไฟล์: app/agent/chat/page.tsx
+ * ==============================================================================
+ * 
+ * [หน้าที่ของไฟล์นี้]
+ * เป็น Container Component (Smart Component) สำหรับหน้าระบบแชทฝั่งนายหน้า (Agent Chat Page)
+ * ที่ Route: /agent/chat หรือ /agent/chat?sessionId={id}
+ * 
+ * [ความแตกต่างจากฝั่งลูกค้า app/(customer)/chat/page.tsx]
+ * 1. กำหนด prop role="agent" ส่งให้ SharedChatView เพื่อเปลี่ยนหัวข้อเป็น "กล่องข้อความเอเย่นต์"
+ * 2. แปลง sender ของข้อความที่ตัวเองส่งเป็น 'agent' เพื่อให้บอลลูนจัดวางชิดขวาอย่างถูกต้อง
+ * 3. มีระบบ "ข้อความตอบกลับด่วน" (Quick Reply Templates):
+ *    - ดึงเทมเพลตจากตาราง quick_reply_templates ผ่าน API: /api/agent/quick-replies
+ *    - แปลงเทมเพลตเป็นปุ่มลัด (Quick Actions) ด้านล่างกล่องแชท เพื่อให้นายหน้ากดส่งข้อความสำเร็จรูปได้ในคลิกเดียว
+ *    - รองรับการเพิ่มและลบเทมเพลตข้อความ
+ * 4. ใช้ API ชุดเดียวกัน (/api/chat/*) เพราะระบบ Backend จะตรวจสอบจาก Session ว่าผู้ใช้เป็น Agent 
+ *    แล้วกรองเฉพาะห้องแชทที่ตัวเองเป็นผู้ดูแล (agent_id = user.id) ให้อัตโนมัติ
+ * ==============================================================================
+ */
+
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
+
+// นำเข้า Hook สำหรับซิงก์ข้อมูลแชทแบบเรียลไทม์ผ่าน Pusher WebSocket
 import { useChatRealtime } from '@/hooks/useChatRealtime';
+
+// ตัวช่วยสำหรับบอกระบบ In-App Notification ทราบว่ากำลังเปิดดูห้องแชทใดอยู่ (เพื่อระงับการแจ้งเตือนของห้องนั้น)
 import { setActiveChatSession } from '@/lib/realtime/activeChatSession';
+
+// นำเข้า Shared Presentation Component กลางและ Types ที่เกี่ยวข้อง
 import SharedChatView, { SharedChatSession, OutgoingChatPayload } from '@/components/common/SharedChatView';
 import { toast } from '@/components/ui/toast';
 
@@ -12,37 +39,45 @@ import { toast } from '@/components/ui/toast';
 // 1. โครงสร้างประเภทข้อมูล (TypeScript Interfaces)
 // ==============================================================================
 
-/** โครงสร้างข้อมูลข้อความแชทแต่ละรายการในห้องสนทนา */
+/**
+ * โครงสร้างข้อมูลข้อความแชทแต่ละรายการในห้องสนทนา (ChatMessage)
+ */
 interface ChatMessage {
-  id: string | number;
-  sender: 'user' | 'other';
-  text: string;
-  time: string;
-  fileUrl?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  isRead?: boolean;
+  id: string | number;           // รหัสประจำตัวข้อความ (UUID หรือ Auto-generated ID)
+  sender: 'user' | 'other';      // ผู้ส่ง ('user' = เราส่งเอง, 'other' = ลูกค้าส่งมา)
+  text: string;                  // เนื้อหาข้อความตัวหนังสือ
+  time: string;                  // เวลาที่ส่งข้อความ (จัดรูปแบบแล้ว เช่น "10:15")
+  fileUrl?: string | null;       // ลิงก์รูปภาพหรือไฟล์เอกสารแนบ (ถ้ามี)
+  latitude?: number | null;      // ละติจูดพิกัดสถานที่ GPS (ถ้ามี)
+  longitude?: number | null;     // ลองจิจูดพิกัดสถานที่ GPS (ถ้ามี)
+  isRead?: boolean;              // สถานะเปิดอ่านแล้วหรือไม่ (true = อ่านแล้ว, false = ยังไม่อ่าน)
 }
 
-/** โครงสร้างข้อมูลห้องแชท (Chat Session) */
+/**
+ * โครงสร้างข้อมูลห้องแชท (ChatSession)
+ * แสดงรายการลูกค้าที่ติดต่อสอบถามเข้ามาหานายหน้าคนนี้
+ */
 interface ChatSession {
-  id: string;
-  name: string;
-  avatar: string;
-  lastMessage: string;
-  time: string;
-  unreadCount?: number;
-  hasMoreMessages?: boolean;
-  propertyTitle: string;
-  propertyPrice: string;
-  messages: ChatMessage[];
+  id: string;                    // รหัสประจำห้องแชท (UUID ของตาราง chat_sessions)
+  name: string;                  // ชื่อคู่สนทนา (ชื่อลูกค้าผู้สอบถาม)
+  avatar: string;                // URL รูปโปรไฟล์ของลูกค้า
+  lastMessage: string;           // ตัวอย่างข้อความล่าสุดสำหรับแสดงพรีวิวในรายการ
+  time: string;                  // เวลาของข้อความล่าสุด
+  unreadCount?: number;          // จำนวนข้อความที่ยังไม่ได้เปิดอ่านในห้องนี้
+  hasMoreMessages?: boolean;     // ธงบอกว่ายังมีข้อความเก่าให้โหลดเพิ่มได้อีกหรือไม่ (Cursor Pagination)
+  propertyTitle: string;         // ชื่อหัวข้อประกาศอสังหาริมทรัพย์ที่ลูกค้าสนใจ
+  propertyPrice: string;         // ราคาของอสังหาริมทรัพย์
+  messages: ChatMessage[];       // รายการข้อความทั้งหมดในห้องนี้
 }
 
-/** โครงสร้างข้อมูลเทมเพลตข้อความตอบกลับด่วนของนายหน้า */
+/**
+ * โครงสร้างข้อมูลเทมเพลตข้อความตอบกลับด่วนของนายหน้า (Quick Reply Template)
+ * แมปกับตาราง quick_reply_templates ในฐานข้อมูล PostgreSQL
+ */
 interface QuickReplyTemplate {
-  id: string;
-  title: string;
-  content: string;
+  id: string;                    // รหัสเทมเพลต (UUID)
+  title: string;                 // ชื่อหัวข้อเทมเพลต (เช่น "ขอพิกัดเพิ่มเติม", "นัดหมายเข้าชม")
+  content: string;               // เนื้อหาข้อความเต็มที่จะส่งออกไปเมื่อกดปุ่ม
 }
 
 // ==============================================================================
@@ -54,6 +89,8 @@ function AgentChatContent() {
   // สถานะการเข้าสู่ระบบของนายหน้า (NextAuth Session)
   const { data: sessionData, status } = useSession();
   const currentUserId = (sessionData?.user as { id?: string } | undefined)?.id;
+  
+  // ดึงค่า sessionId จาก URL Query Parameter (เช่น /agent/chat?sessionId=xxx)
   const searchParams = useSearchParams();
   const initialSessionId = searchParams.get('sessionId');
 
@@ -62,6 +99,7 @@ function AgentChatContent() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(initialSessionId);
   const [syncedSessionId, setSyncedSessionId] = useState<string | null>(initialSessionId);
 
+  // สถานะกำลังโหลดข้อมูลครั้งแรก
   const [loading, setLoading] = useState(true);
 
   // State สำหรับเก็บรายการเทมเพลตตอบกลับด่วนของนายหน้า
@@ -71,7 +109,7 @@ function AgentChatContent() {
   // 3. ฟังก์ชันดึงข้อมูลจาก API (Data Fetching Functions)
   // ----------------------------------------------------------------------------
 
-  // ดึงรายการห้องแชททั้งหมดของนายหน้าคนนี้จากฐานข้อมูลจริง
+  // ดึงรายการห้องแชททั้งหมดของนายหน้าคนนี้จากฐานข้อมูลจริง (GET /api/chat/sessions)
   const fetchChatData = useCallback(() => {
     fetch('/api/chat/sessions')
       .then(res => res.json())
@@ -89,7 +127,7 @@ function AgentChatContent() {
       .finally(() => setLoading(false));
   }, [initialSessionId]);
 
-  // ดึงเทมเพลตข้อความตอบกลับด่วนของนายหน้าคนนี้จากฐานข้อมูลจริง
+  // ดึงเทมเพลตข้อความตอบกลับด่วนของนายหน้าคนนี้จากฐานข้อมูลจริง (GET /api/agent/quick-replies)
   const fetchTemplates = useCallback(() => {
     fetch('/api/agent/quick-replies')
       .then(res => res.json())
@@ -140,6 +178,7 @@ function AgentChatContent() {
       .finally(() => fetchChatData());
   }, [selectedSessionId, fetchChatData]);
 
+  // เรียกใช้ Hook จัดการ WebSocket Real-time สำหรับห้องสนทนา
   const { isTyping, connectionError, sendTyping } = useChatRealtime({
     enabled: status === 'authenticated',
     sessionId: selectedSessionId,
@@ -159,11 +198,12 @@ function AgentChatContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId })
     })
+      // อัปเดต State ให้ตัวเลข unreadCount เป็น 0 ทันทีบน UI
       .then(() => setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, unreadCount: 0 } : s)))
       .catch(err => console.error('Mark read failed:', err));
   }, []);
 
-  // กดปุ่ม "โหลดข้อความเก่ากว่านี้" -> ดึงประวัติข้อความช่วงก่อนหน้ามาต่อด้านบน
+  // กดปุ่ม "โหลดข้อความเก่ากว่านี้" -> ดึงประวัติข้อความช่วงก่อนหน้ามาต่อด้านบน (Cursor Pagination)
   const handleLoadOlderMessages = useCallback(async (sessionId: string, oldestMessageId: string | number) => {
     try {
       const res = await fetch(`/api/chat/messages?sessionId=${sessionId}&before=${oldestMessageId}`);
@@ -178,7 +218,7 @@ function AgentChatContent() {
     }
   }, []);
 
-  // ลบข้อความเดียว
+  // ลบข้อความเดียว (DELETE /api/chat/messages)
   const handleDeleteMessage = useCallback(async (messageId: string | number) => {
     const res = await fetch(`/api/chat/messages?messageId=${messageId}`, { method: 'DELETE' });
     const data = await res.json();
@@ -190,7 +230,7 @@ function AgentChatContent() {
     }
   }, []);
 
-  // ลบห้องแชททั้งหมด
+  // ลบห้องแชททั้งหมด (DELETE /api/chat/sessions)
   const handleDeleteSession = useCallback(async (sessionId: string) => {
     const res = await fetch(`/api/chat/sessions?sessionId=${sessionId}`, { method: 'DELETE' });
     const data = await res.json();
@@ -238,7 +278,7 @@ function AgentChatContent() {
     }
   };
 
-  // ถามข้อมูลแล้วบันทึกเป็นเทมเพลตข้อความตอบกลับด่วนอันใหม่ลงฐานข้อมูล
+  // ถามข้อมูลแล้วบันทึกเป็นเทมเพลตข้อความตอบกลับด่วนอันใหม่ลงฐานข้อมูล (POST /api/agent/quick-replies)
   const handleAddTemplate = async () => {
     const title = prompt('กรุณาระบุชื่อหัวข้อเทมเพลต (เช่น "แจ้งเลื่อนนัดหมาย")');
     if (!title?.trim()) return;
@@ -263,7 +303,7 @@ function AgentChatContent() {
     }
   };
 
-  // ให้เลือกลบเทมเพลตข้อความตอบกลับด่วนออกจากฐานข้อมูล
+  // ให้เลือกลบเทมเพลตข้อความตอบกลับด่วนออกจากฐานข้อมูล (DELETE /api/agent/quick-replies)
   const handleDeleteTemplate = async () => {
     if (templates.length === 0) return;
     const list = templates.map((t, i) => `${i + 1}. ${t.title}`).join('\n');
@@ -354,7 +394,7 @@ function AgentChatContent() {
   );
 }
 
-// Export หน้าหลักของ Agent Chat พร้อม Suspense รองรับการใช้ useSearchParams
+// Export หน้าหลักของ Agent Chat พร้อม Suspense รองรับการใช้ useSearchParams ตามมาตรฐาน Next.js
 export default function AgentChatPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-bold text-xs text-slate-500">กำลังโหลดระบบสนทนา...</div>}>
