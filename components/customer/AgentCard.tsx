@@ -1,7 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, Star, Phone, BadgeCheck, UserCheck, MapPin } from 'lucide-react';
+import { Check, Star, Phone, BadgeCheck, UserCheck, MapPin, MessageSquare } from 'lucide-react';
 
 export interface Agent {
   id: string;
@@ -18,6 +18,7 @@ export interface Agent {
   isVerified: boolean;
   isPro?: boolean;
   experience?: string | null;
+  lineId?: string | null;
 }
 
 interface AgentCardProps {
@@ -110,6 +111,17 @@ export default function AgentCard({ agent }: AgentCardProps) {
               {agent.phone}
             </a>
           </div>
+          {agent.lineId && (
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-400 flex items-center gap-1">
+                <MessageSquare className="w-3 h-3 text-emerald-600 shrink-0" />
+                LINE ID:
+              </span>
+              <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                {agent.lineId}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

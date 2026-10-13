@@ -60,7 +60,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Heart,
-  Star
+  Star,
+  Copy,
+  Check
 } from 'lucide-react';
 import { getGoogleMapsDirectionsUrl, type NearbyPlaceResult } from '@/lib/nearbyService';
 
@@ -235,6 +237,7 @@ export default function PropertyDetailPage() {
     };
   } | null>(null);
 
+  const [copiedLine, setCopiedLine] = useState(false);
   const isNearbyLoading = Boolean(property && (!nearbyData || nearbyData.propertyId !== String(property.id)));
 
   useEffect(() => {
@@ -440,6 +443,16 @@ export default function PropertyDetailPage() {
     ? `https://line.me/ti/p/~${rawLineId.replace('@', '')}`
     : `https://line.me/R/msg/text/?${encodeURIComponent(`สวัสดีครับ สนใจอสังหาริมทรัพย์: ${property.title}`)}`;
   const phoneUrl = `tel:${agentPhone.replace(/[^\d+]/g, '')}`;
+
+  const handleCopyLineId = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined' && rawLineId) {
+      navigator.clipboard.writeText(rawLineId);
+      setCopiedLine(true);
+      toast.success(`คัดลอก LINE ID: ${rawLineId} แล้ว`);
+      setTimeout(() => setCopiedLine(false), 2000);
+    }
+  };
 
   // ----------------------------------------------------------------------------
   // 7. RENDERING SECTION (การแสดงผล UI)
@@ -1069,12 +1082,66 @@ export default function PropertyDetailPage() {
 
               {/* ปุ่มติดต่อด่วน (โทรศัพท์ & คุย LINE) */}
               <div className="space-y-2">
-                <a href={phoneUrl} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs">
-                  <PhoneIcon className="w-3.5 h-3.5" /> {agentPhone}
+                <a 
+                  href={phoneUrl} 
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs shadow-xs"
+                >
+                  <PhoneIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span>{agentPhone}</span>
                 </a>
-                <a href={lineUrl} target="_blank" rel="noreferrer" className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs">
-                  <ChatIcon className="w-3.5 h-3.5" /> คุย LINE นายหน้า
-                </a>
+
+                {/* กล่องแสดง LINE ID ของนายหน้า */}
+                {rawLineId ? (
+                  <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-3 space-y-2 shadow-2xs">
+                    <div className="flex items-center justify-between gap-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="text-[11px] font-bold text-emerald-800 shrink-0">LINE ID:</span>
+                        <span className="font-mono text-[11px] font-black text-emerald-950 bg-white px-2 py-0.5 rounded-lg border border-emerald-200 truncate">
+                          {rawLineId}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyLineId}
+                        className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-white hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                        title="คัดลอก LINE ID"
+                      >
+                        {copiedLine ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span className="text-[10px]">คัดลอกแล้ว</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span className="text-[10px]">คัดลอก</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <a 
+                      href={lineUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-xs shadow-xs cursor-pointer"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                      <span>เปิดแชท LINE นายหน้า</span>
+                    </a>
+                  </div>
+                ) : (
+                  <a 
+                    href={lineUrl} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs shadow-xs"
+                  >
+                    <ChatIcon className="w-3.5 h-3.5 shrink-0" />
+                    <span>คุย LINE นายหน้า</span>
+                  </a>
+                )}
               </div>
 
               {/* ปุ่มนัดหมายชมบ้าน และ ปุ่มแชทสดในระบบ */}
