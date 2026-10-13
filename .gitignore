@@ -47,6 +47,7 @@ public/uploads/
 
 # markdown notes folder
 .md/
+docs/email_setup_guide.md
 
 # database dumps
 *.sql
