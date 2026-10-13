@@ -57,6 +57,8 @@ export async function GET(request: Request) {
       recentProps,
       recentUsers
     ] = await Promise.all([
+        // 1. ดึง Log จากตาราง login_histories (การเข้าสู่ระบบจริง)
+
       db.properties.count({ where: { status: "pending" } }),
       db.properties.count({ where: { status: "approved" } }),
       db.properties.count(),
