@@ -1,5 +1,18 @@
 'use client';
 
+/**
+ * ==============================================================================
+ * [SEARCH: NOTIFICATION_DETAIL_MODAL] [UI: ป๊อปอัปรายละเอียดการแจ้งเตือน] [STYLE: MODAL_PORTAL_OVERLAY]
+ * โมดอลแสดงรายละเอียดการแจ้งเตือนแบบเจาะลึก (Notification Detail Modal)
+ * /components/common/NotificationModal.tsx
+ * ==============================================================================
+ * วัตถุประสงค์และฟังก์ชันหลัก:
+ * 1. แสดงผลผ่าน React Portal ไปยัง document.body เพื่อไม่ให้ติดข้อจำกัด Z-Index
+ * 2. แสดงข้อมูลหัวข้อ รายละเอียด วันเวลาที่ได้รับ ประเภทหมวดหมู่ และปุ่มแอ็กชันนำทาง
+ * 3. มีปุ่มทำเครื่องหมายว่าอ่านแล้ว/ยังไม่ได้อ่าน (Toggle Read) และปุ่มลบ (Delete)
+ * ==============================================================================
+ */
+
 import React, { useEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';

@@ -2,6 +2,7 @@
 
 /**
  * ==============================================================================
+ * [SEARCH: HERO_SECTION] [UI: ฮีโร่แบนเนอร์หน้าแรก] [STYLE: HERO_SEARCH_CONTAINER]
  * คอมโพเนนต์แบนเนอร์ค้นหาหน้าแรก (HeroSection Component)
  * ไฟล์: /components/customer/HeroSection.tsx
  * ==============================================================================
@@ -186,6 +187,7 @@ export default function HeroSection() {
                 ลงประกาศขาย
               </Link>
             ) : (
+              // [UI: ปุ่มค้นหาหลักหน้าแรก] [SEARCH: HERO_SEARCH_BUTTON] [STYLE: ปุ่มน้ำเงินทรงมน]
               // กรณีทั่วไปแสดงปุ่ม "ค้นหาเลย"
               <button
                 type="button"

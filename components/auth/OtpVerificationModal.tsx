@@ -1,5 +1,6 @@
 /**
  * ==============================================================================
+ * [SEARCH: OTP_VERIFICATION_MODAL] [UI: โมดอลยืนยันรหัส OTP] [STYLE: OTP_MODAL_CARD]
  * หน้าต่างลอยยืนยันรหัส OTP 6 หลัก (OTP Verification Modal Component)
  * /components/auth/OtpVerificationModal.tsx
  * ==============================================================================

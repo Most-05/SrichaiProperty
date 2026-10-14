@@ -1,3 +1,14 @@
+/**
+ * ==============================================================================
+ * [SEARCH: UI_CARD_COMPONENT] [STYLE: CARD_LAYOUT_SYSTEM]
+ * คอมโพเนนต์การ์ดข้อมูลมาตรฐาน (Core UI Card Primitives)
+ * ==============================================================================
+ * ชุดคอมโพเนนต์ย่อยสำหรับการ์ด ได้แก่ Card, CardHeader, CardTitle,
+ * CardDescription, CardAction, CardContent และ CardFooter
+ * รองรับ Container Queries (@container) และ Responsive Spacing
+ * ==============================================================================
+ */
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

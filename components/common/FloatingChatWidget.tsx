@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react'; // ใช้ดึงข้อม�
 import { MessageCircle } from 'lucide-react';
 
 // ==============================================================================
+// [SEARCH: FLOATING_CHAT_WIDGET] [UI: ปุ่มแชทลอยมุมขวาล่าง] [STYLE: FLOATING_CHAT_STYLE]
 // FLOATING CHAT WIDGET COMPONENT (ปุ่มทางด่วนเข้าสู่ระบบแชทแบบลอยมุมขวาล่าง)
 // ==============================================================================
 /**

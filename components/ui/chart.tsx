@@ -1,5 +1,16 @@
 "use client"
 
+/**
+ * ==============================================================================
+ * [SEARCH: UI_CHART_COMPONENT] [STYLE: RECHARTS_THEME_ADAPTER]
+ * คอมโพเนนต์แผนภูมิและกราฟสถิติ (Core UI Chart Primitives)
+ * ==============================================================================
+ * ออกแบบครอบ Recharts เพื่อรองรับระบบธีม CSS Variables ของ Tailwind CSS
+ * ใช้ในหน้า Dashboard สถิติของทั้ง Admin และ Agent
+ * ประกอบด้วย: ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent
+ * ==============================================================================
+ */
+
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 import type { TooltipValueType } from "recharts"

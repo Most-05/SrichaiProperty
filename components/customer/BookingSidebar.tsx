@@ -2,6 +2,7 @@
 
 /**
  * ==============================================================================
+ * [SEARCH: BOOKING_SIDEBAR] [UI: แถบสรุปทรัพย์และนายหน้าในการจอง] [STYLE: BOOKING_SIDEBAR_CARD]
  * คอมโพเนนต์การ์ดข้างแสดงข้อมูลสรุปทรัพย์และนายหน้า (BookingSidebar Component)
  * /components/customer/BookingSidebar.tsx
  * ==============================================================================
@@ -19,17 +20,18 @@ import { Property } from '@/context/AppContext'; // กำหนดโครง�
 
 // อินเทอร์เฟซกำหนด Props รับออบเจกต์อสังหาริมทรัพย์ (property) มาจากหน้าแม่
 interface BookingSidebarProps {
-  property: Property;
+  property: Property; // ข้อมูลอสังหาริมทรัพย์ที่ผู้ใช้เลือกทำการจองเข้าชม
 }
 
 export default function BookingSidebar({ property }: BookingSidebarProps) {
   
-  // จัดข้อความทำเลสถานที่: ถ้ามีชื่อ ตำบล/อำเภอ/จังหวัด ให้ต่อประโยคเข้าด้วยกัน ถ้าไม่มีให้ใช้อีโมจิที่ตัดสัญลักษณ์นำออก
+  // จัดข้อความทำเลสถานที่: ถ้ามีชื่อ ตำบล/อำเภอ/จังหวัด ให้ต่อประโยคเข้าด้วยกัน ถ้าไม่มีให้ตัดสัญลักษณ์เข็มหมุดนำหน้าออก
   const locationText = property.districtName && property.amphureName && property.provinceName 
     ? `${property.districtName}, ${property.amphureName}, ${property.provinceName}` 
     : property.location.replace("📍 ", "");
 
   return (
+    // คอนเทนเนอร์คอลัมน์ด้านข้าง กำหนดความกว้าง 4 ส่วนในหน้าจอขนาดใหญ่ (lg:col-span-4)
     <div className="lg:col-span-4 flex flex-col gap-5">
       
       {/* ========================================================================
@@ -38,6 +40,7 @@ export default function BookingSidebar({ property }: BookingSidebarProps) {
       <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/70 shadow-sm">
         {/* รูปภาพหลักอสังหาริมทรัพย์ + แท็กสถานะ (เช่น ขายด่วน/ทรัพย์พรีเมียม) */}
         <div className="h-44 relative bg-slate-100">
+          {/* คอมโพเนนต์ Image ของ Next.js แสดงรูปภาพหลักของทรัพย์ */}
           <Image 
             src={property.image} 
             width={300} 
@@ -46,22 +49,27 @@ export default function BookingSidebar({ property }: BookingSidebarProps) {
             className="w-full h-full object-cover" 
             alt={property.title} 
           />
+          {/* ป้ายแท็กสถานะพิเศษ เช่น 'ขายด่วน' ลอยอยู่มุมบนซ้าย */}
           <span className="absolute top-3 left-3 bg-orange-500 text-white px-2.5 py-0.5 rounded-full text-[9px] font-black shadow-sm">
             {property.tag || 'ขายด่วน'}
           </span>
         </div>
 
-        {/* ประเภทอสังหาฯ, ชื่อประกาศ, ราคา และทำเลที่ตั้ง */}
+        {/* รายละเอียดทรัพย์: ประเภท, ชื่อหัวข้อประกาศ, ราคา และพิกัดทำเล */}
         <div className="p-5 space-y-2">
+          {/* ป้ายประเภทอสังหาฯ เช่น บ้านเดี่ยว, คอนโด */}
           <span className="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full text-[9px] font-bold inline-block">
             {property.type}
           </span>
+          {/* ชื่อประกาศ ตัดความยาวไม่เกิน 2 บรรทัด (line-clamp-2) */}
           <h3 className="text-slate-900 font-extrabold text-sm leading-snug line-clamp-2">
             {property.title}
           </h3>
+          {/* ราคาขายหรือเช่าตัวหนาสีน้ำเงิน */}
           <p className="text-lg font-black text-blue-700 leading-none pt-1">
             {property.price}
           </p>
+          {/* ข้อความทำเลที่ตั้ง พร้อมไอคอนเข็มหมุด MapPin จาก lucide-react */}
           <p className="text-slate-400 text-[10px] font-bold flex items-center gap-1.5 pt-1.5 border-t border-slate-100">
             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span>{locationText}</span>
@@ -75,6 +83,7 @@ export default function BookingSidebar({ property }: BookingSidebarProps) {
       <div className="bg-white rounded-3xl p-5 border border-slate-200/70 shadow-sm space-y-4">
         {/* รูปประจำตัว ชื่อ และป้ายยืนยันตัวตนของนายหน้า */}
         <div className="flex items-center gap-3">
+          {/* รูปถ่ายนายหน้าทรงกลมพร้อมเส้นขอบ */}
           <Image 
             src={property.agentImage} 
             width={44}
@@ -86,6 +95,7 @@ export default function BookingSidebar({ property }: BookingSidebarProps) {
           <div>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">นายหน้าผู้ดูแล</p>
             <h4 className="text-xs font-black text-slate-800">{property.agentName}</h4>
+            {/* ป้ายรับรองการยืนยันตัวตนสีเขียวพร้อมไอคอน Check */}
             <span className="bg-emerald-50 text-emerald-700 text-[8px] font-black px-2 py-0.5 rounded mt-1 inline-flex items-center gap-1">
               <Check className="w-2.5 h-2.5 text-emerald-600 shrink-0 stroke-[3]" />
               ยืนยันตัวตนแล้ว

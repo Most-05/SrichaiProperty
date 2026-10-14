@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 // ============================================================================
-// ไฟล์นี้คือ "Middleware" ของ Next.js (ในโปรเจกต์นี้ถูก export เป็นชื่อ proxy)
+// [SEARCH: MIDDLEWARE_PROXY] [AUTH: ROUTE_PROTECTION_GATEKEEPER] [LOGIC: ตรวจสอบสิทธิ์ RBAC และ REDIRECT ป้องกันเข้าถึงมิชอบ]
+// ไฟล์นี้คือ "Middleware / Proxy" ของ Next.js (ในโปรเจกต์นี้ถูก export เป็นชื่อ proxy)
 // หน้าที่หลัก: ทำงานสกัดกั้นทุก request ที่เข้ามา "ก่อน" ที่จะไปถึงหน้าเว็บ/หน้า API จริง
 // เพื่อตรวจสอบว่า "ใครเป็นคนเรียก" (login หรือยัง) และ "มีสิทธิ์" เข้าหน้านั้นหรือไม่
 // ถ้าไม่มีสิทธิ์ก็จะ redirect ไปหน้าอื่น หรือตอบ error กลับไปแทน

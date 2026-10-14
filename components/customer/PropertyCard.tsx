@@ -3,12 +3,16 @@
 /**
  * ==============================================================================
  * การ์ดแสดงผลอสังหาริมทรัพย์ (PropertyCard Component)
+ * /components/customer/PropertyCard.tsx
  * ==============================================================================
  * ออกแบบใหม่:
  * 1. ใช้ Lucide Icons มาตรฐานทั้งระบบ (MapPin, Bed, Bath, Maximize2, Star, Crown, BadgeCheck, Heart, Calendar)
  * 2. รองรับ 2 มุมมอง: Grid View (การ์ดตาราง) และ List View (การ์ดแนวนอน)
  * 3. แสดงราคาต่อ ตร.ม. และยอดผ่อนประเมินเบื้องต้นต่องวด
  * 4. ปุ่มลัดกด "นัดหมายเข้าชม" ตรงถึงหน้านัดหมายได้ทันที
+ *
+ * [SEARCH: PROPERTY_CARD_COMPONENT]
+ * [UI: การ์ดแสดงผลอสังหาริมทรัพย์]
  * ==============================================================================
  */
 
@@ -45,28 +49,31 @@ export default function PropertyCard({
   toggleFavorite,
   viewMode = 'grid'
 }: PropertyCardProps) {
+  // บันทึกสถานะว่ารูปภาพหลักโหลดเสร็จสมบูรณ์แล้วหรือยัง เพื่อแสดงเอฟเฟกต์ Skeleton Shimmer ระหว่างโหลด
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // ฟังก์ชันช่วยสร้างรูป Avatar สำรองจากชื่อนายหน้า
   const getInitialsAvatar = (name: string) =>
     fallbackAvatarUrl(name || 'Agent', '1d4ed8');
 
-  // คำนวณราคาเป็นตัวเลข
+  // คำนวณราคาเป็นตัวเลข (ตัดเครื่องหมาย ฿, จุลภาค และตัวอักษรอื่นออก เหลือเฉพาะตัวเลขล้วน)
   const rawPriceStr = prop.price || '';
   const numPrice = parseInt(rawPriceStr.replace(/[^\d]/g, ''), 10) || 0;
 
-  // คำนวณราคาต่อ ตร.ม.
+  // คำนวณราคาต่อตารางเมตร (Price per Sq.m.) โดยนำราคาหารด้วยพื้นที่ใช้สอย
   const pricePerSqm = (prop.area && prop.area > 0 && numPrice > 0)
     ? Math.round(numPrice / prop.area)
     : null;
 
-  // คำนวณยอดผ่อนประเมิน (สำหรับทรัพย์ขาย ดอกเบี้ยมาตรฐาน 30 ปี ~฿5,500 - ฿6,000 ต่อ 1 ล้าน)
+  // ตรวจสอบว่าประกาศนี้เป็นประเภทขายหรือไม่ (ดูจาก listingType หรือข้อความราคาที่ไม่มีคำว่า '/ เดือน')
   const isSale = prop.listingType === 'sale' || !rawPriceStr.includes('/ เดือน');
+
+  // คำนวณยอดผ่อนประเมินเบื้องต้น (สำหรับทรัพย์ขาย ประเมินยอดผ่อนดอกเบี้ยมาตรฐาน 30 ปี ~฿5,500 ต่อ 1 ล้านบาท)
   const estimatedMonthly = (isSale && numPrice > 0)
     ? Math.round(numPrice * 0.0055)
     : null;
 
-  // ทำเลที่ตั้งแบบกระชับ
+  // ทำเลที่ตั้งแบบกระชับ: รวม ตำบล, อำเภอ, จังหวัด หรือใช้ข้อความทำเลเดิมที่ตัดสัญลักษณ์เข็มหมุดออก
   const displayLocation = (prop.districtName && prop.amphureName && prop.provinceName)
     ? `${prop.districtName}, ${prop.amphureName}, ${prop.provinceName}`
     : (prop.location || '').replace("📍 ", "").trim();
@@ -117,7 +124,8 @@ export default function PropertyCard({
             </span>
           </div>
 
-          {/* ปุ่มหัวใจรายการโปรด */}
+          {/* [UI: ปุ่มบันทึกรายการโปรด (List View)] [SEARCH: FAVORITE_BUTTON] [STYLE: ปุ่มหัวใจลอยบนรูปภาพ] */}
+          {/* ปุ่มหัวใจรายการโปรด: กดบันทึก/ยกเลิกรายการโปรด โดยหยุด event propagation ไม่ให้เปิดลิงก์ */}
           <button
             type="button"
             onClick={(e) => {
@@ -243,6 +251,8 @@ export default function PropertyCard({
               </div>
             </div>
 
+            {/* [UI: ปุ่มนัดชมทรัพย์ (List View)] [SEARCH: BOOK_VIEWING_BUTTON] [STYLE: ปุ่มฟ้าโปร่ง hover ฟ้าเข้ม] */}
+            {/* ปุ่มนัดชม: ลิงก์นำทางไปยังหน้าจองเวลานัดชมพร้อม query param รหัสทรัพย์สิน */}
             <div className="flex items-center gap-2">
               <Link
                 href={`/book-appointment?propertyId=${prop.id}`}
@@ -272,6 +282,7 @@ export default function PropertyCard({
     <div className={`bg-white rounded-2xl border shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group relative ${
       prop.isPremium ? 'border-amber-400 ring-2 ring-amber-400/20 shadow-amber-50/50' : 'border-slate-200/90'
     }`}>
+      {/* [UI: ปุ่มบันทึกรายการโปรด (Grid View)] [SEARCH: FAVORITE_BUTTON] [STYLE: ปุ่มหัวใจมุมขวาบน] */}
       {/* ปุ่มกดหัวใจบันทึกรายการโปรด */}
       <button
         type="button"
@@ -442,7 +453,8 @@ export default function PropertyCard({
           </div>
         </div>
 
-        {/* ปุ่มลัดนัดชมบ้าน */}
+        {/* [UI: ปุ่มนัดชมทรัพย์ (Grid View)] [SEARCH: BOOK_VIEWING_BUTTON] [STYLE: ปุ่มนัดชมทรงกลมมนพร้อมไอคอนปฏิทิน] */}
+        {/* ปุ่มลัดนัดชมบ้าน: เปิดหน้าแบบฟอร์มจองเวลานัดชม */}
         <Link 
           href={`/book-appointment?propertyId=${prop.id}`}
           className="text-xs font-bold text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-transparent px-3 py-1.5 rounded-xl transition-all shadow-2xs flex items-center gap-1 shrink-0 cursor-pointer"

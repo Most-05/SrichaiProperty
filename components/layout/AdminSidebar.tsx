@@ -1,5 +1,27 @@
 'use client';
 
+/**
+ * ==============================================================================
+ * [SEARCH: ADMIN_SIDEBAR] [UI: เมนูด้านข้างแอดมิน] [STYLE: ADMIN_SIDEBAR_THEME]
+ * แถบเมนูด้านข้างสำหรับผู้ดูแลระบบ (Admin Sidebar Component)
+ * /components/layout/AdminSidebar.tsx
+ * ==============================================================================
+ * หน้าที่หลัก:
+ * 1. เมนูนำทางไปยังส่วนต่างๆ ของระบบ Admin:
+ *    - หน้าภาพรวม (Dashboard)
+ *    - สถิติและการวิเคราะห์ (Analytics)
+ *    - ตรวจสอบรายการทรัพย์ (Moderation) พร้อมแสดง Badge นับจำนวนรอตรวจ
+ *    - ตรวจสอบยืนยันตัวตน KYC นายหน้า พร้อม Badge จำนวนรอตรวจ
+ *    - จัดการข้อร้องเรียน (Reports) พร้อม Badge
+ *    - ตรวจสอบสลิปการชำระเงิน (Payments) พร้อม Badge
+ *    - จัดการผู้ใช้งาน (Users)
+ *    - ตั้งค่าระบบ (Settings)
+ * 2. Real-time Counter Sync: ดึงจำนวนงานค้างตรวจจาก `/api/admin/dashboard` อัตโนมัติ
+ * 3. Mobile Drawer Responsive: เปิด/ปิด Drawer เมนูบนหน้าจอขนาดเล็ก (< lg)
+ * 4. User Profile & Sign Out: แสดงชื่อ แอดมิน และปุ่มออกจากระบบ
+ * ==============================================================================
+ */
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 /**
  * ==============================================================================
+ * [SEARCH: TOAST_MANAGER] [SEARCH: USE_TOAST_HOOK] [UI: ระบบการแจ้งเตือน TOAST]
  * ระบบ Toast Notification แบบ Event-Driven (Custom Lightweight Toast)
  * /components/ui/toast.tsx
  * ==============================================================================
