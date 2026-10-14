@@ -1,129 +1,93 @@
-
-
 /**
  * ==============================================================================
- * เซอร์วิสคำนวณและประเมินผล SLA การตรวจสอบประกาศ (Moderation SLA Service)
+ * เซอร์วิสคำนวณเวลารอตรวจประกาศ (Moderation Waiting Time Service)
  * /lib/services/slaService.ts
  * ==============================================================================
- * หน้าที่หลัก:
- * 1. คำนวณเวลาที่เหลือ (Count Down) ของประกาศที่รอการตรวจสอบ (Pending Moderation)
- * 2. จัดระดับความด่วน (SlaLevel): 'normal', 'warning', 'urgent', 'overdue'
- *    เพื่อนำไปกำหนดสีป้ายกำกับ (Badge) และแจ้งเตือนแอดมิน
- * 3. ประเมินผลย้อนหลัง (Performance KPI): คำนวณเวลาเฉลี่ย และ % การตรวจเสร็จทันกำหนด 24 ชม.
- *
- * ความสัมพันธ์:
- * - เชื่อมโยงกับ API: /api/admin/moderation, /api/admin/dashboard
- * - เชื่อมโยงกับ UI: app/admin/(dashboard)/moderation/page.tsx (ปุ่มเรียงตาม SLA)
- *   และ components/admin/ModerationList.tsx (ป้ายแสดง SLA ด่วน)
- *
- * [SEARCH: SLA_SERVICE]
- * [SEARCH: MODERATION_SLA]
- * [LOGIC: การคำนวณ SLA ตรวจสอบประกาศ]
+ * คำนวณเวลาง่ายๆ ตรงไปตรงมา:
+ * 1. ประกาศนี้ลงมาแล้วกี่ชั่วโมง กี่นาที (รอตรวจมานานเท่าไหร่)
+ * 2. ระดับความด่วน:
+ *    - รอ < 12 ชม.  = normal  (สีเทา/ปกติ)
+ *    - รอ 12-24 ชม. = warning (สีส้ม/เริ่มนาน)
+ *    - รอ > 24 ชม.  = urgent  (สีแดง/ค้างตรวจนานเกิน 24 ชม.)
  * ==============================================================================
  */
 
-/** กรอบเวลาที่แอดมินต้องตรวจประกาศให้เสร็จ นับจากเวลาที่นายหน้ากดส่ง (ชั่วโมง) */
+/** มาตรฐานเวลาตรวจประกาศ (ชั่วโมง) */
 export const MODERATION_SLA_HOURS = 24;
 
-/** เหลือน้อยกว่านี้ถือว่า "ด่วน" (ชั่วโมง) - ป้ายจะแสดงสีแดง (urgent) */
-export const MODERATION_SLA_URGENT_HOURS = 4;
-
-/** เหลือน้อยกว่านี้ถือว่า "ใกล้ครบกำหนด" (ชั่วโมง) - ป้ายจะแสดงสีส้ม/เหลือง (warning) */
-export const MODERATION_SLA_WARNING_HOURS = 12;
-
-const MS_PER_MINUTE = 60 * 1000;
-const MS_PER_HOUR = 60 * MS_PER_MINUTE;
-
-/** ระดับความด่วน ใช้เลือกสีที่หน้าเว็บ */
 export type SlaLevel = 'normal' | 'warning' | 'urgent' | 'overdue';
 
 export interface SlaInfo {
-  /** เวลาครบกำหนดตรวจ (created_at + MODERATION_SLA_HOURS) */
   deadline: Date;
-  /** นาทีที่เหลือ (ติดลบ = เลยกำหนดมาแล้ว) */
   minutesLeft: number;
-  /** ชั่วโมงที่เหลือแบบทศนิยม (ติดลบ = เลยกำหนดมาแล้ว) */
   hoursLeft: number;
-  /** ข้อความพร้อมแสดง เช่น "เหลือ 45 นาที" / "เกินกำหนด 3 ชม." */
   label: string;
-  /** ระดับความด่วน ใช้เลือกสีป้าย */
   level: SlaLevel;
-  /** เลยกำหนดแล้วหรือยัง */
   isOverdue: boolean;
 }
 
 /**
- * คำนวณสถานะ SLA ของประกาศ 1 รายการ
- * [SEARCH: CALCULATE_MODERATION_SLA]
- *
- * @param createdAt เวลาที่นายหน้ากดส่งประกาศเข้ามา
- * @param now       เวลาปัจจุบัน (ส่งเข้ามาได้เพื่อให้เทสต์ผลลัพธ์คงที่)
+ * คำนวณว่าบ้านหลังนี้ลงประกาศมาแล้วกี่ชั่วโมง กี่นาที
  */
 export function calculateModerationSla(
   createdAt: Date | string,
   now: number = Date.now()
 ): SlaInfo {
-  const deadline = new Date(new Date(createdAt).getTime() + MODERATION_SLA_HOURS * MS_PER_HOUR);
-  const msLeft = deadline.getTime() - now;
-  const minutesLeft = Math.ceil(msLeft / MS_PER_MINUTE);
-  const hoursLeft = msLeft / MS_PER_HOUR;
-  const isOverdue = msLeft <= 0;
+  const createdMs = new Date(createdAt).getTime();
+  const diffMs = Math.max(0, now - createdMs);
+
+  const totalMinutes = Math.floor(diffMs / (60 * 1000));
+  const hoursPassed = Math.floor(totalMinutes / 60);
+  const minutesPassed = totalMinutes % 60;
+
+  // 1. ระดับความเร่งด่วน: เกิน 24 ชม. = ด่วนมาก (urgent), เกิน 12 ชม. = เริ่มนาน (warning)
+  let level: SlaLevel = 'normal';
+  if (hoursPassed >= MODERATION_SLA_HOURS) {
+    level = 'urgent';
+  } else if (hoursPassed >= 12) {
+    level = 'warning';
+  }
+
+  // 2. ข้อความภาษาไทยเข้าใจง่าย ตรงไปตรงมา
+  let label = '';
+  if (hoursPassed === 0 && minutesPassed === 0) {
+    label = 'เพิ่งลงเมื่อสักครู่';
+  } else if (hoursPassed === 0) {
+    label = `รอตรวจ ${minutesPassed} นาที`;
+  } else if (hoursPassed < 24) {
+    label = minutesPassed > 0 
+      ? `รอตรวจ ${hoursPassed} ชม. ${minutesPassed} นาที` 
+      : `รอตรวจ ${hoursPassed} ชม.`;
+  } else {
+    const days = Math.floor(hoursPassed / 24);
+    const remHours = hoursPassed % 24;
+    label = remHours > 0 
+      ? `ค้างตรวจนาน ${days} วัน ${remHours} ชม.` 
+      : `ค้างตรวจนาน ${days} วัน`;
+  }
 
   return {
-    deadline,
-    minutesLeft,
-    hoursLeft,
-    label: formatSlaLabel(minutesLeft),
-    level: resolveSlaLevel(hoursLeft),
-    isOverdue
+    deadline: new Date(createdMs + MODERATION_SLA_HOURS * 60 * 60 * 1000),
+    minutesLeft: (MODERATION_SLA_HOURS * 60) - totalMinutes,
+    hoursLeft: MODERATION_SLA_HOURS - (totalMinutes / 60),
+    label,
+    level,
+    isOverdue: hoursPassed >= MODERATION_SLA_HOURS
   };
 }
 
-/**
- * แปลงนาทีที่เหลือเป็นข้อความภาษาไทย
- * เหลือไม่ถึง 1 ชม. จะบอกเป็นนาที เพื่อให้แอดมินเห็นความเร่งด่วนชัดขึ้น
- */
-function formatSlaLabel(minutesLeft: number): string {
-  if (minutesLeft <= 0) {
-    const overdueMinutes = -minutesLeft;
-    return overdueMinutes < 60
-      ? `เกินกำหนด ${overdueMinutes} นาที`
-      : `เกินกำหนด ${Math.floor(overdueMinutes / 60)} ชม.`;
-  }
-  return minutesLeft < 60
-    ? `เหลือ ${minutesLeft} นาที`
-    : `เหลือ ${Math.floor(minutesLeft / 60)} ชม.`;
-}
-
-/** จัดระดับความด่วนจากชั่วโมงที่เหลือ */
-function resolveSlaLevel(hoursLeft: number): SlaLevel {
-  if (hoursLeft <= 0) return 'overdue';
-  if (hoursLeft <= MODERATION_SLA_URGENT_HOURS) return 'urgent';
-  if (hoursLeft <= MODERATION_SLA_WARNING_HOURS) return 'warning';
-  return 'normal';
-}
-
-// ==============================================================================
-// ส่วนที่ 2: วัดผล SLA ย้อนหลัง (ใช้ได้หลังประกาศถูกตรวจแล้วเท่านั้น)
-// ==============================================================================
-// ส่วนบนตอบได้แค่ "ยังเหลือเวลาอีกเท่าไหร่" ของประกาศที่ยังรอตรวจ
-// พอแอดมินกดอนุมัติ/ตีกลับ ข้อมูลนั้นก็หมดประโยชน์ทันที
-// ส่วนนี้ใช้ reviewed_at คู่กับ created_at ตอบว่า "จริงๆ แล้วใช้เวลาไปเท่าไหร่
-// และทันกำหนดหรือไม่" ซึ่งเป็นสิ่งที่ต้องใช้ตอนรายงานผล
+// ------------------------------------------------------------------------------
+// ส่วนประเมินผลเวลาที่แอดมินใช้ตรวจจริง (หลังอนุมัติหรือตีกลับแล้ว)
+// ------------------------------------------------------------------------------
 
 export interface ReviewDurationInfo {
-  /** เวลาที่ใช้ตรวจจริง (ชั่วโมงแบบทศนิยม) */
   hoursUsed: number;
-  /** ข้อความพร้อมแสดง เช่น "3 ชม. 12 นาที" */
   label: string;
-  /** ตรวจเสร็จภายใน MODERATION_SLA_HOURS หรือไม่ */
   withinSla: boolean;
 }
 
 /**
- * คำนวณว่าประกาศหนึ่งใบใช้เวลาตรวจไปเท่าไหร่
- * คืน null ถ้ายังไม่ถูกตรวจ หรือเป็นประกาศเก่าที่ยังไม่มี reviewed_at
- * (ข้อมูลก่อนฟีเจอร์นี้จะไม่มีค่า จึงต้องเผื่อกรณี null ไว้ทุกที่ที่เรียกใช้)
+ * คำนวณเวลาที่แอดมินใช้ตรวจจริง (reviewed_at - created_at)
  */
 export function calculateReviewDuration(
   createdAt: Date | string | null,
@@ -134,46 +98,38 @@ export function calculateReviewDuration(
   const ms = new Date(reviewedAt).getTime() - new Date(createdAt).getTime();
   if (!Number.isFinite(ms) || ms < 0) return null;
 
-  const hoursUsed = ms / MS_PER_HOUR;
+  const totalMinutes = Math.round(ms / (60 * 1000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  let label = '';
+  if (hours === 0) {
+    label = `${totalMinutes} นาที`;
+  } else if (hours < 24) {
+    label = minutes > 0 ? `${hours} ชม. ${minutes} นาที` : `${hours} ชม.`;
+  } else {
+    const days = Math.floor(hours / 24);
+    label = `${days} วัน ${hours % 24} ชม.`;
+  }
+
+  const hoursUsed = ms / (60 * 60 * 1000);
   return {
     hoursUsed,
-    label: formatDurationLabel(ms),
+    label,
     withinSla: hoursUsed <= MODERATION_SLA_HOURS
   };
 }
 
-/** แปลงช่วงเวลาเป็นข้อความภาษาไทย เช่น "3 ชม. 12 นาที" / "45 นาที" */
-function formatDurationLabel(ms: number): string {
-  const totalMinutes = Math.round(ms / MS_PER_MINUTE);
-  if (totalMinutes < 60) return `${totalMinutes} นาที`;
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24);
-    return `${days} วัน ${hours % 24} ชม.`;
-  }
-  return minutes === 0 ? `${hours} ชม.` : `${hours} ชม. ${minutes} นาที`;
-}
-
 export interface SlaSummary {
-  /** จำนวนประกาศที่ตรวจเสร็จแล้วและมีข้อมูลเวลาครบ */
   reviewedCount: number;
-  /** เวลาเฉลี่ยที่ใช้ตรวจ (ชั่วโมง) */
   averageHours: number;
-  /** ข้อความเวลาเฉลี่ยพร้อมแสดง */
   averageLabel: string;
-  /** จำนวนที่ตรวจทันกำหนด */
   withinSlaCount: number;
-  /** เปอร์เซ็นต์ที่ตรวจทันกำหนด (ปัดเป็นจำนวนเต็ม) */
   withinSlaPercent: number;
 }
 
 /**
- * สรุปผล SLA จากรายการประกาศที่ตรวจแล้ว
- * [SEARCH: SUMMARIZE_REVIEW_SLA]
- * 
- * ใบที่ยังไม่มี reviewed_at จะถูกข้าม ไม่นับรวมในค่าเฉลี่ย
- * (ไม่งั้นประกาศเก่าก่อนมีฟีเจอร์นี้จะทำให้ตัวเลขเพี้ยน)
+ * สรุปภาพรวมเวลาที่ใช้ตรวจของชุดประกาศ
  */
 export function summarizeReviewSla(
   rows: { created_at: Date | string | null; reviewed_at: Date | string | null }[]
@@ -183,17 +139,30 @@ export function summarizeReviewSla(
     .filter((d): d is ReviewDurationInfo => d !== null);
 
   if (durations.length === 0) {
-    return { reviewedCount: 0, averageHours: 0, averageLabel: 'ยังไม่มีข้อมูล', withinSlaCount: 0, withinSlaPercent: 0 };
+    return {
+      reviewedCount: 0,
+      averageHours: 0,
+      averageLabel: 'ยังไม่มีข้อมูล',
+      withinSlaCount: 0,
+      withinSlaPercent: 0
+    };
   }
 
   const totalHours = durations.reduce((sum, d) => sum + d.hoursUsed, 0);
   const averageHours = totalHours / durations.length;
   const withinSlaCount = durations.filter((d) => d.withinSla).length;
 
+  const avgMinutes = Math.round(averageHours * 60);
+  const avgHrs = Math.floor(avgMinutes / 60);
+  const avgMins = avgMinutes % 60;
+  const averageLabel = avgHrs === 0 
+    ? `${avgMinutes} นาที` 
+    : avgMins > 0 ? `${avgHrs} ชม. ${avgMins} นาที` : `${avgHrs} ชม.`;
+
   return {
     reviewedCount: durations.length,
     averageHours,
-    averageLabel: formatDurationLabel(averageHours * MS_PER_HOUR),
+    averageLabel,
     withinSlaCount,
     withinSlaPercent: Math.round((withinSlaCount / durations.length) * 100)
   };

@@ -56,7 +56,7 @@ export default function StatCards({
       count: pendingCount,
       unit: 'รายการ',
       subtitle: pendingCount > 0 ? 'จำเป็นต้องตรวจก่อนขึ้นเว็บ' : 'ไม่มีประกาศค้างตรวจ',
-      href: '/admin/moderation',
+      href: '/admin/moderation?tab=pending',
       // หากมีงานค้าง ให้ขอบบนเป็นสีส้มเพื่อเตือนความเร่งด่วน
       topBorderColor: pendingCount > 0 ? 'border-t-amber-500' : 'border-t-slate-200',
       badge: pendingCount > 0 ? { text: 'ต้องตรวจ', className: 'text-amber-800 bg-amber-50 border border-amber-200' } : null
@@ -100,7 +100,7 @@ export default function StatCards({
       count: approvedListingsCount,
       unit: 'ประกาศ',
       subtitle: 'แสดงผลบนหน้าเว็บไซต์',
-      href: '/admin/moderation',
+      href: '/admin/moderation?tab=approved',
       // ขอบบนสีเทาเรียบหรูสำหรับสถิติเชิงปริมาณทั่วไป
       topBorderColor: 'border-t-slate-400',
       badge: { text: 'Active', className: 'text-emerald-700 bg-emerald-50 border border-emerald-200' }

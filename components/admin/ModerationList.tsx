@@ -18,6 +18,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Clock } from 'lucide-react';
 
 export interface ModerationItem {
   id: string;
@@ -100,21 +101,16 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
                     - SLA ปกติ: text-slate-600 bg-slate-100 border-slate-200 (โทนสีเทาสุภาพ)
                     - ทรงป้าย: rounded-full text-xs font-bold / font-medium px-2.5 py-0.5 border
                   */}
-                  {item.slaUrgent ? (
-                    <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
-                      SLA ด่วน: {item.sla}
-                    </span>
-                  ) : (
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
-                      SLA: {item.sla}
-                    </span>
-                  )}
-
-                  {item.createdTimeAgo && (
-                    <span className="text-xs text-slate-400">
-                      · ส่งมา {item.createdTimeAgo}
-                    </span>
-                  )}
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                      item.slaUrgent
+                        ? 'text-rose-700 bg-rose-50 border border-rose-200 animate-pulse'
+                        : 'text-slate-700 bg-slate-100 border border-slate-200'
+                    }`}
+                  >
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span>{item.sla}</span>
+                  </span>
                 </div>
 
                 <h4 className="font-bold text-slate-900 text-sm sm:text-base leading-snug truncate hover:text-blue-600 transition-colors">

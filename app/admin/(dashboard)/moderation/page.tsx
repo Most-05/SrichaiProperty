@@ -613,7 +613,7 @@ function AdminModerationContent() {
               }`}
             >
               <Clock className="w-3.5 h-3.5" />
-              <span>เรียงตาม SLA (ด่วนสุด)</span>
+              <span>เรียงตามเวลารอตรวจ (นานสุดก่อน)</span>
             </button>
           </div>
         </div>
@@ -900,7 +900,7 @@ function AdminModerationContent() {
                                 ID: {property.id.slice(0, 8)}
                               </span>
 
-                              {/* SLA Badge in pending */}
+                              {/* ป้ายเวลารอตรวจในแท็บ pending */}
                               {activeTab === 'pending' && (
                                 <span
                                   className={`text-[10px] font-black px-2 py-0.5 rounded-md border flex items-center gap-1 ${slaBadgeClass(
@@ -908,7 +908,7 @@ function AdminModerationContent() {
                                   )}`}
                                 >
                                   <Clock className="w-3 h-3" />
-                                  SLA: {property.slaLabel}
+                                  <span>{property.slaLabel}</span>
                                 </span>
                               )}
 

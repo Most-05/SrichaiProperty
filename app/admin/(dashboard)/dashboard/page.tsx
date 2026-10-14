@@ -10,7 +10,12 @@ import {
   RefreshCw,
   ExternalLink,
   AlertCircle,
-  Clock
+  Clock,
+  ArrowRight,
+  Eye,
+  ShieldCheck,
+  CreditCard,
+  AlertTriangle
 } from 'lucide-react';
 
 const REFRESH_INTERVAL_MS = 20000;
@@ -266,6 +271,17 @@ export default function AdminDashboardPage() {
   // คำนวณยอดรวมงานค้างตรวจทั้งหมดที่ต้องได้รับการจัดการโดยแอดมิน
   const totalPendingActionItems = pendingCount + kycCount + paymentsCount + reportsCount;
 
+  // ลิงก์ตรงไปยังหน้าจัดการงานค้างตามลำดับความสำคัญ (SLA Urgent > ประกาศ > KYC > สลิป > รายงาน)
+  const pendingManageHref = useMemo(() => {
+    if (moderationItems.some(i => i.slaUrgent) || pendingCount > 0) {
+      return '/admin/moderation?tab=pending';
+    }
+    if (kycCount > 0) return '/admin/kyc';
+    if (paymentsCount > 0) return '/admin/payments';
+    if (reportsCount > 0) return '/admin/reports';
+    return '/admin/moderation';
+  }, [moderationItems, pendingCount, kycCount, paymentsCount, reportsCount]);
+
   // Semantic timeline dot color helper
   const getActivityDotClass = (type: ActivityItem['type']) => {
     switch (type) {
@@ -360,56 +376,63 @@ export default function AdminDashboardPage() {
               </span>
               {pendingCount > 0 && (
                 <Link
-                  href="#moderation"
-                  className="inline-flex items-center gap-1 bg-white border border-amber-300 text-amber-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-amber-100/50 transition-colors"
+                  href="/admin/moderation?tab=pending"
+                  className="inline-flex items-center gap-1.5 bg-white border border-amber-300 text-amber-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-amber-100/50 transition-colors"
+                  title="ไปหน้าตรวจสอบประกาศ"
                 >
-                  ประกาศรอตรวจ ({pendingCount})
+                  <Eye className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>ประกาศรอตรวจ ({pendingCount})</span>
                 </Link>
               )}
               {kycCount > 0 && (
                 <Link
                   href="/admin/kyc"
-                  className="inline-flex items-center gap-1 bg-white border border-indigo-200 text-indigo-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-indigo-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-indigo-50 transition-colors"
+                  title="ไปหน้าตรวจสอบยืนยันตัวตน KYC"
                 >
-                  ยืนยันตัวตน KYC ({kycCount})
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span>ยืนยันตัวตน KYC ({kycCount})</span>
                 </Link>
               )}
               {paymentsCount > 0 && (
                 <Link
                   href="/admin/payments"
-                  className="inline-flex items-center gap-1 bg-white border border-emerald-200 text-emerald-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-emerald-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 bg-white border border-emerald-200 text-emerald-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-emerald-50 transition-colors"
+                  title="ไปหน้าตรวจสอบสลิปชำระเงิน"
                 >
-                  สลิปชำระเงิน ({paymentsCount})
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>สลิปชำระเงิน ({paymentsCount})</span>
                 </Link>
               )}
               {reportsCount > 0 && (
                 <Link
                   href="/admin/reports"
-                  className="inline-flex items-center gap-1 bg-white border border-rose-200 text-rose-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-rose-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 bg-white border border-rose-200 text-rose-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-rose-50 transition-colors"
+                  title="ไปหน้ารายงานปัญหา"
                 >
-                  รายงานปัญหา ({reportsCount})
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>รายงานปัญหา ({reportsCount})</span>
                 </Link>
               )}
               {moderationItems.filter(i => i.slaUrgent).length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModerationFilter('urgent');
-                    document.getElementById('moderation')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="inline-flex items-center gap-1.5 bg-red-600 text-white px-2.5 py-1 rounded-lg font-extrabold text-xs shadow-xs hover:bg-red-700 transition-colors animate-pulse cursor-pointer"
+                <Link
+                  href="/admin/moderation?tab=pending"
+                  className="inline-flex items-center gap-1.5 bg-red-600 text-white px-2.5 py-1 rounded-lg font-extrabold text-xs shadow-xs hover:bg-red-700 transition-colors animate-pulse"
+                  title="ไปหน้าตรวจสอบประกาศที่ค้างตรวจนาน"
                 >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>งานด่วน SLA &lt; 4 ชม. ({moderationItems.filter(i => i.slaUrgent).length})</span>
-                </button>
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>ค้างตรวจนาน ({moderationItems.filter(i => i.slaUrgent).length})</span>
+                </Link>
               )}
             </div>
 
             <Link
-              href="/admin/moderation"
-              className="self-start sm:self-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-bold shrink-0 transition-colors shadow-xs"
+              href={pendingManageHref}
+              className="self-start sm:self-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-bold shrink-0 transition-colors shadow-xs flex items-center gap-1.5"
+              title="ไปหน้าจัดการงานค้างสำคัญที่สุดทันที"
             >
-              จัดการงานค้าง
+              <span>จัดการงานค้าง</span>
+              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
             </Link>
           </div>
         )}
@@ -494,7 +517,7 @@ export default function AdminDashboardPage() {
                     }`}
                   >
                     <Clock className="w-3.5 h-3.5" />
-                    <span>ด่วน SLA ({moderationItems.filter(i => i.slaUrgent).length})</span>
+                    <span>ค้างตรวจนาน ({moderationItems.filter(i => i.slaUrgent).length})</span>
                   </button>
                 </div>
               </div>
