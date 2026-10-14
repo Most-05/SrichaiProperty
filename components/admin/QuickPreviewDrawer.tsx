@@ -138,34 +138,19 @@ export default function QuickPreviewDrawer({
   onReject
 }: QuickPreviewDrawerProps) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-
-  // ปิด Drawer เมื่อกดปุ่ม Escape บนคีย์บอร์ด
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   // รีเซ็ตดัชนีรูปภาพเมื่อเปลี่ยนอสังหาริมทรัพย์ (ตามแนวทาง React Recommended Pattern)
   const [prevPropertyId, setPrevPropertyId] = useState(property?.id);
   if (property?.id !== prevPropertyId) {
     setPrevPropertyId(property?.id);
     setActiveImageIndex(0);
+    setIsLightboxOpen(false);
   }
 
-  if (!isOpen || !property) return null;
-
-  const images = property.images && property.images.length > 0
+  const images = property?.images && property.images.length > 0
     ? property.images
-    : property.image
+    : property?.image
     ? [property.image]
     : [];
 
@@ -180,6 +165,37 @@ export default function QuickPreviewDrawer({
     if (images.length <= 1) return;
     setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
+
+  // ดักจับปุ่มบนคีย์บอร์ด: Escape (ปิด), ลูกศรซ้าย/ขวา (เลื่อนดูรูปภาพ)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isLightboxOpen) {
+          setIsLightboxOpen(false);
+        } else {
+          onClose();
+        }
+      } else if (e.key === 'ArrowLeft') {
+        if (images.length > 1) {
+          setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (images.length > 1) {
+          setActiveImageIndex((prev) => (prev + 1) % images.length);
+        }
+      }
+    };
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, isLightboxOpen, images.length]);
+
+  if (!isOpen || !property) return null;
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -258,20 +274,34 @@ export default function QuickPreviewDrawer({
              * 1. PHOTO GALLERY (แกลเลอรีรูปภาพหลัก + สไลด์เลื่อน)
              * ================================================================ */}
             <div className="space-y-3">
-              <div className="relative aspect-video sm:h-84 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 shadow-xs group flex items-center justify-center">
+              <div
+                onClick={() => currentImage && setIsLightboxOpen(true)}
+                className={`relative aspect-video sm:h-84 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 shadow-xs group flex items-center justify-center ${
+                  currentImage ? 'cursor-zoom-in' : ''
+                }`}
+                title={currentImage ? 'คลิกเพื่อดูรูปขนาดเต็ม (Lightbox)' : undefined}
+              >
                 {currentImage ? (
                   <Image
                     src={currentImage}
                     alt={property.title}
                     fill
                     sizes="(max-width: 768px) 100vw, 768px"
-                    className="object-cover transition-transform duration-500"
+                    className="object-cover group-hover:scale-[1.02] transition-transform duration-500"
                     priority
                   />
                 ) : (
                   <div className="text-center text-slate-400 font-bold text-xs flex flex-col items-center gap-1.5">
                     <ImageIcon className="w-8 h-8 text-slate-300" />
                     <span>ไม่มีรูปภาพแนบในประกาศนี้</span>
+                  </div>
+                )}
+
+                {/* Badge ปุ่มคลิกขยายรูปใหญ่ (ล่างซ้าย) */}
+                {currentImage && (
+                  <div className="absolute bottom-3 left-3 bg-slate-900/80 hover:bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-full z-10 shadow-sm flex items-center gap-1.5 backdrop-blur-xs transition pointer-events-none">
+                    <Maximize2 className="w-3 h-3 shrink-0" />
+                    <span>คลิกดูรูปเต็มจอ (หรือกดปุ่มลูกศร)</span>
                   </div>
                 )}
 
@@ -287,16 +317,22 @@ export default function QuickPreviewDrawer({
                 {images.length > 1 && (
                   <>
                     <button
-                      onClick={prevImage}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md flex items-center justify-center transition cursor-pointer"
-                      title="รูปก่อนหน้า"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        prevImage();
+                      }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md flex items-center justify-center transition cursor-pointer z-10"
+                      title="รูปก่อนหน้า (ปุ่มลูกศรซ้าย)"
                     >
                       <ChevronLeft className="w-5 h-5 shrink-0" />
                     </button>
                     <button
-                      onClick={nextImage}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md flex items-center justify-center transition cursor-pointer"
-                      title="รูปถัดไป"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        nextImage();
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md flex items-center justify-center transition cursor-pointer z-10"
+                      title="รูปถัดไป (ปุ่มลูกศรขวา)"
                     >
                       <ChevronRight className="w-5 h-5 shrink-0" />
                     </button>
@@ -701,6 +737,111 @@ export default function QuickPreviewDrawer({
           </div>
         </aside>
       </div>
+
+      {/* ================================================================
+       * LIGHTBOX MODAL (ขยายรูปภาพขนาดเต็มจอสำหรับตรวจสอบลายน้ำ/ความคมชัด)
+       * ================================================================ */}
+      {isLightboxOpen && currentImage && (
+        <div
+          className="fixed inset-0 z-[60] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-6 animate-in fade-in duration-200"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          {/* Header Bar ใน Lightbox */}
+          <div
+            className="w-full max-w-6xl flex items-center justify-between text-white py-2 shrink-0 border-b border-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-200">
+                รูปที่ {activeImageIndex + 1} จาก {images.length}
+              </span>
+              <span className="text-[11px] text-slate-400 hidden sm:inline">
+                (กดปุ่มลูกศร &larr; &rarr; บนคีย์บอร์ดเพื่อเปลี่ยนรูป)
+              </span>
+            </div>
+
+            <button
+              onClick={() => setIsLightboxOpen(false)}
+              className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+              title="ปิดหน้าต่างรูปใหญ่ (Esc)"
+            >
+              <X className="w-4 h-4 shrink-0" />
+              <span>ปิด (Esc)</span>
+            </button>
+          </div>
+
+          {/* รูปภาพขนาดใหญ่ตรงกลาง */}
+          <div
+            className="relative flex-1 w-full max-w-6xl my-4 flex items-center justify-center overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative w-full h-full max-h-[75vh] flex items-center justify-center">
+              <Image
+                src={currentImage}
+                alt={`${property.title} - รูปที่ ${activeImageIndex + 1}`}
+                fill
+                sizes="100vw"
+                className="object-contain"
+                priority
+              />
+            </div>
+
+            {/* ลูกศรเลื่อนรูปขนาดใหญ่ใน Lightbox */}
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevImage();
+                  }}
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white border border-white/20 shadow-xl flex items-center justify-center transition cursor-pointer z-10"
+                  title="รูปก่อนหน้า (ปุ่มลูกศรซ้าย)"
+                >
+                  <ChevronLeft className="w-7 h-7 shrink-0" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextImage();
+                  }}
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white border border-white/20 shadow-xl flex items-center justify-center transition cursor-pointer z-10"
+                  title="รูปถัดไป (ปุ่มลูกศรขวา)"
+                >
+                  <ChevronRight className="w-7 h-7 shrink-0" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* แถบ Thumbnails ขนาดเล็กล่างสุดใน Lightbox */}
+          {images.length > 1 && (
+            <div
+              className="w-full max-w-4xl flex gap-2 overflow-x-auto py-2 justify-center shrink-0 no-scrollbar"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveImageIndex(idx)}
+                  className={`relative w-16 h-12 rounded-lg overflow-hidden shrink-0 border-2 transition cursor-pointer ${
+                    activeImageIndex === idx
+                      ? 'border-blue-500 ring-2 ring-blue-400/50 scale-105 opacity-100'
+                      : 'border-transparent opacity-50 hover:opacity-100'
+                  }`}
+                >
+                  <Image
+                    src={img}
+                    alt={`thumb-lightbox-${idx}`}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
