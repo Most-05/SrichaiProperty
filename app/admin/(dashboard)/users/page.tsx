@@ -52,35 +52,61 @@ interface StatsData {
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminUsersPage() {
+  // ----------------------------------------------------------------------------
+  // 1. STATE MANAGEMENT (การจัดการสถานะภายในหน้าจัดการผู้ใช้งาน)
+  // ----------------------------------------------------------------------------
+  // รายชื่อผู้ใช้ทั้งหมดที่ดึงมาจาก API ตามเงื่อนไขบทบาท
   const [users, setUsers] = useState<UserData[]>([]);
+
+  // สถิติจำนวนผู้ใช้สรุป (ทั้งหมด, นายหน้า, ลูกค้าทั่วไป, รอยืนยัน)
   const [stats, setStats] = useState<StatsData>({ total: 0, agents: 0, buyers: 0, pending: 0 });
+
+  // สถานะการโหลดข้อมูลครั้งแรก (แสดง Loading Spinner เต็มหน้าจอ)
   const [loading, setLoading] = useState(true);
+
+  // สถานะการกดปุ่มรีเฟรชข้อมูลด้วยตนเอง (หมุนไอคอน RefreshCw)
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // ตัวกรองบทบาทผู้ใช้: 'all' (ทั้งหมด), 'agent' (นายหน้า), 'buyer' (ลูกค้า)
   const [roleFilter, setRoleFilter] = useState('all');
+
+  // ข้อความค้นหาด่วน (Search Query) รองรับการค้นชื่อ, อีเมล, เบอร์โทร หรือ User ID
   const [searchQuery, setSearchQuery] = useState('');
+
+  // หน้าปัจจุบันของตารางรายการ (Pagination)
   const [currentPage, setCurrentPage] = useState(1);
+
+  // รหัส User ID ที่กำลังถูกเลือกเพื่อเปิด Modal ดูโปรไฟล์เชิงลึก
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
+
+  // รหัส User ID ที่กำลังอยู่ในระหว่างการบันทึกมอบสิทธิ์ Verified PRO (ป้องกันการกดซ้ำ)
   const [grantingId, setGrantingId] = useState<string | null>(null);
 
+  // ----------------------------------------------------------------------------
+  // 2. DATA FETCHING (ฟังก์ชันดึงข้อมูลผู้ใช้งานจาก API)
+  // ----------------------------------------------------------------------------
   const fetchUsers = async () => {
     try {
+      // ส่งคำขอแบบ GET ไปยัง /api/admin/users พร้อมแนบตัวกรองบทบาท
       const res = await fetch(`/api/admin/users?role=${roleFilter}`);
       const data = await res.json();
       if (data.success) {
-        setUsers(data.users || []);
-        setStats(data.stats || { total: 0, agents: 0, buyers: 0, pending: 0 });
+        setUsers(data.users || []); // บันทึกรายชื่อผู้ใช้
+        setStats(data.stats || { total: 0, agents: 0, buyers: 0, pending: 0 }); // บันทึกสถิติรวม
       }
     } catch (err) {
       console.error(err);
       toast.error('ไม่สามารถโหลดข้อมูลผู้ใช้ได้');
     } finally {
+      // ปิดสถานะโหลดข้อมูลทั้งแบบปกติและแบบรีเฟรช
       setLoading(false);
       setIsRefreshing(false);
     }
   };
 
+  // ดักจับการเปลี่ยนตัวกรองบทบาท เพื่อดึงข้อมูลใหม่ทันที
   useEffect(() => {
-    let ignore = false;
+    let ignore = false; // ป้องกัน Race Condition
     async function loadUsers() {
       try {
         const res = await fetch(`/api/admin/users?role=${roleFilter}`);
@@ -100,26 +126,34 @@ export default function AdminUsersPage() {
     }
     loadUsers();
     return () => {
-      ignore = true;
+      ignore = true; // คืนทรัพยากรเมื่อ Component Unmount
     };
   }, [roleFilter]);
 
+  // ฟังก์ชันรีเฟรชข้อมูลด้วยตนเองจาก Header
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchUsers();
   };
 
+  // ----------------------------------------------------------------------------
+  // 3. ACTION HANDLERS (ฟังก์ชันเปลี่ยนสถานะบัญชี และ มอบสิทธิ์ PRO)
+  // ----------------------------------------------------------------------------
+  // ฟังก์ชันเปลี่ยนสถานะบัญชีผู้ใช้ (อนุมัติ, ปฏิเสธ หรือแบน/ระงับบัญชี)
   const handleStatusChange = async (userId: string, newStatus: string) => {
-    let reason = "";
+    let reason = ""; // ข้อความระบุเหตุผลในการดำเนินการ
+    // ถ้าเป็นการปฏิเสธหรือแบน ให้แสดง Prompt ขอให้แอดมินระบุเหตุผลเพื่อส่งอีเมล/แจ้งเตือน
     if (newStatus === 'rejected' || newStatus === 'banned') {
       const input = prompt("กรุณาระบุเหตุผลในการไม่อนุมัติหรือระงับบัญชี (ระบุหรือไม่ก็ได้ เพื่อส่งแจ้งเตือนไปยังผู้ใช้):");
-      if (input === null) return; // กดยกเลิก
+      if (input === null) return; // หากกดยกเลิกใน Prompt ให้หยุดการทำงานทันที
       reason = input.trim();
     } else {
+      // ถ้าเป็นการอนุมัติ ให้แสดงกล่องถามยืนยันธรรมดา
       if (!confirm(`ยืนยันการอนุมัติบัญชีนี้ในฐานข้อมูล?`)) return;
     }
 
     try {
+      // ส่งคำขอแบบ PATCH ไปยัง API /api/admin/users
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -127,6 +161,7 @@ export default function AdminUsersPage() {
       });
       const data = await res.json();
       if (data.success) {
+        // อัปเดตสถานะใน State ทันที (Optimistic Update)
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
         setStats(prev => ({
           ...prev,
@@ -142,12 +177,13 @@ export default function AdminUsersPage() {
     }
   };
 
-  // มอบ / ขยาย สิทธิ์ Verified PRO โดยตรงจากฝั่งแอดมิน (+30 หรือ +365 วัน)
+  // มอบหรือต่ออายุสิทธิ์ Verified PRO ให้แก่นายหน้าโดยตรงจากฝั่งแอดมิน (+30 วัน หรือ +365 วัน)
   const handleGrantPro = async (user: UserData, days: number) => {
     const label = days === 365 ? 'รายปี (+365 วัน)' : 'รายเดือน (+30 วัน)';
     if (!confirm(`ยืนยันมอบสิทธิ์ Verified PRO ${label} ให้ "${user.first_name} ${user.last_name}" ใช่หรือไม่?`)) return;
-    setGrantingId(user.id);
+    setGrantingId(user.id); // บันทึก ID กำลังประมวลผล
     try {
+      // ส่งคำขอแบบ PATCH ไปยัง API พร้อมระบุจำนวนวันที่จะมอบ
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -156,7 +192,7 @@ export default function AdminUsersPage() {
       const data = await res.json();
       if (data.success) {
         toast.success(`มอบสิทธิ์ Verified PRO ${label} เรียบร้อยแล้ว`);
-        fetchUsers();
+        fetchUsers(); // โหลดข้อมูลใหม่เพื่ออัปเดตวันหมดอายุล่าสุด
       } else {
         toast.error(data.error || 'ไม่สามารถมอบสิทธิ์ได้');
       }
@@ -167,7 +203,10 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Filter users based on search
+  // ----------------------------------------------------------------------------
+  // 4. COMPUTATIONS & PAGINATION (การค้นหาและแบ่งหน้า)
+  // ----------------------------------------------------------------------------
+  // กรองรายชื่อผู้ใช้ตามคำค้นหา (ชื่อ-นามสกุล, อีเมล, เบอร์โทร, รหัส)
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return users;
     const q = searchQuery.toLowerCase().trim();
@@ -180,21 +219,28 @@ export default function AdminUsersPage() {
     });
   }, [users, searchQuery]);
 
-  // Pagination calculation
+  // คำนวณจำนวนหน้าทั้งหมด (Total Pages)
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE));
+
+  // ตัดข้อมูลเฉพาะหน้าที่กำลังเลือกมาแสดงผล (Slice data for current page)
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredUsers, currentPage]);
 
-  // Export to CSV function
+  // ----------------------------------------------------------------------------
+  // 5. CSV EXPORT (ฟังก์ชันส่งออกรายชื่อผู้ใช้เป็นไฟล์ CSV)
+  // ----------------------------------------------------------------------------
   const handleExportCSV = () => {
     if (filteredUsers.length === 0) {
       toast.error('ไม่มีข้อมูลสำหรับส่งออก');
       return;
     }
 
+    // กำหนดหัวตารางของไฟล์ CSV
     const headers = ['User ID', 'ชื่อ-นามสกุล', 'อีเมล', 'เบอร์โทรศัพท์', 'บทบาท', 'สถานะ', 'ประวัติไม่มาตามนัด (ครั้ง)', 'วันที่สมัคร'];
+
+    // แปลงข้อมูลแต่ละแถวเป็น CSV Format
     const rows = filteredUsers.map(u => [
       `"${u.id}"`,
       `"${u.first_name || ''} ${u.last_name || ''}"`,
@@ -206,6 +252,7 @@ export default function AdminUsersPage() {
       `"${new Date(u.created_at).toLocaleString('th-TH')}"`
     ]);
 
+    // เติม Byte Order Mark (\uFEFF) นำหน้า เพื่อให้ Microsoft Excel รองรับภาษาไทยได้ถูกต้อง
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

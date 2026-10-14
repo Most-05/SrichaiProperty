@@ -2,6 +2,7 @@
 
 /**
  * ==============================================================================
+ * [SEARCH: ADMIN_KYC_AGENT_CARD] [UI: การ์ดตรวจสอบ KYC นายหน้า] [STYLE: KYC_AGENT_CARD]
  * คอมโพเนนต์การ์ดตรวจสอบอนุมัติเอกสาร KYC นายหน้า (Admin KYC Agent Card)
  * /components/admin/AdminKycAgentCard.tsx
  * ==============================================================================
@@ -289,6 +290,7 @@ export default function AdminKycAgentCard({
                 </button>
               )}
 
+              {/* [UI: ปุ่มปฏิเสธเอกสาร KYC] [SEARCH: KYC_REJECT_BUTTON] [STYLE: ปุ่มกากบาทขอบเทาโฮเวอร์แดง] */}
               {/* Reject Button (Opens Modal) */}
               <button
                 onClick={() => setIsRejectModalOpen(true)}
@@ -298,6 +300,7 @@ export default function AdminKycAgentCard({
                 <span>ปฏิเสธเอกสาร</span>
               </button>
 
+              {/* [UI: ปุ่มอนุมัติเป็นนายหน้า] [SEARCH: KYC_APPROVE_BUTTON] [STYLE: ปุ่มเขียวมรกตพร้อมเครื่องหมายถูก] */}
               {/* Approve Button */}
               <button
                 onClick={() => onUpdateStatus(agent.id, 'approved')}

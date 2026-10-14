@@ -122,46 +122,68 @@ function ChangeBadge({ percent }: { percent: number | null | undefined }) {
 }
 
 export default function AdminAnalyticsPage() {
+  // ----------------------------------------------------------------------------
+  // 1. STATE MANAGEMENT (การจัดการสถานะภายในหน้ารายงานสถิติ)
+  // ----------------------------------------------------------------------------
+  // ช่วงเวลาที่เลือกดูสถิติ (ค่าเริ่มต้นคือ 6 เดือนล่าสุด 'month')
   const [range, setRange] = useState<RangeType>('month');
+
+  // วันที่เริ่มต้นสำหรับช่วงเวลาที่ผู้ใช้กำหนดเอง (Custom Date Range)
   const [customStartDate, setCustomStartDate] = useState('');
+
+  // วันที่สิ้นสุดสำหรับช่วงเวลาที่ผู้ใช้กำหนดเอง
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // ข้อมูลสถิติและผลการวิเคราะห์ทั้งหมดที่ดึงมาจาก API (กราฟนัดหมาย, สมาชิกใหม่, ทรัพย์ยอดนิยม)
   const [data, setData] = useState<AnalyticsData | null>(null);
+
+  // สถานะการโหลดข้อมูลครั้งแรก (แสดง Loading Spinner เต็มหน้าจอ)
   const [loading, setLoading] = useState(true);
+
+  // ข้อความแจ้งเตือนข้อผิดพลาดกรณีดึงข้อมูลจาก Server ล้มเหลว
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Metric series toggles for appointment chart
+  // การเปิด/ปิดการแสดงผลของชุดข้อมูลกราฟนัดหมาย (Metric Series Toggles)
   const [visibleSeries, setVisibleSeries] = useState<Record<string, boolean>>({
-    completed: true,
-    approved: true,
-    pending: true,
-    rejected: true,
-    cancelled: true,
+    completed: true, // แสดงเส้น/แท่ง: เข้าชมสำเร็จ
+    approved: true,  // แสดงเส้น/แท่ง: ยืนยันแล้ว
+    pending: true,   // แสดงเส้น/แท่ง: รอดำเนินการ
+    rejected: true,  // แสดงเส้น/แท่ง: ปฏิเสธ
+    cancelled: true, // แสดงเส้น/แท่ง: ยกเลิก
   });
 
+  // สลับการเปิด/ปิดการแสดงผลของชุดข้อมูลในกราฟ (Toggle Bar Chart Series)
   const toggleSeries = (key: string) => {
     setVisibleSeries(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // ----------------------------------------------------------------------------
+  // 2. DATA FETCHING (ฟังก์ชันดึงข้อมูลสถิติจาก API)
+  // ----------------------------------------------------------------------------
+  // ฟังก์ชันสลับช่วงเวลาพรีเซ็ต (7 วัน, เดือนนี้, 6 เดือน, ไตรมาส, รายปี)
   const handleRangeChange = (newRange: RangeType) => {
-    if (newRange === range) return;
-    setLoading(true);
-    setRange(newRange);
+    if (newRange === range) return; // หากกดซ้ำช่วงเดิม ไม่ต้องดึงใหม่
+    setLoading(true);               // แสดงสถานะกำลังโหลด
+    setRange(newRange);             // เปลี่ยน State เพื่อกระตุ้น useEffect
   };
 
+  // นำช่วงวันที่ที่กำหนดเอง (Custom Range) ไปดึงข้อมูลจาก API
   const handleApplyCustomRange = async () => {
+    // ตรวจสอบว่ากรอกทั้งสองวันที่ครบถ้วนหรือไม่
     if (!customStartDate || !customEndDate) {
       toast.error('กรุณาระบุทั้งวันที่เริ่มต้นและสิ้นสุด');
       return;
     }
     setLoading(true);
     try {
+      // ส่งคำขอแบบ GET พร้อมแนบ startDate และ endDate
       const res = await fetch(`/api/admin/analytics?range=custom&startDate=${customStartDate}&endDate=${customEndDate}&t=${Date.now()}`);
       const json = await res.json();
       if (json.error) {
         setFetchError(json.error);
       } else {
-        setData(json);
-        setFetchError(null);
+        setData(json);            // บันทึกข้อมูลสถิติใหม่
+        setFetchError(null);      // ล้างข้อผิดพลาดเดิม
       }
     } catch {
       setFetchError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
@@ -170,9 +192,11 @@ export default function AdminAnalyticsPage() {
     }
   };
 
+  // ฟังก์ชันลองใหม่กรณีดึงข้อมูลล้มเหลว (Retry Fetching)
   const handleRetry = async () => {
     setLoading(true);
     let url = `/api/admin/analytics?range=${range}&t=${Date.now()}`;
+    // ถ้าเป็นโหมดกำหนดเอง ให้ต่อพารามิเตอร์วันที่ไปด้วย
     if (range === 'custom' && customStartDate && customEndDate) {
       url += `&startDate=${customStartDate}&endDate=${customEndDate}`;
     }
@@ -192,8 +216,9 @@ export default function AdminAnalyticsPage() {
     }
   };
 
+  // ดักจับการเปลี่ยนช่วงเวลาพรีเซ็ต เพื่อดึงข้อมูลจาก Server
   useEffect(() => {
-    if (range === 'custom') return;
+    if (range === 'custom') return; // หากเป็นโหมดกำหนดเอง จะรอให้ผู้ใช้กดปุ่ม Apply ก่อน
     let ignore = false;
     const url = `/api/admin/analytics?range=${range}&t=${Date.now()}`;
 
@@ -216,10 +241,11 @@ export default function AdminAnalyticsPage() {
       });
 
     return () => {
-      ignore = true;
+      ignore = true; // คืนทรัพยากรเมื่อ Component Unmount
     };
   }, [range]);
 
+  // สร้างข้อความระบุช่วงเวลาสำหรับแสดงบนหัวตารางหรือรายงาน
   const rangeText = useMemo(() => {
     if (range === 'day') return '7 วันล่าสุด';
     if (range === 'this_month') return 'เดือนปัจจุบัน';
@@ -230,10 +256,14 @@ export default function AdminAnalyticsPage() {
     return '';
   }, [range, customStartDate, customEndDate]);
 
-  // Export Executive CSV
+  // ----------------------------------------------------------------------------
+  // 3. EXPORT & PRINT (ส่งออกรายงานผู้บริหารเป็นไฟล์ CSV และสั่งพิมพ์ PDF)
+  // ----------------------------------------------------------------------------
+  // ส่งออกรายงานสถิติระดับผู้บริหาร (Executive Summary CSV)
   const handleExportCSV = () => {
     if (!data) return;
 
+    // รวบรวมข้อมูลตัวชี้วัดสำคัญระดับผู้บริหาร
     const summaryRows = [
       ['ตัวชี้วัดสำคัญ (Executive KPI)', 'ค่าในช่วงเวลา', 'เทียบช่วงก่อนหน้า'],
       ['นัดหมายเข้าชมบ้านใหม่', data.summary.appointmentsInRange, data.summary.appointmentsChangePercent ? `${data.summary.appointmentsChangePercent}%` : '-'],
@@ -251,6 +281,7 @@ export default function AdminAnalyticsPage() {
       ['ยกเลิก (Cancelled)', data.appointmentHealth?.cancelled ?? 0, `${data.appointmentHealth?.cancelledPercent ?? 0}%`],
     ];
 
+    // เติม Byte Order Mark (\uFEFF) นำหน้า เพื่อให้ Microsoft Excel รองรับภาษาไทยได้สมบูรณ์
     const csvContent = '\uFEFF' + summaryRows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -263,6 +294,7 @@ export default function AdminAnalyticsPage() {
     toast.success('ดาวน์โหลดไฟล์ CSV สถิติเรียบร้อยแล้ว');
   };
 
+  // ฟังก์ชันพิมพ์หน้ารายงานผ่านระบบพิมพ์ของเบราว์เซอร์ (รองรับ Save as PDF)
   const handlePrint = () => {
     window.print();
   };

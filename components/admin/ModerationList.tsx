@@ -1,3 +1,18 @@
+/**
+ * ==============================================================================
+ * คอมโพเนนต์รายการตรวจสอบประกาศอสังหาริมทรัพย์สำหรับแอดมิน (Moderation List Component)
+ * /components/admin/ModerationList.tsx
+ * ==============================================================================
+ * หน้าที่หลัก:
+ * - แสดงรายการประกาศที่อยู่ในสถานะรอตรวจสอบ (Pending) ในหน้า Admin Dashboard
+ * - แสดงป้ายเตือนระดับความด่วนของ SLA (SLA ด่วน / SLA ปกติ)
+ * - มีปุ่ม "อนุมัติ" (Approve) และ "ไม่อนุมัติ" (Reject) เพื่อให้แอดมินจัดการคิวได้รวดเร็ว
+ *
+ * [SEARCH: MODERATION_LIST_COMPONENT]
+ * [UI: ตารางคิวตรวจสอบประกาศ]
+ * ==============================================================================
+ */
+
 'use client';
 
 import React from 'react';
@@ -70,12 +85,27 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
                     {item.code}
                   </span>
 
+                  {/* 
+                    [UI: ป้าย SLA ตรวจสอบประกาศ]
+                    [SEARCH: MODERATION_SLA_BADGE]
+
+                    หน้าที่:
+                    แสดงเวลาคงเหลือในการตรวจสอบประกาศตามข้อตกลง SLA (Service Level Agreement)
+
+                    ข้อความ:
+                    "SLA ด่วน: {item.sla}" (กรณีใกล้ครบกำหนด <= 4 ชม.) หรือ "SLA: {item.sla}" (กรณีปกติ)
+
+                    Style:
+                    - SLA ด่วน: text-rose-700 bg-rose-50 border-rose-200 (โทนสีแดงกุหลาบ)
+                    - SLA ปกติ: text-slate-600 bg-slate-100 border-slate-200 (โทนสีเทาสุภาพ)
+                    - ทรงป้าย: rounded-full text-xs font-bold / font-medium px-2.5 py-0.5 border
+                  */}
                   {item.slaUrgent ? (
                     <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
                       SLA ด่วน: {item.sla}
                     </span>
                   ) : (
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
                       SLA: {item.sla}
                     </span>
                   )}
@@ -114,7 +144,10 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
               </div>
             </div>
 
-            {/* Action Buttons: Functional Color Coding (Green = Approve, Red Outline = Reject) */}
+            {/* 
+              [UI: กลุ่มปุ่มจัดการคิวตรวจสอบ]
+              [SEARCH: MODERATION_ACTION_BUTTONS]
+            */}
             <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end">
               <Link
                 href="/admin/moderation"
@@ -123,6 +156,23 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
                 ดูรายละเอียด
               </Link>
 
+              {/* 
+                [UI: ปุ่มอนุมัติประกาศ]
+                [SEARCH: MODERATION_APPROVE_BTN]
+
+                หน้าที่:
+                อนุมัติประกาศอสังหาริมทรัพย์และเปลี่ยนสถานะเป็น 'approved' เพื่อให้แสดงบนหน้าเว็บสาธารณะทันที
+
+                ข้อความ:
+                "อนุมัติ"
+
+                Style:
+                - พื้นหลัง/ตัวอักษร: bg-emerald-600 hover:bg-emerald-700 text-white
+                - รูปทรง: px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-colors shadow-xs
+
+                การทำงาน:
+                ผูกกับ onClick={() => onApprove(item.id, item.title)} เรียก Callback จากหน้าหลัก
+              */}
               <button
                 type="button"
                 onClick={() => onApprove(item.id, item.title)}
@@ -131,6 +181,23 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
                 อนุมัติ
               </button>
 
+              {/* 
+                [UI: ปุ่มไม่อนุมัติประกาศ]
+                [SEARCH: MODERATION_REJECT_BTN]
+
+                หน้าที่:
+                ปฏิเสธประกาศและเปิดหน้าต่างระบุเหตุผลเพื่อส่งแจ้งเตือนให้นายหน้านำกลับไปแก้ไข
+
+                ข้อความ:
+                "ไม่อนุมัติ"
+
+                Style:
+                - พื้นหลัง/ขอบ/ตัวอักษร: bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 hover:border-rose-300
+                - รูปทรง: px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-colors
+
+                การทำงาน:
+                ผูกกับ onClick={() => onReject(item.id, item.title)} เปิด Modal ระบุเหตุผลตีกลับ
+              */}
               <button
                 type="button"
                 onClick={() => onReject(item.id, item.title)}

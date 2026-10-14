@@ -1,3 +1,15 @@
+/**
+ * ==============================================================================
+ * [SEARCH: ADMIN_DASHBOARD_LAYOUT] [AUTH: SERVER_ADMIN_SESSION_CHECK] [UI: โครงร่างหน้าจอแดชบอร์ดแอดมิน]
+ * โครงร่างหน้าจอสำหรับแผงควบคุมผู้ดูแลระบบ (Admin Dashboard Layout)
+ * /app/admin/(dashboard)/layout.tsx
+ * ==============================================================================
+ * วัตถุประสงค์:
+ * 1. ตรวจสอบสิทธิ์ Admin Session ฝั่ง Server หากไม่มีสิทธิ์ให้ redirect ไป /admin/login ทันที
+ * 2. จัดวาง AdminSidebar ด้านซ้าย และ Main Content Area ด้านขวา
+ * ==============================================================================
+ */
+
 // ฟังก์ชันดึงข้อมูล session ของผู้ใช้ที่ login อยู่ (ฝั่ง server)
 import { getServerSession } from 'next-auth/next';
 // ใช้สำหรับสั่งเปลี่ยนหน้า (redirect) จากฝั่ง server

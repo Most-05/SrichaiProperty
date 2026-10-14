@@ -90,41 +90,49 @@ interface Toast {
 }
 
 export default function AdminDashboardPage() {
+  // ----------------------------------------------------------------------------
+  // 1. STATE MANAGEMENT (การจัดการสถานะข้อมูลแดชบอร์ด)
+  // ----------------------------------------------------------------------------
+  // สถานะกำลังโหลดข้อมูลภาพรวมครั้งแรก (แสดง Spinner กลางจอ)
   const [loading, setLoading] = useState(true);
+
+  // สถานะการกดปุ่มรีเฟรชข้อมูลด้วยตนเอง (หมุนไอคอน RefreshCw)
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // ข้อความแจ้งเตือนข้อผิดพลาดกรณีดึงข้อมูลจาก Server ล้มเหลว
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Counts
-  const [pendingCount, setPendingCount] = useState(0);
-  const [approvedListingsCount, setApprovedListingsCount] = useState(0);
-  const [agentsCount, setAgentsCount] = useState(0);
-  const [proAgentsCount, setProAgentsCount] = useState(0);
-  const [kycCount, setKycCount] = useState(0);
-  const [paymentsCount, setPaymentsCount] = useState(0);
-  const [reportsCount, setReportsCount] = useState(0);
-  const [pendingAppointmentsCount, setPendingAppointmentsCount] = useState(0);
+  // ตัวนับสถิติ (Stat Counters)
+  const [pendingCount, setPendingCount] = useState(0);                   // จำนวนประกาศที่รอการตรวจสอบ (Pending Moderation)
+  const [approvedListingsCount, setApprovedListingsCount] = useState(0); // จำนวนประกาศที่ได้รับการอนุมัติแล้วในระบบ (Approved Listings)
+  const [agentsCount, setAgentsCount] = useState(0);                     // จำนวนนายหน้าทั้งหมดในระบบ
+  const [proAgentsCount, setProAgentsCount] = useState(0);               // จำนวนนายหน้าระดับพรีเมียม (Verified PRO)
+  const [kycCount, setKycCount] = useState(0);                           // จำนวนคำขอยืนยันตัวตน KYC ที่รอการตรวจสอบ
+  const [paymentsCount, setPaymentsCount] = useState(0);                 // จำนวนสลิปการชำระเงินที่รอการอนุมัติ
+  const [reportsCount, setReportsCount] = useState(0);                   // จำนวนรายงานการร้องเรียน (Reports) ที่รอดำเนินการ
+  const [pendingAppointmentsCount, setPendingAppointmentsCount] = useState(0); // จำนวนนัดหมายเข้าชมทรัพย์ที่รอยืนยัน
 
-  // Lists
-  const [moderationItems, setModerationItems] = useState<ModerationItem[]>([]);
-  const [pendingKycList, setPendingKycList] = useState<PendingKycItem[]>([]);
-  const [pendingPaymentsList, setPendingPaymentsList] = useState<PendingPaymentItem[]>([]);
-  const [pendingReportsList, setPendingReportsList] = useState<PendingReportItem[]>([]);
-  const [recentAppointments, setRecentAppointments] = useState<RecentAppointmentItem[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  // รายการข้อมูลสำหรับแสดงผลในวิดเจ็ต (Data Lists)
+  const [moderationItems, setModerationItems] = useState<ModerationItem[]>([]);               // รายการประกาศรอตรวจด่วน
+  const [pendingKycList, setPendingKycList] = useState<PendingKycItem[]>([]);                 // รายการนายหน้ารอตรวจเอกสาร KYC
+  const [pendingPaymentsList, setPendingPaymentsList] = useState<PendingPaymentItem[]>([]);   // รายการสลิปรอตรวจสอบยอดเงิน
+  const [pendingReportsList, setPendingReportsList] = useState<PendingReportItem[]>([]);       // รายการข้อร้องเรียนที่ผู้ใช้แจ้งเข้ามา
+  const [recentAppointments, setRecentAppointments] = useState<RecentAppointmentItem[]>([]); // รายการนัดหมายเข้าชมล่าสุด
+  const [activities, setActivities] = useState<ActivityItem[]>([]);                           // รายการบันทึกกิจกรรมล่าสุดในระบบ (Audit Feed)
 
-  // Filters & Search
-  const [searchQuery, setSearchQuery] = useState('');
-  const [moderationFilter, setModerationFilter] = useState<'all' | 'urgent'>('all');
+  // Filters & Search (ตัวกรองและคำค้นหาสำหรับวิดเจ็ตคิวประกาศ)
+  const [searchQuery, setSearchQuery] = useState('');                                         // ข้อความค้นหาประกาศด่วน
+  const [moderationFilter, setModerationFilter] = useState<'all' | 'urgent'>('all');         // กรองคิวทั้งหมด ('all') หรือเฉพาะด่วนใกล้หลุด SLA ('urgent')
 
-  // Toasts
+  // Toasts Notification System (ระบบแจ้งเตือนแบบป๊อปอัพมุมขวาบน)
   const [toasts, setToasts] = useState<Toast[]>([]);
   const showToast = (message: string, variant: Toast['variant'] = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, variant }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
+    const id = Date.now(); // สร้าง ID เฉพาะจาก Timestamp ปัจจุบัน
+    setToasts(prev => [...prev, { id, message, variant }]); // เพิ่มข้อความแจ้งเตือนใหม่เข้า Array
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500); // ตั้งเวลาปิดการแสดงผลอัตโนมัติใน 3.5 วินาที
   };
 
-  // Current Thai Date formatted
+  // จัดรูปแบบวันที่ปัจจุบันเป็นภาษาไทยแบบเป็นทางการ เช่น "วันพุธที่ 14 ตุลาคม 2569"
   const formattedToday = useMemo(() => {
     return new Intl.DateTimeFormat('th-TH', {
       weekday: 'long',
@@ -134,12 +142,17 @@ export default function AdminDashboardPage() {
     }).format(new Date());
   }, []);
 
-  // Fetch Dashboard Data
+  // ----------------------------------------------------------------------------
+  // 2. DATA FETCHING (ฟังก์ชันดึงข้อมูลสรุปแดชบอร์ดจาก API)
+  // ----------------------------------------------------------------------------
   const fetchDashboardData = useCallback((isBackground = false) => {
+    // ส่งคำขอแบบ GET ไปยัง API รวมศูนย์แดชบอร์ดแอดมิน
     fetch('/api/admin/dashboard')
       .then(res => res.json())
       .then(data => {
+        // ตรวจสอบว่าไม่มีข้อผิดพลาดจาก Backend
         if (!data.error) {
+          // อัปเดตสถิติตัวเลขสรุปทั้งหมด
           setPendingCount(data.pendingCount ?? 0);
           setApprovedListingsCount(data.approvedListingsCount ?? 0);
           setAgentsCount(data.agentsCount ?? 0);
@@ -149,6 +162,7 @@ export default function AdminDashboardPage() {
           setReportsCount(data.reportsCount ?? 0);
           setPendingAppointmentsCount(data.pendingAppointmentsCount ?? 0);
 
+          // อัปเดตรายการข้อมูลสำหรับวิดเจ็ตต่างๆ
           setModerationItems(data.moderationItems || []);
           setPendingKycList(data.pendingKycList || []);
           setPendingPaymentsList(data.pendingPaymentsList || []);
@@ -156,43 +170,48 @@ export default function AdminDashboardPage() {
           setRecentAppointments(data.recentAppointments || []);
           setActivities(data.activities || []);
 
-          setFetchError(null);
+          setFetchError(null); // ล้างข้อผิดพลาดเดิม
         } else {
-          setFetchError(data.error);
+          setFetchError(data.error); // บันทึกข้อผิดพลาดที่ Server ส่งกลับมา
         }
-        setLoading(false);
-        setIsRefreshing(false);
+        setLoading(false);      // ปิดหน้ากากโหลดข้อมูลรอบแรก
+        setIsRefreshing(false); // ปิดเอฟเฟกต์หมุนปุ่มรีเฟรช
       })
       .catch(err => {
         console.error("Error fetching admin dashboard data:", err);
+        // แสดงข้อความแจ้งเตือนเฉพาะเมื่อไม่ได้เป็นการแอบโพลลิ่งเบื้องหลัง (Background Polling)
         if (!isBackground) setFetchError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
         setLoading(false);
         setIsRefreshing(false);
       });
   }, []);
 
+  // ฟังก์ชันรองรับการคลิกปุ่มรีเฟรชข้อมูลด้วยตนเองจาก Header
   const handleManualRefresh = () => {
-    setIsRefreshing(true);
-    fetchDashboardData(false);
+    setIsRefreshing(true);     // เปิดเอฟเฟกต์หมุนไอคอน
+    fetchDashboardData(false); // เรียกดึงข้อมูลใหม่
   };
 
+  // เรียกโหลดข้อมูลเมื่อเปิดหน้าจอ พร้อมตั้งเวลาโพลลิ่งอัปเดตอัตโนมัติทุกๆ 20 วินาที
   useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(() => fetchDashboardData(true), REFRESH_INTERVAL_MS);
-    return () => clearInterval(interval);
+    fetchDashboardData(); // โหลดข้อมูลทันทีเมื่อคอมโพเนนต์ Mount
+    const interval = setInterval(() => fetchDashboardData(true), REFRESH_INTERVAL_MS); // โพลลิ่งเบื้องหลัง
+    return () => clearInterval(interval); // คืนทรัพยากรล้าง Timer เมื่อปิดหน้าจอ
   }, [fetchDashboardData]);
 
-  // Moderation filtering
+  // กรองรายการประกาศในวิดเจ็ตคิวตรวจด่วน ตามคำค้นหาและสถานะความด่วน SLA
   const filteredModerationItems = useMemo(() => {
     let result = moderationItems;
 
+    // ถ้าเลือกกรองเฉพาะประกาศเร่งด่วน ให้คัดเฉพาะที่มี slaUrgent เป็น true
     if (moderationFilter === 'urgent') {
       result = result.filter(item => item.slaUrgent);
     }
 
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return result;
+    if (!q) return result; // หากไม่มีคำค้นหา ให้คืนผลลัพธ์ทันที
 
+    // กรองหาข้อความในชื่อประกาศ, รหัสประกาศ หรือชื่อนายหน้า
     return result.filter(item =>
       item.title.toLowerCase().includes(q) ||
       item.code.toLowerCase().includes(q) ||
@@ -200,9 +219,10 @@ export default function AdminDashboardPage() {
     );
   }, [moderationItems, moderationFilter, searchQuery]);
 
-  // Approve listing
+  // ฟังก์ชันอนุมัติประกาศด่วนจากหน้ารวมแดชบอร์ด
   const handleApprove = async (id: string, title: string) => {
     try {
+      // ส่งคำขอแบบ PATCH ไปยัง /api/properties เพื่อเปลี่ยนสถานะเป็น approved
       const res = await fetch('/api/properties', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -211,7 +231,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         showToast(`อนุมัติประกาศ "${title}" เรียบร้อยแล้ว`, 'success');
-        fetchDashboardData(true);
+        fetchDashboardData(true); // ดึงข้อมูลแดชบอร์ดใหม่เพื่ออัปเดตตัวเลขและวิดเจ็ต
       } else {
         showToast("เกิดข้อผิดพลาด: " + (data.error || "ไม่สามารถดำเนินการได้"), 'error');
       }
@@ -221,9 +241,10 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Reject listing
+  // ฟังก์ชันปฏิเสธ/ส่งกลับประกาศด่วนจากหน้ารวมแดชบอร์ด
   const handleReject = async (id: string, title: string) => {
     try {
+      // ส่งคำขอแบบ PATCH เพื่อเปลี่ยนสถานะเป็น rejected
       const res = await fetch('/api/properties', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -232,7 +253,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         showToast(`ส่งกลับคำขอ "${title}" เรียบร้อยแล้ว`, 'success');
-        fetchDashboardData(true);
+        fetchDashboardData(true); // ดึงข้อมูลแดชบอร์ดใหม่เพื่ออัปเดตตัวเลข
       } else {
         showToast("เกิดข้อผิดพลาด: " + (data.error || "ไม่สามารถดำเนินการได้"), 'error');
       }
@@ -242,6 +263,7 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // คำนวณยอดรวมงานค้างตรวจทั้งหมดที่ต้องได้รับการจัดการโดยแอดมิน
   const totalPendingActionItems = pendingCount + kycCount + paymentsCount + reportsCount;
 
   // Semantic timeline dot color helper
@@ -504,61 +526,81 @@ export default function AdminDashboardPage() {
                 </Link>
               </div>
 
+              {/* รายการนัดหมายเข้าชมบ้านล่าสุด */}
               <div className="divide-y divide-slate-100">
+                {/* ตรวจสอบว่ามีรายการนัดหมายหรือไม่ ถ้าไม่มีให้แสดงข้อความว่าง */}
                 {recentAppointments.length === 0 ? (
                   <div className="text-center py-10 text-slate-400 text-sm">
                     ไม่มีรายการนัดหมายในขณะนี้
                   </div>
                 ) : (
+                  // วนลูปแสดงผลรายการนัดหมายแต่ละรายการ
                   recentAppointments.map(app => {
+                    // กำหนดค่าเริ่มต้นเป็น 'รอดำเนินการ' (สีส้ม)
                     let statusLabel = 'รอดำเนินการ';
                     let statusClass = 'text-amber-800 bg-amber-50 border border-amber-200 font-bold';
+
+                    // เงื่อนไขที่ 1: สถานะ 'approved' (นายหน้ากดยืนยันเวลานัดแล้ว - แสดงสีเขียว)
                     if (app.status === 'approved') {
                       statusLabel = 'ยืนยันแล้ว';
                       statusClass = 'text-emerald-800 bg-emerald-50 border border-emerald-200 font-bold';
+                    // เงื่อนไขที่ 2: สถานะ 'completed' (ลูกค้าเข้าชมทรัพย์เสร็จสิ้นเรียบร้อยแล้ว - แสดงสีน้ำเงิน)
                     } else if (app.status === 'completed') {
                       statusLabel = 'เข้าชมแล้ว';
                       statusClass = 'text-blue-800 bg-blue-50 border border-blue-200 font-bold';
+                    // เงื่อนไขที่ 3: สถานะ 'awaiting_customer' (นายหน้าเสนอวันเวลาใหม่ รอลูกค้าตอบรับ - แสดงสีฟ้า)
                     } else if (app.status === 'awaiting_customer') {
                       statusLabel = 'รอลูกค้ายืนยันวันใหม่';
                       statusClass = 'text-sky-800 bg-sky-50 border border-sky-200 font-bold';
+                    // เงื่อนไขที่ 4: สถานะ 'no_show' (ลูกค้าหรือนายหน้าไม่มาตามเวลานัดหมาย - แสดงสีเทาขอบเข้ม ป้องกันเข้าใจผิดว่าเป็นรอดำเนินการ)
                     } else if (app.status === 'no_show') {
-                      // เดิมไม่มีเงื่อนไขนี้ นัดไม่มาตามนัดจึงขึ้นเป็น "รอดำเนินการ" (BUG-21)
                       statusLabel = 'ไม่มาตามนัด';
                       statusClass = 'text-slate-700 bg-slate-100 border border-slate-300 font-bold';
+                    // เงื่อนไขที่ 5: สถานะ 'rejected' (นายหน้าปฏิเสธคำขอนัดหมาย - แสดงสีแดง)
                     } else if (app.status === 'rejected') {
                       statusLabel = 'ถูกปฏิเสธ';
                       statusClass = 'text-rose-800 bg-rose-50 border border-rose-200 font-bold';
+                    // เงื่อนไขที่ 6: สถานะ 'cancelled' (ผู้ขอยกเลิกนัดหมายด้วยตนเอง - แสดงสีแดง)
                     } else if (app.status === 'cancelled') {
                       statusLabel = 'ยกเลิก';
                       statusClass = 'text-rose-800 bg-rose-50 border border-rose-200 font-bold';
                     }
 
+                    // แสดงผลการ์ดแถวรายการนัดหมายแต่ละรายการ
                     return (
                       <div
                         key={app.id}
                         className="p-4 sm:p-5 hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
+                        {/* ข้อมูลลูกค้า, ชื่อทรัพย์ และนายหน้าผู้ดูแล */}
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2.5">
+                            {/* ชื่อลูกค้าผู้ขอนัดหมาย */}
                             <span className="font-bold text-slate-900 text-sm sm:text-base">{app.customerName}</span>
+                            {/* เบอร์โทรศัพท์ลูกค้า (แสดงเฉพาะเมื่อมีเบอร์และไม่ใช่ '-') */}
                             {app.customerPhone !== '-' && (
                               <span className="text-slate-500 text-xs sm:text-sm font-medium">({app.customerPhone})</span>
                             )}
+                            {/* ป้ายกำกับสถานะการนัดหมายตามเงื่อนไขสีที่คำนวณไว้ด้านบน */}
                             <span className={`px-2.5 py-0.5 rounded-full text-xs ${statusClass}`}>
                               {statusLabel}
                             </span>
                           </div>
+                          {/* ชื่ออสังหาริมทรัพย์และทำเลที่ตั้ง */}
                           <p className="text-slate-700 text-xs sm:text-sm truncate">
                             อสังหาฯ: <span className="font-bold text-slate-900">{app.propertyTitle}</span> {app.propertyLocation && <span className="text-slate-500 font-normal">· {app.propertyLocation}</span>}
                           </p>
+                          {/* ชื่อตัวแทนนายหน้าผู้รับผิดชอบการนัดหมาย */}
                           <p className="text-slate-500 text-xs sm:text-sm">
                             นายหน้าผู้ดูแล: <span className="font-semibold text-slate-800">{app.agentName}</span>
                           </p>
                         </div>
 
+                        {/* วันที่และช่วงเวลาของนัดหมาย (จัดชิดขวาในจอขนาดกลางขึ้นไป) */}
                         <div className="text-left sm:text-right shrink-0 text-slate-600 sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                          {/* วันที่นัดหมาย */}
                           <div className="font-bold text-slate-900 text-sm sm:text-base">{app.appointmentDate}</div>
+                          {/* ช่วงเวลาที่นัด เช่น 10:00 - 11:30 น. */}
                           <div className="text-xs sm:text-sm text-slate-600 font-medium">{app.timeSlot}</div>
                         </div>
                       </div>
