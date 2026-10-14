@@ -1,3 +1,15 @@
+/**
+ * ==============================================================================
+ * [SEARCH: API_ADMIN_PAYMENTS_ROUTE] [AUTH: ADMIN_RBAC_CHECK] [LOGIC: ตรวจสอบและอนุมัติสลิปชำระเงิน PRO]
+ * API ตรวจสอบและจัดการธุรกรรมการชำระเงินของระบบ (Admin Payment Verification API)
+ * /app/api/admin/payments/route.ts
+ * ==============================================================================
+ * ฟังก์ชันหลัก:
+ * - GET: ดึงรายการสลิปชำระเงินแพ็กเกจ PRO Agent พร้อมเชื่อมโยงข้อมูลนายหน้าเจ้าของสลิป
+ * - PATCH: อนุมัติการชำระเงิน (คำนวณวันหมดอายุ PRO ทบวันล่วงหน้า), ปฏิเสธ หรือบันทึกโน้ตภายในของแอดมิน
+ * ==============================================================================
+ */
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next"; // ดึงเซสชันเพื่อยืนยันสิทธิ์ admin
 import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession

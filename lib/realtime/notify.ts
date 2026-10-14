@@ -1,3 +1,19 @@
+/**
+ * ==============================================================================
+ * ศูนย์กระจายการแจ้งเตือนแบบครบวงจร (Omnichannel Notification Dispatcher)
+ * /lib/realtime/notify.ts
+ * ==============================================================================
+ * หน้าที่หลัก:
+ * 1. บันทึกข้อมูลการแจ้งเตือนลงฐานข้อมูล (Prisma db.notifications.create)
+ * 2. ยิง Realtime WebSocket Event ผ่าน Pusher ไปยังผู้รับ (new-notification)
+ * 3. ส่งอีเมลแจ้งเตือนอัตโนมัติ (Automated Email) ผ่าน Nodemailer และ Email Templates
+ *    ครอบคลุม: นัดหมาย, แชท, ผลการตรวจประกาศ, สถานะ KYC, สลิปชำระเงิน
+ *
+ * [SEARCH: NOTIFY_USER_SERVICE]
+ * [LOGIC: การกระจายการแจ้งเตือน Realtime และอีเมล]
+ * ==============================================================================
+ */
+
 import { db } from '@/lib/db';
 import { getPusher } from './pusher';
 import { notificationChannelName } from './channels';

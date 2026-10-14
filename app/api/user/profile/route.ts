@@ -7,6 +7,7 @@ import { notifyUser, notifyUsers } from "@/lib/notify"; // ส่งแจ้ง
 
 /**
  * ==============================================================================
+ * [SEARCH: API_USER_PROFILE_ROUTE] [DATA: ข้อมูลโปรไฟล์ส่วนตัวและการเปลี่ยนรหัสผ่าน] [AUTH: BCRYPT_PASSWORD_HASH]
  * API Endpoint สำหรับจัดการข้อมูลส่วนตัวของผู้ใช้ (User Profile API Route)
  * /app/api/user/profile/route.ts
  * ==============================================================================

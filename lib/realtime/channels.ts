@@ -1,17 +1,16 @@
 /**
  * ==============================================================================
- * ไฟล์: lib/realtime/channels.ts
+ * การกำหนดชื่อและจัดการ Pusher Channel (Pusher Channel Naming Conventions)
+ * /lib/realtime/channels.ts
  * ==============================================================================
- * 
- * [หน้าที่ของไฟล์นี้]
- * เป็น Utility Module สำหรับจัดการข้อตกลงการตั้งชื่อ (Naming Conventions) ของ Pusher Channels
- * ทั้งระบบห้องแชท (Chat Channels) และระบบการแจ้งเตือนส่วนบุคคล (Notification Channels)
- * 
- * [ทำไมต้องขึ้นต้นด้วย 'private-']
- * ใน Pusher Protocol ช่องทางสื่อสาร (Channel) ที่ขึ้นต้นด้วยคำว่า `private-`
- * จะถูกกำหนดให้เป็น Private Channel ซึ่งผู้ใช้ไม่สามารถแอบต่อเองได้โดยพลการ
- * แต่ Pusher Client จะต้องส่งคำขอไปขอ Auth Signature จากเซิร์ฟเวอร์เราที่ `/api/pusher/auth` ก่อนเสมอ
- * เพื่อตรวจสอบว่าผู้ใช้คนนั้นมีสิทธิ์ในห้องแชท หรือเป็นเจ้าของ User ID นั้นจริงหรือไม่
+ * หน้าที่หลัก:
+ * - จัดการข้อตกลงการตั้งชื่อ (Naming Conventions) ของ Pusher Channels
+ *   ทั้งระบบห้องแชท (chatChannelName: 'private-chat-{sessionId}')
+ *   และระบบกระดิ่งแจ้งเตือนส่วนบุคคล (notificationChannelName: 'private-user-{userId}')
+ * - ช่องทางทั้งหมดเป็น Private Channel ที่ต้องยืนยันสิทธิ์ผ่าน /api/pusher/auth ก่อนเสมอ
+ *
+ * [SEARCH: PUSHER_CHANNELS_UTIL]
+ * [LOGIC: ข้อตกลงการตั้งชื่อ Pusher Channel]
  * ==============================================================================
  */
 

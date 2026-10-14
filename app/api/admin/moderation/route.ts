@@ -1,3 +1,21 @@
+/**
+ * ==============================================================================
+ * API ดึงรายการคิวตรวจสอบประกาศและสรุปผล SLA สำหรับแอดมิน (Admin Moderation Queue API)
+ * /app/api/admin/moderation/route.ts
+ * ==============================================================================
+ * หน้าที่หลัก:
+ * 1. ตรวจสอบสิทธิ์ความปลอดภัย: ต้องเข้าสู่ระบบในฐานะ 'admin' เท่านั้น (401 Unauthorized)
+ * 2. รับ Query Params: ?status=pending|approved|rejected และ ?listingType=sale|rent
+ * 3. ดึงข้อมูลประกาศจากฐานข้อมูล (Prisma db.properties.findMany) พร้อมข้อมูลนายหน้า, รูปภาพ, เอกสาร
+ * 4. นำ created_at ไปคำนวณเวลานับถอยหลัง SLA (calculateModerationSla)
+ * 5. นำ reviewed_at ไปคำนวณผลการทำงานย้อนหลัง (calculateReviewDuration, summarizeReviewSla)
+ *
+ * [SEARCH: API_ADMIN_MODERATION_GET]
+ * [API: โหลดข้อมูลคิวตรวจสอบประกาศและสรุปผล SLA]
+ * [AUTH: ตรวจสอบสิทธิ์ผู้ดูแลระบบ]
+ * ==============================================================================
+ */
+
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับดึงประกาศตามสถานะการตรวจสอบ
 import { getServerSession } from 'next-auth/next'; // ดึงเซสชันเพื่อยืนยันสิทธิ์ admin
@@ -14,6 +32,7 @@ interface AdminSession {
 
 export async function GET(req: Request) {
   try {
+    // [AUTH: ตรวจสอบสิทธิ์ผู้ดูแลระบบ (Admin Only)]
     const session = await getServerSession(authOptions) as AdminSession | null;
     if (!session || !session.user || session.user.role !== 'admin') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,3 +1,19 @@
+/**
+ * ==============================================================================
+ * การเชื่อมต่อฐานข้อมูล PostgreSQL ผ่าน Prisma ORM (Prisma Database Client Singleton)
+ * /lib/db.ts
+ * ==============================================================================
+ * หน้าที่หลัก:
+ * - สร้างและดูแล Connection Pool เชื่อมต่อกับฐานข้อมูล PostgreSQL
+ * - ใช้เทคนิค Singleton บน globalThis เพื่อป้องกันปัญหาการเปิด Connection ซ้ำซ้อน 
+ *   ในโหมดพัฒนา (Next.js Fast Refresh)
+ * - ส่งออกตัวแปร `db` สำหรับเรียกใช้คำสั่งคิวรีทุกแห่งในระบบ เช่น db.properties, db.users
+ *
+ * [SEARCH: DATABASE_CLIENT_SINGLETON]
+ * [DATA: จุดเชื่อมต่อฐานข้อมูลหลัก]
+ * ==============================================================================
+ */
+
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';

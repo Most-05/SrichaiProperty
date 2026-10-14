@@ -1,12 +1,17 @@
 /**
  * ==============================================================================
- * emailTemplates.ts - คลังเทมเพลตอีเมลแจ้งเตือนระดับพรีเมียม (Srichai Property)
+ * คลังเทมเพลตอีเมลแจ้งเตือนระดับพรีเมียม (Responsive Luxury Email Templates)
+ * /lib/templates/emailTemplates.ts
  * ==============================================================================
  * ออกแบบด้วย HTML/CSS สไตล์ Responsive ระดับ Luxury Real Estate
  * รองรับการเปิดบนมือถือ (iOS Mail, Android, Gmail App) และโปรแกรมเปิดอีเมลทุกค่าย
  * (Gmail, Outlook, Apple Mail, Yahoo Mail)
  * ธีมสีหลัก: Deep Navy (#0b1329 / #0f172a) ขลิบทอง Golden Amber (#d97706 / #f59e0b)
  * ไร้ Raw Emoji ในส่วน UI/Subject เพื่อความน่าเชื่อถือ ป้องกันการตก Junk/Spam
+ *
+ * [SEARCH: EMAIL_TEMPLATES]
+ * [LOGIC: เทมเพลตอีเมลแจ้งเตือนระบบ]
+ * [STYLE: สไตล์อีเมล Responsive สไตล์ Luxury]
  * ==============================================================================
  */
 
