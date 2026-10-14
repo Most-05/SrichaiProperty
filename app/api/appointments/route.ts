@@ -4,7 +4,15 @@ import { authOptions } from "@/lib/authOptions"; // ค่าคอนฟิก 
 import { db } from "@/lib/db"; // ไคลเอนต์ Prisma สำหรับจัดการนัดหมายและสล็อตวันว่าง
 import { notifyUser } from "@/lib/notify"; // ส่งการแจ้งเตือนเมื่อมีการนัด/ยืนยัน/ยกเลิกนัดหมาย
 import { hasAgentBookingConflict, validateSlotInput } from "@/lib/services/viewingSlotService"; // เช็คว่านายหน้ามีนัดจริงกับบ้านหลังอื่นชนเวลานี้อยู่แล้วหรือไม่
-import { autoCompleteOverdueAppointments, autoCancelExpiredRescheduleOffers, appointmentNeedsResult, isCustomerBlockedByNoShow, getCustomerReliability, getTodayDateBangkok } from "@/lib/services/noShowService"; // auto-complete/auto-cancel + เช็คนัดรอผล + เช็คลูกค้าถูกบล็อก + วันนี้ตามเวลาไทย
+import { 
+  autoCompleteOverdueAppointments, 
+  autoCancelExpiredRescheduleOffers, 
+  autoCancelExpiredPendingAppointments,
+  appointmentNeedsResult, 
+  isCustomerBlockedByNoShow, 
+  getCustomerReliability, 
+  getTodayDateBangkok 
+} from "@/lib/services/noShowService";
 import { NO_SHOW_LIMIT, APPOINTMENT_STATUS, timeSlotRange } from "@/lib/constants"; // โควตาเบี้ยวนัด + ค่าคงที่สถานะนัดหมาย
 import { findUpcomingAppointments, findRecentlyRemindedAppointmentIds, buildReminderMessage, REMINDER_TYPE } from "@/lib/services/appointmentReminderService"; // เตือนล่วงหน้าก่อนถึงวันนัด
 import { collectWaitlistToNotify, buildWaitlistAlert, removeFromWaitlist, purgeExpiredWaitlist } from "@/lib/services/waitlistService"; // คิวรอรอบเข้าชม
@@ -80,6 +88,8 @@ export async function GET(request: Request) {
     await autoCompleteOverdueAppointments();
     // ยกเลิกนัดที่นายหน้าขอเลื่อนไว้แต่ลูกค้าไม่เคยกดรับ จนวันที่เสนอผ่านไปแล้ว (คืนรอบว่างให้ด้วย)
     await autoCancelExpiredRescheduleOffers();
+    // ยกเลิกนัดที่รอดำเนินการ (pending) จนเลยวันนัดหมายไปแล้ว
+    await autoCancelExpiredPendingAppointments();
     // เก็บกวาดคิวรอที่เลยวันไปแล้ว (โปรเจกต์นี้ไม่มี cron จึงทำตอนมีคนเปิดหน้าเหมือนจุดอื่น)
     await purgeExpiredWaitlist();
 

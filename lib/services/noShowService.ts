@@ -110,6 +110,77 @@ export async function autoCancelExpiredRescheduleOffers(): Promise<void> {
   }
 }
 
+/**
+ * ยกเลิกนัดหมายที่ค้าง "รอดำเนินการ (pending)" จนเลยวันนัดหมายไปแล้ว
+ * (กรณีนายหน้าไม่เคยกดรับนัดหรือปฏิเสธ จนวันนัดผ่านไปแล้ว)
+ */
+export async function autoCancelExpiredPendingAppointments(): Promise<void> {
+  const today = getTodayDateBangkok();
+
+  const expired = await db.appointments.findMany({
+    where: {
+      status: APPOINTMENT_STATUS.PENDING,
+      appointment_date: { lt: today }
+    },
+    select: {
+      id: true,
+      property_id: true,
+      appointment_date: true,
+      time_slot: true,
+      customer_id: true,
+      agent_id: true,
+      properties: { select: { title: true } }
+    }
+  });
+
+  if (expired.length === 0) return;
+
+  for (const apt of expired) {
+    await db.appointments.update({
+      where: { id: apt.id },
+      data: {
+        status: APPOINTMENT_STATUS.CANCELLED,
+        cancel_reason: 'หมดอายุเนื่องจากนายหน้าไม่ได้ตอบรับก่อนถึงวันนัดหมาย'
+      }
+    });
+
+    if (apt.property_id) {
+      await db.property_viewing_slots.updateMany({
+        where: {
+          property_id: apt.property_id,
+          available_date: apt.appointment_date,
+          time_slot: apt.time_slot ?? undefined
+        },
+        data: { is_booked: false }
+      });
+    }
+
+    const propTitle = apt.properties?.title || 'อสังหาริมทรัพย์';
+
+    // 1. แจ้งเตือนลูกค้า
+    if (apt.customer_id) {
+      notifyUser({
+        userId: apt.customer_id,
+        title: 'นัดหมายหมดอายุ',
+        content: `คำขอนัดหมายเข้าชม "${propTitle}" หมดอายุแล้วเนื่องจากพ้นกำหนดวันนัดหมาย ท่านสามารถเลือกจองรอบใหม่ได้ตลอดเวลา`,
+        type: 'appointment',
+        linkUrl: '/appointments'
+      }).catch(err => console.error('Error sending expired pending notification to customer:', err));
+    }
+
+    // 2. แจ้งเตือนนายหน้า
+    if (apt.agent_id) {
+      notifyUser({
+        userId: apt.agent_id,
+        title: 'นัดหมายหมดอายุ',
+        content: `คำขอนัดหมายเข้าชม "${propTitle}" หมดอายุแล้วเนื่องจากพ้นกำหนดเวลาตอบรับ`,
+        type: 'appointment',
+        linkUrl: '/agent/appointments'
+      }).catch(err => console.error('Error sending expired pending notification to agent:', err));
+    }
+  }
+}
+
 /** นับจำนวนครั้งที่ลูกค้าคนนี้เคยเบี้ยวนัด (status = no_show) สะสมทั้งหมด */
 export async function countNoShows(customerId: string): Promise<number> {
   return db.appointments.count({

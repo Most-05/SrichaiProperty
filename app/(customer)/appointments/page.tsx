@@ -89,7 +89,7 @@ const MONTH_NAMES_TH = [
 ];
 
 // ฟังก์ชันช่วยคืนค่าสี ข้อความ และไอคอนตามสถานะการนัดหมาย
-const getStatusDetails = (status: string, isPast: boolean) => {
+const getStatusDetails = (status: string, isPast: boolean, cancelReason?: string) => {
   switch (status) {
     case 'approved':
       if (isPast) {
@@ -103,6 +103,9 @@ const getStatusDetails = (status: string, isPast: boolean) => {
     case 'rejected':
       return { text: "นายหน้าไม่สะดวกในรอบนี้", bg: "bg-rose-50 border-rose-200", color: "text-rose-800", Icon: XCircle };
     case 'cancelled':
+      if (cancelReason?.includes('หมดอายุ')) {
+        return { text: "หมดอายุ", bg: "bg-slate-100 border-slate-300", color: "text-slate-700", Icon: Clock };
+      }
       return { text: "ยกเลิกแล้ว", bg: "bg-slate-100 border-slate-200", color: "text-slate-700", Icon: Ban };
     case 'no_show':
       return { text: "ไม่ได้มาตามนัด", bg: "bg-red-50 border-red-200", color: "text-red-700", Icon: AlertTriangle };
@@ -587,7 +590,7 @@ export default function AppointmentsPage() {
             filteredAppointments.map((apt) => {
               const pastThisApt = isPastApt(apt);
               const cancelledThisApt = isCancelledApt(apt);
-              const statusDetails = getStatusDetails(apt.status, pastThisApt);
+              const statusDetails = getStatusDetails(apt.status, pastThisApt, apt.cancelReason);
               const StatusIcon = statusDetails.Icon;
 
               const dateObj = new Date(apt.date);
@@ -773,12 +776,21 @@ export default function AppointmentsPage() {
                   {apt.status === 'cancelled' && (
                     <div className="bg-slate-100/90 border border-slate-200 rounded-xl p-3 space-y-1 text-xs text-slate-800">
                       <div className="flex items-center gap-2 font-black text-slate-700">
-                        <Ban className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        <span>การนัดหมายถูกยกเลิกแล้ว</span>
+                        {apt.cancelReason?.includes('หมดอายุ') ? (
+                          <>
+                            <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <span>การนัดหมายหมดอายุแล้ว</span>
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <span>การนัดหมายถูกยกเลิกแล้ว</span>
+                          </>
+                        )}
                       </div>
                       {apt.cancelReason && (
                         <p className="text-[11px] text-slate-600 pl-5 font-semibold">
-                          เหตุผลการยกเลิก: &ldquo;{apt.cancelReason}&rdquo;
+                          {apt.cancelReason?.includes('หมดอายุ') ? 'รายละเอียด:' : 'เหตุผลการยกเลิก:'} &ldquo;{apt.cancelReason}&rdquo;
                         </p>
                       )}
                     </div>

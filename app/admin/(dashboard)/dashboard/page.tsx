@@ -75,6 +75,7 @@ interface RecentAppointmentItem {
   appointmentDate: string;
   timeSlot: string;
   status: string;
+  cancelReason?: string;
   timeAgo: string;
 }
 
@@ -583,10 +584,10 @@ export default function AdminDashboardPage() {
                     } else if (app.status === 'rejected') {
                       statusLabel = 'ถูกปฏิเสธ';
                       statusClass = 'text-rose-800 bg-rose-50 border border-rose-200 font-bold';
-                    // เงื่อนไขที่ 6: สถานะ 'cancelled' (ผู้ขอยกเลิกนัดหมายด้วยตนเอง - แสดงสีแดง)
+                    // เงื่อนไขที่ 6: สถานะ 'cancelled' (หมดอายุเนื่องจากพ้นกำหนด หรือ ผู้ขอยกเลิกนัดหมาย)
                     } else if (app.status === 'cancelled') {
-                      statusLabel = 'ยกเลิก';
-                      statusClass = 'text-rose-800 bg-rose-50 border border-rose-200 font-bold';
+                      statusLabel = app.cancelReason?.includes('หมดอายุ') ? 'หมดอายุ' : 'ยกเลิกแล้ว';
+                      statusClass = 'text-slate-700 bg-slate-100 border border-slate-300 font-bold';
                     }
 
                     // แสดงผลการ์ดแถวรายการนัดหมายแต่ละรายการ

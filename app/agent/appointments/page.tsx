@@ -1000,7 +1000,7 @@ export default function AgentAppointmentsPage() {
                           ) : apt.status === 'cancelled' ? (
                             <>
                               <Ban className="w-3 h-3 text-slate-400" />
-                              <span>ลูกค้ายกเลิกแล้ว</span>
+                              <span>{apt.cancelReason?.includes('หมดอายุ') ? 'หมดอายุ' : 'ยกเลิกแล้ว'}</span>
                             </>
                           ) : (
                             <>

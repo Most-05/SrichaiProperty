@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next'; // ดึงเซสชั�
 import { authOptions } from '@/lib/authOptions'; // ค่าคอนฟิก NextAuth ส่งให้ getServerSession
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับดึงข้อมูลวิเคราะห์ (analytics)
 import { summarizeReviewSla } from '@/lib/services/slaService'; // สรุปผล SLA การตรวจประกาศย้อนหลัง
+import { autoCancelExpiredPendingAppointments } from '@/lib/services/noShowService';
 
 interface AdminSession {
   user?: {
@@ -138,6 +139,8 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const rangeParam = searchParams.get('range');
+
+    await autoCancelExpiredPendingAppointments().catch(err => console.error("Error auto-cancelling in analytics:", err));
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
 

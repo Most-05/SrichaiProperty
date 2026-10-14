@@ -24,6 +24,12 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 import { db } from "@/lib/db";
 import { calculateModerationSla } from "@/lib/services/slaService";
+import { 
+  autoCancelExpiredPendingAppointments, 
+  autoCompleteOverdueAppointments, 
+  autoCancelExpiredRescheduleOffers, 
+  getTodayDateBangkok 
+} from "@/lib/services/noShowService";
 import { TIME_SLOT_INFO, timeSlotRange } from "@/lib/constants"; // ชื่อ + เวลารอบ (ค่ากลางที่เดียว)
 
 // "morning" → "รอบเช้า" (ไม่แสดงคำภาษาอังกฤษดิบบนหน้า dashboard)
@@ -57,6 +63,15 @@ export async function GET(request: Request) {
     const forwardedFor = request.headers.get("x-forwarded-for");
     const adminIp = forwardedFor ? forwardedFor.split(",")[0].trim() : (request.headers.get("x-real-ip") || "unknown");
 
+    const today = getTodayDateBangkok();
+
+    // เคลียร์นัดหมายที่พ้นกำหนดเวลา (Auto-cleanup) เพื่อให้ข้อมูลแดชบอร์ดถูกต้องเป็นปัจจุบันเสมอ
+    await Promise.all([
+      autoCancelExpiredPendingAppointments(),
+      autoCompleteOverdueAppointments(),
+      autoCancelExpiredRescheduleOffers()
+    ]).catch(err => console.error("Error running appointment cleanups in admin dashboard:", err));
+
     const [
       pendingCount,
       approvedListingsCount,
@@ -89,7 +104,7 @@ export async function GET(request: Request) {
       db.users.count({ where: { role_id: "agent", status: "pending" } }),
       db.payment_transactions.count({ where: { status: "pending" } }),
       db.reports.count({ where: { status: "pending" } }),
-      db.appointments.count({ where: { status: "pending" } }),
+      db.appointments.count({ where: { status: "pending", appointment_date: { gte: today } } }),
       db.appointments.count(),
 
       // 1. ประกาศที่รอการอนุมัติ (Pending Properties)
@@ -245,6 +260,7 @@ export async function GET(request: Request) {
         appointmentDate: appDate,
         timeSlot: slotName(a.time_slot) ? `${slotName(a.time_slot)} ${timeSlotRange(a.time_slot)}` : "ตามตกลง",
         status: a.status || "pending",
+        cancelReason: a.cancel_reason || "",
         timeAgo: formatThaiRelativeTime(new Date(a.created_at))
       };
     });
