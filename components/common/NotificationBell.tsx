@@ -1,5 +1,24 @@
 'use client';
 
+/**
+ * ==============================================================================
+ * [SEARCH: NOTIFICATION_BELL_COMPONENT] [UI: กระดิ่งแจ้งเตือน] [LOGIC: ซิงค์แจ้งเตือน PUSHER REALTIME]
+ * คอมโพเนนต์กระดิ่งแจ้งเตือนแบบเรียลไทม์ (Real-time Notification Bell & Popover)
+ * /components/common/NotificationBell.tsx
+ * ==============================================================================
+ * วัตถุประสงค์และฟังก์ชันหลัก:
+ * 1. UI Popover & Modal: แสดงกระดิ่งพร้อม Badge ตัวเลขสีแดงแจ้งเตือนที่ยังไม่ได้อ่าน
+ *    - เมื่อคลิก จะเปิดป๊อปโอเวอร์สรุปรายการแจ้งเตือนล่าสุด 30 รายการ
+ *    - สามารถสลับแท็บ "ทั้งหมด" กับ "ยังไม่อ่าน" ได้
+ * 2. Pusher Real-time Integration: ซับสไครบ์ช่องแจ้งเตือนส่วนบุคคล `private-user-[userId]`
+ *    - เมื่อมีอีเวนต์ `new-notification` เด้งเข้ามา จะเพิ่มรายการและส่ง Toast Alert ทันที
+ *    - อัจฉริยะ: ตรวจจับว่าถ้าผู้ใช้กำลังเปิดหน้าแชทห้องนั้นอยู่ (`isNotificationForActiveChat`)
+ *      จะไม่ส่งเสียงกวนใจ และมาร์กอ่านแล้วให้โดยอัตโนมัติ
+ * 3. Portal Floating Support: รองรับการแสดงผลแบบ Floating Portal เพื่อหลบหนี
+ *    CSS Overflow ของ Sidebar แอดมิน ไม่ให้ถูกตัดขอบ
+ * ==============================================================================
+ */
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';

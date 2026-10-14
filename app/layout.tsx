@@ -1,3 +1,16 @@
+/**
+ * ==============================================================================
+ * [SEARCH: ROOT_LAYOUT] [UI: โครงสร้างหลักของระบบ HTML] [STYLE: GLOBAL_FONT_TYPOGRAPHY]
+ * โครงร่างหลักระดับรากของเว็บไซต์ (Root Application Layout)
+ * /app/layout.tsx
+ * ==============================================================================
+ * วัตถุประสงค์:
+ * 1. กำหนดฟอนต์ Google Fonts ภาษาไทย (Prompt) และภาษาอังกฤษ (Geist)
+ * 2. กำหนด Metadata สำหรับ SEO และ OpenGraph
+ * 3. ห่อหุ้มลูกทั้งหมดด้วย Providers (Session, Global State, Toast, Network Monitor)
+ * ==============================================================================
+ */
+
 import type { Metadata } from "next";
 import { Prompt, Geist } from "next/font/google";
 import "./globals.css";

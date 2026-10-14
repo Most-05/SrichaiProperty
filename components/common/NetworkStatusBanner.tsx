@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 /**
  * ==============================================================================
+ * [SEARCH: NETWORK_STATUS_BANNER] [UI: แถบสถานะอินเทอร์เน็ต] [STYLE: OFFLINE_ONLINE_BANNER]
  * แบนเนอร์แจ้งเตือนสถานะเครือข่าย (Offline / Network Resilient UI)
  * /components/common/NetworkStatusBanner.tsx
  * ==============================================================================

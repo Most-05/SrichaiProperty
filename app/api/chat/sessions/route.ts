@@ -6,13 +6,23 @@ import { db } from '@/lib/db'; // Prisma Client ตัวแทนใช้ต�
 
 /**
  * ==============================================================================
+ * [SEARCH: API_CHAT_SESSIONS_ROUTE] [DATA: รายการห้องแชทระหว่างลูกค้าและนายหน้า] [LOGIC: ค้นหาหรือสร้างห้องสนทนา FIND_OR_CREATE]
  * API ROUTE: /api/chat/sessions
  * ==============================================================================
+ * [หน้าที่ของไฟล์นี้]
  * จัดการระบบห้องแชทซื้อขายอสังหาริมทรัพย์ระหว่าง ลูกค้า (Customer) และ นายหน้า (Agent)
- * ประกอบด้วย 3 HTTP Methods:
- * 1. GET    - ดึงรายการห้องแชททั้งหมดของผู้ใช้ที่ล็อกอินอยู่
- * 2. POST   - เปิด/สร้างห้องแชทใหม่ หรือ ดึงห้องแชทเดิมที่มีอยู่ (Find or Create)
- * 3. DELETE - ลบห้องแชทและข้อความทั้งหมดในห้องนั้น ( Cascading Delete )
+ * ทำหน้าที่เป็น Backend Controller สำหรับ Route: /api/chat/sessions
+ * 
+ * [HTTP Methods ที่รองรับ]
+ * 1. GET    - ดึงรายการห้องแชททั้งหมดของผู้ใช้ที่ล็อกอินอยู่ (คัดกรองตาม Role อัตโนมัติ)
+ *             พร้อมนับจำนวนข้อความที่ยังไม่อ่าน (unreadCount) และเช็ก Cursor Pagination (hasMoreMessages)
+ * 2. POST   - เปิด/สร้างห้องแชทใหม่ หรือ ดึงห้องแชทเดิมที่มีอยู่ (Find-or-Create Pattern)
+ *             ผูกตามความสัมพันธ์ (customer_id, agent_id, property_id)
+ * 3. DELETE - ลบห้องแชทและข้อความทั้งหมดในห้องนั้น (พร้อมตรวจสอบสิทธิ์ Authorization เข้มงวด)
+ * 
+ * [ความปลอดภัย (Security Standards)]
+ * - ทุก Method มีการตรวจสอบ Authentication ผ่าน getServerSession(authOptions)
+ * - มีการตรวจสอบสิทธิ์ Authorization: ผู้ใช้สามารถเข้าถึงหรือลบได้เฉพาะห้องแชทที่ตนเองเป็นคู่สนทนาเท่านั้น
  * ==============================================================================
  */
 
@@ -42,9 +52,9 @@ export async function GET() {
       return NextResponse.json({ error: 'ไม่พบผู้ใช้ในระบบ' }, { status: 404 });
     }
 
-    // เช็คว่าผู้ใช้ปัจจุบันมีบทบาทเป็น นายหน้า (agent) หรือไม่
+    // เช็คว่าผู้ใช้ปัจจุบันมีบทบาทเป็น นายหน้า (agent) หรือไม่ เพื่อแยกเงื่อนไข Query
     const isAgent = user.role_id === 'agent';
-    // กำหนดจำนวนข้อความสูงสุดที่จะดึงในตอนแรกต่อ 1 ห้อง (เพื่อไม่ให้แอปโหลดช้า)
+    // กำหนดจำนวนข้อความสูงสุดที่จะดึงในตอนแรกต่อ 1 ห้อง (เพื่อลดโหลด DB และ Network Payload)
     const MESSAGE_PAGE_SIZE = 30;
 
     // --------------------------------------------------------------------------
@@ -78,7 +88,7 @@ export async function GET() {
       orderBy: { created_at: 'desc' }
     });
 
-    // ดึงเอาเฉพาะ ID ของห้องแชททั้งหมดมารวบรวมเป็น Array string[]
+    // ดึงเอาเฉพาะ ID ของห้องแชททั้งหมดมารวบรวมเป็น Array string[] เพื่อใช้ทำ Aggregate Query
     const sessionIds = sessions.map(s => s.id);
 
     // --------------------------------------------------------------------------
@@ -92,7 +102,7 @@ export async function GET() {
           _count: { _all: true }
         })
       : [];
-    // แปลงผลลัพธ์เป็น Map<sessionId, totalCount> เพื่อให้ค้นหาค่าได้รวดเร็ว (O(1))
+    // แปลงผลลัพธ์เป็น Map<sessionId, totalCount> เพื่อให้ค้นหาค่าได้รวดเร็วแบบ O(1)
     const totalCountMap = new Map(totalCounts.map(c => [c.session_id, c._count._all]));
 
     // --------------------------------------------------------------------------
@@ -117,7 +127,7 @@ export async function GET() {
     // [6] แปลงโครงสร้างข้อมูล (Data Mapping) ส่งให้ Frontend
     // --------------------------------------------------------------------------
     const formatted = sessions.map(s => {
-      // กลับลำดับข้อความจาก (ใหม่->เก่า) เป็น (เก่า->ใหม่) เพื่อแสดงเรียงตามเวลาจริง
+      // กลับลำดับข้อความจาก (ใหม่->เก่า) เป็น (เก่า->ใหม่) เพื่อแสดงเรียงตามเวลาจริงในแชท
       s.messages.reverse();
 
       // เช็คว่ามีข้อความเก่าใน DB มากกว่า 30 ข้อความที่ดึงมาหรือไม่
@@ -135,7 +145,7 @@ export async function GET() {
       // ดึงข้อความล่าสุดมาทำ Text Preview (พรีวิวข้อความ, 📎 ไฟล์แนบ, หรือ 📍 ตำแหน่งที่แชร์)
       const lastMsg = s.messages[s.messages.length - 1];
       const lastMsgPreview = lastMsg 
-        ? (lastMsg.content || (lastMsg.file_url ? '📎 ไฟล์แนบ' : lastMsg.latitude ? '📍 ตำแหน่งที่แชร์' : ''))
+        ? (lastMsg.content || (lastMsg.file_url ? '[ไฟล์แนบ]' : lastMsg.latitude ? '[ตำแหน่งที่แชร์]' : ''))
         : 'เริ่มบทสนทนาใหม่';
 
       // ดึงจำนวนข้อความยังไม่ได้อ่านของห้องนี้
@@ -337,4 +347,3 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'ลบห้องแชทล้มเหลว: ' + err.message }, { status: 500 });
   }
 }
-

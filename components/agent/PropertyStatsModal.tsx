@@ -2,9 +2,10 @@
 
 /**
  * ==============================================================================
+ * [SEARCH: PROPERTY_STATS_MODAL] [UI: โมดอลสถิติอสังหาริมทรัพย์นายหน้า] [LOGIC: การคำนวณกราฟสถิติ RECHARTS]
  * หน้าต่างลอยแสดงสถิติอสังหาริมทรัพย์เชิงลึก (Property Stats Modal Component)
  * ==============================================================================
- * ไฟล์: components/agent/dashboard/PropertyStatsModal.tsx
+ * ไฟล์: components/agent/PropertyStatsModal.tsx
  * ประเภท: React Client Component ('use client')
  * 
  * หน้าที่หลัก (Main Responsibilities):

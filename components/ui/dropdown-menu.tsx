@@ -1,5 +1,15 @@
 "use client"
 
+/**
+ * ==============================================================================
+ * [SEARCH: UI_DROPDOWN_MENU] [STYLE: DROPDOWN_MENU_STYLES]
+ * คอมโพเนนต์เมนูดรอปดาวน์มาตรฐาน (Core UI Dropdown Menu Primitives)
+ * ==============================================================================
+ * พัฒนาต่อยอดจาก @base-ui/react/menu สำหรับทำเมนูเลือกตัวเลือก, เมนูบริบท (Context Menu),
+ * หรือเมนูโปรไฟล์ของผู้ใช้งาน รองรับ Portal, Submenu, Keyboard Navigation และ Animations
+ * ==============================================================================
+ */
+
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 

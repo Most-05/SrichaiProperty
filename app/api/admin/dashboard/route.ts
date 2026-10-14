@@ -1,3 +1,24 @@
+/**
+ * ==============================================================================
+ * API สรุปข้อมูลแดชบอร์ดหลักของผู้ดูแลระบบ (Admin Dashboard Overview API)
+ * /app/api/admin/dashboard/route.ts
+ * ==============================================================================
+ * หน้าที่หลัก:
+ * 1. ตรวจสอบสิทธิ์ความปลอดภัย: เฉพาะผู้ใช้ที่มีสิทธิ์ 'admin' เท่านั้น (401 Unauthorized)
+ * 2. รวบรวมสถิติภาพรวมทั้งระบบ (KPI Stats):
+ *    - จำนวนประกาศรออนุมัติ (pendingProperties)
+ *    - จำนวนนายหน้ารอตรวจเอกสารยืนยันตัวตน (pendingKyc)
+ *    - จำนวนสลิปชำระเงินรอตรวจ (pendingPayments)
+ *    - จำนวนนัดหมายวันนี้ (todayAppointments)
+ * 3. คำนวณ SLA ตรวจสอบประกาศรายชิ้น (calculateModerationSla)
+ * 4. ส่งกลับข้อมูลสรุปทั้งหมดเพื่อแสดงผลบนหน้า /admin/dashboard
+ *
+ * [SEARCH: API_ADMIN_DASHBOARD_GET]
+ * [API: โหลดข้อมูลแดชบอร์ดแอดมิน]
+ * [AUTH: ตรวจสอบสิทธิ์ผู้ดูแลระบบ]
+ * ==============================================================================
+ */
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
@@ -25,7 +46,7 @@ function formatThaiRelativeTime(date: Date): string {
 
 export async function GET(request: Request) {
   try {
-    // ตรวจสอบสิทธิ์: เฉพาะ Admin เท่านั้น
+    // [AUTH: ตรวจสอบสิทธิ์: เฉพาะ Admin เท่านั้น]
     const session = await getServerSession(authOptions);
     const role = session?.user?.role;
     if (!session || role !== "admin") {
@@ -57,6 +78,8 @@ export async function GET(request: Request) {
       recentProps,
       recentUsers
     ] = await Promise.all([
+        // 1. ดึง Log จากตาราง login_histories (การเข้าสู่ระบบจริง)
+
       db.properties.count({ where: { status: "pending" } }),
       db.properties.count({ where: { status: "approved" } }),
       db.properties.count(),
@@ -153,7 +176,8 @@ export async function GET(request: Request) {
       })
     ]);
 
-    // แปลงรายการรอตรวจสอบประกาศ
+    // [SEARCH: DASHBOARD_MODERATION_ITEMS]
+    // [DATA: แปลงรายการรอตรวจสอบประกาศพร้อมข้อมูลคำนวณ SLA]
     const moderationItems = pendingProperties.map(p => {
       const slaInfo = calculateModerationSla(p.created_at);
       return {
@@ -174,7 +198,8 @@ export async function GET(request: Request) {
       };
     });
 
-    // รายการนายหน้ารอตรวจ KYC
+    // [SEARCH: DASHBOARD_PENDING_KYC]
+    // [DATA: รายการนายหน้ารอตรวจเอกสารยืนยันตัวตน KYC]
     const formattedPendingKyc = pendingKycUsers.map(u => ({
       id: u.id,
       name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || "นายหน้า",

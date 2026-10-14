@@ -5,6 +5,7 @@ import { useToast, ToastMessage, ToastType } from '@/components/ui/toast';
 
 /**
  * ==============================================================================
+ * [SEARCH: TOAST_CONTAINER] [UI: กล่องแสดงการแจ้งเตือน TOAST] [STYLE: TOAST_GLASSMORPHISM]
  * คอนเทนเนอร์แสดงผล Toast Notifications (Toast Container)
  * /components/common/ToastContainer.tsx
  * ==============================================================================

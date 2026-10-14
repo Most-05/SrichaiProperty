@@ -2,6 +2,7 @@
 
 /**
  * ==============================================================================
+ * [SEARCH: SOCIAL_LOGIN_BUTTONS] [UI: ปุ่มเข้าสู่ระบบด้วยโซเชียล] [AUTH: GOOGLE_FACEBOOK_SIGNIN]
  * ปุ่มเข้าสู่ระบบด้วยโซเชียลมีเดีย (Social Login Buttons Component)
  * /components/auth/SocialLoginButtons.tsx
  * ==============================================================================

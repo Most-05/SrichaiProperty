@@ -1,10 +1,31 @@
+/**
+ * ==============================================================================
+ * [SEARCH: UI_BADGE_COMPONENT] [STYLE: BADGE_STATUS_STYLES]
+ * คอมโพเนนต์ป้ายสถานะมาตรฐาน (Core Status Badge Component)
+ * ==============================================================================
+ * ใช้สำหรับแสดงป้ายกำกับสถานะต่างๆ ในระบบ เช่น การตรวจสอบทรัพย์ (Moderation),
+ * สถานะผู้ใช้งาน, นัดหมาย และรายการร้องเรียน
+ * 
+ * การจับคู่สีและข้อความอัตโนมัติ:
+ * 1. Approved / Resolved / Online -> สีเขียว (Emerald) "อนุมัติแล้ว / แก้ไขแล้ว / ออนไลน์"
+ * 2. Pending / Processing / รอตรวจสอบ -> สีเหลืองอำพัน (Amber) "รอตรวจสอบ / กำลังดำเนินการ"
+ * 3. Rejected / Dismissed / Scam / Suspended -> สีแดง (Red) "ปฏิเสธ / ปัดตก / ระงับบัญชี"
+ * 4. กรณีอื่นๆ -> สีเทา (Slate) ค่าเริ่มต้น
+ * ==============================================================================
+ */
+
 import React from 'react';
 
 interface BadgeProps {
+  /** รหัสสถานะภาษาอังกฤษหรือภาษาไทย เช่น 'approved', 'pending', 'rejected' */
   status: string;
+  /** คลาส CSS เพิ่มเติมสำหรับปรับแต่งขอบหรือขนาด */
   className?: string;
 }
 
+/**
+ * คอมโพเนนต์ป้าย Badge แสดงผลตามสถานะที่ส่งเข้ามา
+ */
 export default function Badge({ status, className = '' }: BadgeProps) {
   const normStatus = status.toLowerCase();
 

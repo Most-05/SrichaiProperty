@@ -60,7 +60,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Heart,
-  Star
+  Star,
+  Copy,
+  Check
 } from 'lucide-react';
 import { getGoogleMapsDirectionsUrl, type NearbyPlaceResult } from '@/lib/nearbyService';
 
@@ -212,18 +214,19 @@ function getNearbyMeta(category?: string | null, transitType?: string | null): N
 
 export default function PropertyDetailPage() {
   // ----------------------------------------------------------------------------
-  // 1. ROUTER & GLOBAL CONTEXT
+  // 1. ROUTER & GLOBAL CONTEXT (การอ่านพารามิเตอร์ URL และ Context ส่วนกลาง)
   // ----------------------------------------------------------------------------
-  const params = useParams();
-  const id = params.id; // รหัส ID อสังหาฯ จาก URL Parameter (เช่น /property/uuid)
+  const params = useParams(); // Hook อ่านพารามิเตอร์ Dynamic Route จาก URL เช่น /property/[id]
+  const id = params.id;       // รหัส ID อสังหาฯ จาก URL Parameter (เช่น /property/uuid)
 
+  // ดึงข้อมูลและฟังก์ชันจัดการจาก AppContext ส่วนกลาง
   const { properties, propertiesLoading, favorites, toggleFavorite } = useApp();
 
   // 1.1 ค้นหาข้อมูลอสังหาริมทรัพย์จาก ID ที่ตรงกันในฐานข้อมูล
   const property = properties.find((p) => String(p.id) === String(id));
 
   // 1.2 จัดการสถานที่สำคัญหลัก 5 แท็บแบบ Real-time Dynamic จาก OpenStreetMap (ปลอดข้อมูลฮาร์ดโค้ด 100%)
-  const [activeNearbyTab, setActiveNearbyTab] = useState<'all' | 'shopping' | 'education' | 'hospital' | 'transport'>('all');
+  const [activeNearbyTab, setActiveNearbyTab] = useState<'all' | 'shopping' | 'education' | 'hospital' | 'transport'>('all'); // แท็บหมวดหมู่สถานที่ใกล้เคียงที่เลือกดู
   const [nearbyData, setNearbyData] = useState<{
     propertyId: string;
     data: {
@@ -233,20 +236,29 @@ export default function PropertyDetailPage() {
       hospital: NearbyPlaceResult[];
       transport: NearbyPlaceResult[];
     };
-  } | null>(null);
+  } | null>(null); // เก็บผลลัพธ์สถานที่สำคัญรอบพิกัดที่ดึงจาก OSM Overpass API
 
+  // สถานะการคัดลอก LINE ID สำเร็จ (แสดงไอคอน Check ชั่วคราว)
+  const [copiedLine, setCopiedLine] = useState(false);
+
+  // ตรวจสอบว่ากำลังโหลดข้อมูลสถานที่ใกล้เคียงอยู่หรือไม่ (เมื่อมีข้อมูลทรัพย์แต่ยังไม่มีข้อมูล OSM)
   const isNearbyLoading = Boolean(property && (!nearbyData || nearbyData.propertyId !== String(property.id)));
 
+  // ดึงข้อมูลสถานที่ใกล้เคียงแบบ Dynamic จากพิกัดละติจูด/ลองจิจูดของทรัพย์
   useEffect(() => {
-    if (!property) return;
+    if (!property) return; // หากยังโหลดทรัพย์ไม่เสร็จ ให้ข้าม
+    // อ่านพิกัดละติจูด หากไม่มีให้ใช้ค่าเริ่มต้นพิกัดหาดใหญ่ สงขลา
     const lat = property.latitude != null ? Number(property.latitude) : 7.0089;
+    // อ่านพิกัดลองจิจูด หากไม่มีให้ใช้ค่าเริ่มต้น
     const lng = property.longitude != null ? Number(property.longitude) : 100.4812;
 
-    let isMounted = true;
+    let isMounted = true; // ตัวแปรป้องกัน Race Condition เมื่อปิดหน้าจอ
 
+    // ส่งคำขอไปยัง API /api/nearby เพื่อค้นหาสถานที่สำคัญในรัศมีรอบโครงการ
     fetch(`/api/nearby?lat=${lat}&lng=${lng}`)
       .then((res) => res.json())
       .then((res) => {
+        // ตรวจสอบว่า Component ยังคง Mount อยู่ และ API ส่งข้อมูลสำเร็จ
         if (isMounted && res.success && res.data) {
           setNearbyData({
             propertyId: String(property.id),
@@ -258,35 +270,41 @@ export default function PropertyDetailPage() {
         console.error('Failed to fetch dynamic nearby places from OSM:', err);
       });
 
+    // Cleanup Function ล้างสถานะเมื่อ Component ถูก Unmount
     return () => {
       isMounted = false;
     };
   }, [property]);
 
+  // ดึงรายการสถานที่สำคัญเฉพาะในแท็บหมวดหมู่ที่ผู้ใช้กำลังเปิดดู
   const activePlaces = useMemo<NearbyPlaceResult[]>(() => {
     if (!nearbyData || nearbyData.propertyId !== String(property?.id)) return [];
     return nearbyData.data[activeNearbyTab] || [];
   }, [nearbyData, activeNearbyTab, property?.id]);
 
-  // 1.2 ค้นหาอสังหาริมทรัพย์ที่คล้ายกัน (ประเภทเดียวกัน หรือ ทำเลเดียวกัน หรือ ช่วงราคาใกล้เคียง ไม่รวมหลังปัจจุบัน)
+  // 1.3 ค้นหาอสังหาริมทรัพย์ที่คล้ายกัน โดยใช้ระบบให้คะแนนความเหมือน (Multi-attribute scoring algorithm)
   const similarProperties = useMemo(() => {
     if (!property) return [];
+    // คัดกรองเอาเฉพาะประกาศหลังอื่นที่ไม่ใช่หลังปัจจุบัน
     const others = properties.filter((p) => String(p.id) !== String(property.id));
+    // คำนวณคะแนนความคล้ายคลึง
     const scored = others.map((p) => {
       let score = 0;
-      if (p.type === property.type) score += 3;
-      if (p.province_id && property.province_id && p.province_id === property.province_id) score += 2;
-      if (p.amphure_id && property.amphure_id && p.amphure_id === property.amphure_id) score += 1;
+      if (p.type === property.type) score += 3; // คะแนน +3 ถ้าเป็นประเภทอสังหาฯ เดียวกัน (เช่น บ้านเดี่ยวเหมือนกัน)
+      if (p.province_id && property.province_id && p.province_id === property.province_id) score += 2; // คะแนน +2 ถ้าอยู่จังหวัดเดียวกัน
+      if (p.amphure_id && property.amphure_id && p.amphure_id === property.amphure_id) score += 1;     // คะแนน +1 ถ้าอยู่อำเภอเดียวกัน
       return { prop: p, score };
     });
+    // เรียงจากคะแนนสูงที่สุดลงมา
     scored.sort((a, b) => b.score - a.score);
+    // เลือกมาเฉพาะ 3 รายการที่มีความใกล้เคียงมากที่สุด
     return scored.slice(0, 3).map((item) => item.prop);
   }, [properties, property]);
 
   // ----------------------------------------------------------------------------
   // 2. PHOTO GALLERY MEMOIZATION (จัดการรูปภาพสำหรับแสดงผลในกริด)
   // ----------------------------------------------------------------------------
-  // realImages: รูปภาพจริงทั้งหมดที่บันทึกไว้ใน DB
+  // realImages: รูปภาพจริงทั้งหมดที่บันทึกไว้ใน DB (ถ้าไม่มี Array ให้ใช้รูปหลักเดี่ยว)
   const realImages = useMemo(() => {
     if (!property) return [];
     return property.images && property.images.length > 0 ? property.images : [property.image];
@@ -301,7 +319,7 @@ export default function PropertyDetailPage() {
   // ----------------------------------------------------------------------------
   // 3. LOCAL COMPONENT STATE (สถานะภายในหน้า)
   // ----------------------------------------------------------------------------
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);       // เปิด/ปิด Modal รูปขยายเต็มจอ
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);       // เปิด/ปิด Modal รูปขยายเต็มจอ (Lightbox)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0); // ดัชนีรูปภาพที่กำลังเปิดดูใน Modal
   const [startingChat, setStartingChat] = useState(false);         // สถานะกำลังส่งคำขอเปิดห้องแชท (เพื่อแสดง Spinner)
 
@@ -319,7 +337,7 @@ export default function PropertyDetailPage() {
   const [downPaymentPercent, setDownPaymentPercent] = useState(10); // เงินดาวน์เริ่มต้น % ของราคาซื้อขาย
 
   // ----------------------------------------------------------------------------
-  // 5. REVIEWS STATE & EFFECT
+  // 5. REVIEWS STATE & EFFECT (ระบบรีวิวนายหน้าผู้ดูแลประกาศ)
   // ----------------------------------------------------------------------------
   interface ReviewItem {
     id: string;
@@ -330,11 +348,12 @@ export default function PropertyDetailPage() {
     customerImage?: string | null;
     propertyTitle: string;
   }
-  const [reviews, setReviews] = useState<ReviewItem[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(true);
-  const [agentRealRating, setAgentRealRating] = useState<number>(property?.agentRating || 0);
-  const [agentRealReviewCount, setAgentRealReviewCount] = useState<number>(property?.agentReviewCount || 0);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);                                     // รายการรีวิวทั้งหมด
+  const [reviewsLoading, setReviewsLoading] = useState(true);                                   // สถานะกำลังโหลดรีวิว
+  const [agentRealRating, setAgentRealRating] = useState<number>(property?.agentRating || 0);   // คะแนนเฉลี่ยจริง
+  const [agentRealReviewCount, setAgentRealReviewCount] = useState<number>(property?.agentReviewCount || 0); // จำนวนรีวิวรวม
 
+  // ดึงข้อมูลรีวิวของนายหน้าผู้ดูแลจาก API
   useEffect(() => {
     if (property?.agent_id) {
       fetch(`/api/reviews?agentId=${property.agent_id}`)
@@ -352,23 +371,24 @@ export default function PropertyDetailPage() {
   }, [property?.agent_id]);
 
   // ----------------------------------------------------------------------------
-  // 6. EFFECTS & COMPUTATIONS
+  // 6. EFFECTS & COMPUTATIONS (การคำนวณและดักจับการเปลี่ยนแปลง)
   // ----------------------------------------------------------------------------
   // 6.1 บันทึกยอดผู้เข้าชมประกาศนี้ไปยังฐานข้อมูล (+1 View Count)
   useEffect(() => {
     if (id) fetch(`/api/properties/${id}/view`, { method: 'POST' }).catch(() => {});
   }, [id]);
 
-  // 5.2 หักเงินดาวน์ออกจากราคาซื้อขาย เพื่อให้ได้วงเงินกู้จริงที่ใช้คำนวณค่างวด
+  // 6.2 หักเงินดาวน์ออกจากราคาซื้อขาย เพื่อให้ได้วงเงินกู้จริงที่ใช้คำนวณค่างวด
   const downPaymentAmount = useMemo(() => Math.round(price * downPaymentPercent / 100), [price, downPaymentPercent]);
-  const loanAmount = Math.max(price - downPaymentAmount, 0);
+  const loanAmount = Math.max(price - downPaymentAmount, 0); // วงเงินกู้สุทธิ (ยอดราคาเต็ม - เงินดาวน์)
 
-  // 5.3 คำนวณยอดผ่อนชำระค่างวดสินเชื่อต่อเดือน (สูตรดอกเบี้ยทบต้นคงที่)
+  // 6.3 คำนวณยอดผ่อนชำระค่างวดสินเชื่อต่อเดือน (สูตรดอกเบี้ยทบต้นคงที่ Amortization Formula)
   const monthlyInstallment = useMemo(() => {
-    const monthlyRate = interestRate / 12 / 100;
-    const totalPayments = loanYears * 12;
-    if (loanAmount <= 0) return '0';
-    if (monthlyRate === 0) return (loanAmount / totalPayments).toFixed(0);
+    const monthlyRate = interestRate / 12 / 100; // อัตราดอกเบี้ยต่อเดือน (ทศนิยม)
+    const totalPayments = loanYears * 12;        // จำนวนงวดทั้งหมด (ปี x 12 เดือน)
+    if (loanAmount <= 0) return '0';             // หากไม่ต้องกู้ ยอดผ่อนเป็น 0
+    if (monthlyRate === 0) return (loanAmount / totalPayments).toFixed(0); // หากดอกเบี้ย 0%
+    // สูตรคำนวณ: M = P * [ r(1+r)^n ] / [ (1+r)^n - 1 ]
     const payment = (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / (Math.pow(1 + monthlyRate, totalPayments) - 1);
     return isNaN(payment) || !isFinite(payment) ? '0' : payment.toFixed(0);
   }, [loanAmount, interestRate, loanYears]);
@@ -400,9 +420,9 @@ export default function PropertyDetailPage() {
   const isSaved = favorites.includes(property.id);
 
   // ----------------------------------------------------------------------------
-  // 6. EVENT HANDLERS (ฟังก์ชันจัดการการกระทำของผู้ใช้)
+  // 7. EVENT HANDLERS (ฟังก์ชันจัดการการกระทำของผู้ใช้)
   // ----------------------------------------------------------------------------
-  // 6.1 ฟังก์ชันคัดลอก URL เพื่อแชร์
+  // 7.1 ฟังก์ชันคัดลอก URL เพื่อแชร์
   const handleShare = () => {
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
@@ -410,10 +430,11 @@ export default function PropertyDetailPage() {
     }
   };
 
-  // 6.2 ฟังก์ชันเปิดห้องแชทสื่อสารกับนายหน้าผ่าน API
+  // 7.2 ฟังก์ชันเปิดห้องแชทสื่อสารกับนายหน้าผ่าน API
   const handleStartChat = async () => {
-    setStartingChat(true);
+    setStartingChat(true); // เปิดสถานะกำลังประมวลผล
     try {
+      // ส่งคำขอสร้างหรือเปิดห้องแชทเดิมระหว่างลูกค้ากับนายหน้า
       const res = await fetch('/api/chat/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -421,6 +442,7 @@ export default function PropertyDetailPage() {
       });
       const data = await res.json();
       if (res.ok && data.success && data.sessionId) {
+        // หากสำเร็จ ให้ Redirect ไปยังหน้าต่างห้องแชท
         window.location.href = `/chat?sessionId=${data.sessionId}`;
       } else {
         toast.error(data.error || 'ไม่สามารถเปิดห้องแชทได้');
@@ -428,7 +450,7 @@ export default function PropertyDetailPage() {
     } catch {
       toast.error('เกิดข้อผิดพลาดในการเปิดห้องแชท');
     } finally {
-      setStartingChat(false);
+      setStartingChat(false); // ปิดสถานะประมวลผล
     }
   };
 
@@ -436,10 +458,23 @@ export default function PropertyDetailPage() {
   const propRecord = property as unknown as Record<string, unknown>;
   const rawLineId = String(propRecord.lineId || propRecord.line_id || '');
   const agentPhone = String(propRecord.agentPhone || propRecord.phone || '081-234-5678');
+  // สร้าง URL ลิงก์ตรงสำหรับเปิดแอปพลิเคชัน LINE
   const lineUrl = rawLineId
     ? `https://line.me/ti/p/~${rawLineId.replace('@', '')}`
     : `https://line.me/R/msg/text/?${encodeURIComponent(`สวัสดีครับ สนใจอสังหาริมทรัพย์: ${property.title}`)}`;
+  // สร้าง URL สำหรับกดโทรออกทันที
   const phoneUrl = `tel:${agentPhone.replace(/[^\d+]/g, '')}`;
+
+  // ฟังก์ชันคัดลอก LINE ID ลงคลิปบอร์ด
+  const handleCopyLineId = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined' && rawLineId) {
+      navigator.clipboard.writeText(rawLineId);
+      setCopiedLine(true);
+      toast.success(`คัดลอก LINE ID: ${rawLineId} แล้ว`);
+      setTimeout(() => setCopiedLine(false), 2000);
+    }
+  };
 
   // ----------------------------------------------------------------------------
   // 7. RENDERING SECTION (การแสดงผล UI)
@@ -1069,12 +1104,66 @@ export default function PropertyDetailPage() {
 
               {/* ปุ่มติดต่อด่วน (โทรศัพท์ & คุย LINE) */}
               <div className="space-y-2">
-                <a href={phoneUrl} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs">
-                  <PhoneIcon className="w-3.5 h-3.5" /> {agentPhone}
+                <a 
+                  href={phoneUrl} 
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs shadow-xs"
+                >
+                  <PhoneIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span>{agentPhone}</span>
                 </a>
-                <a href={lineUrl} target="_blank" rel="noreferrer" className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs">
-                  <ChatIcon className="w-3.5 h-3.5" /> คุย LINE นายหน้า
-                </a>
+
+                {/* กล่องแสดง LINE ID ของนายหน้า */}
+                {rawLineId ? (
+                  <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-3 space-y-2 shadow-2xs">
+                    <div className="flex items-center justify-between gap-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="text-[11px] font-bold text-emerald-800 shrink-0">LINE ID:</span>
+                        <span className="font-mono text-[11px] font-black text-emerald-950 bg-white px-2 py-0.5 rounded-lg border border-emerald-200 truncate">
+                          {rawLineId}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyLineId}
+                        className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-white hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                        title="คัดลอก LINE ID"
+                      >
+                        {copiedLine ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span className="text-[10px]">คัดลอกแล้ว</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span className="text-[10px]">คัดลอก</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <a 
+                      href={lineUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-xs shadow-xs cursor-pointer"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                      <span>เปิดแชท LINE นายหน้า</span>
+                    </a>
+                  </div>
+                ) : (
+                  <a 
+                    href={lineUrl} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs shadow-xs"
+                  >
+                    <ChatIcon className="w-3.5 h-3.5 shrink-0" />
+                    <span>คุย LINE นายหน้า</span>
+                  </a>
+                )}
               </div>
 
               {/* ปุ่มนัดหมายชมบ้าน และ ปุ่มแชทสดในระบบ */}

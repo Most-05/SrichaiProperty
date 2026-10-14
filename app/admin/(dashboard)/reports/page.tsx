@@ -54,10 +54,15 @@ interface ReportData {
   } | null;
 }
 
+// ชนิดข้อมูลระดับความรุนแรงของรายงาน: วิกฤต (critical), ปานกลาง (medium), เล็กน้อย (low)
 type Severity = 'critical' | 'medium' | 'low';
 
+// ฟังก์ชันวิเคราะห์ระดับความรุนแรงของข้อร้องเรียนโดยอัตโนมัติจากคำค้นหา (Keyword Heuristic)
 function getReportSeverity(reason: string, details?: string): Severity {
+  // รวมข้อความเหตุผลและรายละเอียดเข้าด้วยกัน แปลงเป็นตัวพิมพ์เล็ก
   const text = `${reason} ${details || ''}`.toLowerCase();
+
+  // เงื่อนไขที่ 1: กรณีวิกฤต (Critical) - มิจฉาชีพ หลอกโอนเงิน สวมรอย หรือฉ้อโกง
   if (
     text.includes('ฉ้อโกง') ||
     text.includes('scam') ||
@@ -66,8 +71,10 @@ function getReportSeverity(reason: string, details?: string): Severity {
     text.includes('มิจฉาชีพ') ||
     text.includes('ปลอม')
   ) {
-    return 'critical';
+    return 'critical'; // ระดับวิกฤต: ต้องจัดการทันที
   }
+
+  // เงื่อนไขที่ 2: กรณีปานกลาง (Medium) - ข้อมูลเท็จ สแปม ไม่ตรงปก หรือขายไปแล้วยังไม่ลบ
   if (
     text.includes('ข้อมูลเท็จ') ||
     text.includes('false') ||
@@ -77,31 +84,51 @@ function getReportSeverity(reason: string, details?: string): Severity {
     text.includes('spam') ||
     text.includes('ไม่ตรงปก')
   ) {
-    return 'medium';
+    return 'medium'; // ระดับปานกลาง: ส่งตักเตือนหรือแก้ไข
   }
+
+  // เงื่อนไขที่ 3: กรณีเล็กน้อย (Low)
   return 'low';
 }
 
 export default function AdminReportsPage() {
+  // ----------------------------------------------------------------------------
+  // 1. STATE MANAGEMENT (การจัดการสถานะภายในหน้าจัดการข้อร้องเรียน)
+  // ----------------------------------------------------------------------------
+  // รายการข้อร้องเรียนทั้งหมดที่ดึงมาจาก API
   const [reports, setReports] = useState<ReportData[]>([]);
+
+  // สถานะการโหลดข้อมูลครั้งแรก (แสดง Loading Spinner เต็มหน้าจอ)
   const [loading, setLoading] = useState(true);
+
+  // สถานะการกดปุ่มรีเฟรชข้อมูลด้วยตนเอง (หมุนไอคอน RefreshCw)
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // แท็บสถานะปัจจุบัน: 'pending' (รอตรวจสอบ), 'resolved' (ดำเนินการยุติเรื่องแล้ว), 'dismissed' (ยกฟ้อง/ปฏิเสธข้อร้องเรียน)
   const [activeTab, setActiveTab] = useState<'pending' | 'resolved' | 'dismissed'>('pending');
+
+  // ตัวกรองระดับความรุนแรง: ทั้งหมด, วิกฤต, ปานกลาง, เล็กน้อย
   const [severityFilter, setSeverityFilter] = useState<'all' | 'critical' | 'medium' | 'low'>('all');
+
+  // ข้อความค้นหาด่วน (Search Query) รองรับการค้นรหัส Ticket ID, ผู้แจ้ง, ผู้ถูกร้องเรียน หรือชื่อทรัพย์
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Resolution Modal State
-  const [resolvingReport, setResolvingReport] = useState<ReportData | null>(null);
-  const [resolutionAction, setResolutionAction] = useState<'resolved' | 'warn' | 'ban' | 'dismissed'>('resolved');
-  const [resolutionSummary, setResolutionSummary] = useState('');
-  const [submittingResolution, setSubmittingResolution] = useState(false);
+  // Resolution Modal State (สถานะหน้าต่างระบุผลการยุติเรื่องร้องเรียน)
+  const [resolvingReport, setResolvingReport] = useState<ReportData | null>(null);                    // รายงานที่จะดำเนินการ
+  const [resolutionAction, setResolutionAction] = useState<'resolved' | 'warn' | 'ban' | 'dismissed'>('resolved'); // คำสั่งดำเนินการ เช่น แบน เตือน ยุติ หรือยกฟ้อง
+  const [resolutionSummary, setResolutionSummary] = useState('');                                   // บันทึกสรุปการยุติเรื่องแจ้งคู่กรณี
+  const [submittingResolution, setSubmittingResolution] = useState(false);                           // สถานะกำลังส่งข้อมูล
 
+  // ----------------------------------------------------------------------------
+  // 2. DATA FETCHING (ฟังก์ชันดึงข้อมูลข้อร้องเรียนจาก API)
+  // ----------------------------------------------------------------------------
   const fetchReports = (status: string) => {
+    // ส่งคำขอแบบ GET ไปยัง /api/admin/reports พร้อมแนบสถานะและ Timestamp กันแคช
     fetch(`/api/admin/reports?status=${status}&t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          setReports(data.reports || []);
+          setReports(data.reports || []); // บันทึกรายการข้อร้องเรียนลง State
         }
       })
       .catch(err => {
@@ -109,36 +136,45 @@ export default function AdminReportsPage() {
         toast.error('ไม่สามารถโหลดข้อมูลรายงานได้');
       })
       .finally(() => {
+        // ปิดสถานะโหลดข้อมูลทั้งแบบปกติและแบบรีเฟรช
         setLoading(false);
         setIsRefreshing(false);
       });
   };
 
+  // ดักจับการเปลี่ยนแท็บสถานะ เพื่อโหลดรายการใหม่ทันที
   useEffect(() => {
     fetchReports(activeTab);
   }, [activeTab]);
 
+  // ฟังก์ชันรองรับการคลิกปุ่มรีเฟรชด้วยตนเองจาก Header
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchReports(activeTab);
   };
 
-  // Open Resolution Modal
+  // ----------------------------------------------------------------------------
+  // 3. ACTION HANDLERS (ฟังก์ชันจัดการเรื่องร้องเรียนและระงับประกาศ)
+  // ----------------------------------------------------------------------------
+  // เปิด Modal เพื่อเลือกมาตรการดำเนินการและพิมพ์สรุปผลการยุติเรื่อง
   const handleOpenResolveModal = (report: ReportData, defaultAction: 'resolved' | 'warn' | 'ban' | 'dismissed') => {
-    setResolvingReport(report);
-    setResolutionAction(defaultAction);
-    setResolutionSummary('');
+    setResolvingReport(report);          // กำหนดข้อร้องเรียนเป้าหมาย
+    setResolutionAction(defaultAction);   // กำหนดมาตรการเริ่มต้น เช่น ตักเตือน, แบน หรือยกฟ้อง
+    setResolutionSummary('');            // ล้างข้อความสรุปเดิม
   };
 
-  // Confirm Resolution
+  // ยืนยันการบันทึกผลการยุติเรื่องและส่งการแจ้งเตือนไปยังคู่กรณี
   const handleConfirmResolution = async () => {
     if (!resolvingReport) return;
-    setSubmittingResolution(true);
+    setSubmittingResolution(true); // เปิดสถานะกำลังประมวลผล
 
+    // กำหนดสถานะปลายทางของเคส (dismissed หรือ resolved)
     const targetStatus = resolutionAction === 'dismissed' ? 'dismissed' : 'resolved';
+    // หากเลือกคำสั่งแบน ให้แนบ action: 'ban' เพื่อระงับบัญชีนายหน้าในระบบ
     const actionParam = resolutionAction === 'ban' ? 'ban' : undefined;
 
     try {
+      // ส่งคำขอแบบ PATCH ไปยัง API /api/admin/reports
       const res = await fetch('/api/admin/reports', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -154,8 +190,8 @@ export default function AdminReportsPage() {
       const data = await res.json();
       if (data.success) {
         toast.success('บันทึกผลการยุติเรื่องและอัปเดตสถานะเรียบร้อยแล้ว');
-        setResolvingReport(null);
-        fetchReports(activeTab);
+        setResolvingReport(null); // ปิด Modal
+        fetchReports(activeTab);  // ดึงรายการใหม่
       } else {
         toast.error('เกิดข้อผิดพลาด: ' + (data.error || ''));
       }
@@ -167,14 +203,15 @@ export default function AdminReportsPage() {
     }
   };
 
-  // One-click Suspend / Restore Property Listing
+  // ฟังก์ชันสลับสถานะระงับประกาศชั่วคราว (One-click Suspend / Restore Property)
   const handleTogglePropertySuspension = async (reportId: string, propertyId: string, currentStatus: string) => {
-    const isCurrentlySuspended = currentStatus === 'rejected';
-    const action = isCurrentlySuspended ? 'restore_property' : 'suspend_property';
+    const isCurrentlySuspended = currentStatus === 'rejected'; // ตรวจว่ากำลังถูกระงับอยู่หรือไม่
+    const action = isCurrentlySuspended ? 'restore_property' : 'suspend_property'; // เลือกคำสั่ง
     const promptMsg = isCurrentlySuspended
       ? 'ยืนยันการคืนค่าประกาศ ให้กลับมาแสดงผลบนเว็บไซต์ตามปกติหรือไม่?'
       : 'ยืนยันการระงับประกาศทันทีหรือไม่? ประกาศนี้จะถูกถอดออกจากหน้าเว็บทันทีระหว่างรอการตรวจสอบ';
 
+    // กล่องข้อความถามยืนยันเพื่อป้องกันการกดพลาด
     if (!confirm(promptMsg)) return;
 
     try {
@@ -195,7 +232,10 @@ export default function AdminReportsPage() {
     }
   };
 
-  // Severity Counts
+  // ----------------------------------------------------------------------------
+  // 4. COMPUTATIONS & FILTER PIPELINE (คำนวณสถิติและกระบวนการกรองข้อมูล)
+  // ----------------------------------------------------------------------------
+  // นับจำนวนข้อร้องเรียนแยกตามระดับความรุนแรง
   const severityCounts = useMemo(() => {
     let critical = 0, medium = 0, low = 0;
     reports.forEach(r => {
@@ -207,25 +247,25 @@ export default function AdminReportsPage() {
     return { all: reports.length, critical, medium, low };
   }, [reports]);
 
-  // Filter reports by search & severity
+  // กรองรายการข้อร้องเรียนตามคำค้นหาและระดับความรุนแรง
   const filteredReports = useMemo(() => {
     return reports.filter(r => {
-      // Severity Filter
+      // ขั้นที่ 1: กรองตามระดับความรุนแรง (ถ้าไม่ได้เลือก 'all')
       if (severityFilter !== 'all') {
         const sev = getReportSeverity(r.reason, r.details);
         if (sev !== severityFilter) return false;
       }
 
-      // Search Query
+      // ขั้นที่ 2: ค้นหาคำค้นหาหลายฟิลด์พร้อมกัน
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const ticketId = `tk-${r.id.slice(0, 8)}`.toLowerCase();
-        const reason = (r.reason || '').toLowerCase();
-        const details = (r.details || '').toLowerCase();
-        const reporterName = (r.reporter?.name || '').toLowerCase();
-        const agentName = (r.reportedAgent?.name || '').toLowerCase();
-        const propTitle = (r.property?.title || '').toLowerCase();
-        const resText = (r.resolution?.summary || '').toLowerCase();
+        const ticketId = `tk-${r.id.slice(0, 8)}`.toLowerCase();        // รหัสตั๋วร้องเรียน
+        const reason = (r.reason || '').toLowerCase();                    // หัวข้อเหตุผล
+        const details = (r.details || '').toLowerCase();                  // รายละเอียดเพิ่มเติม
+        const reporterName = (r.reporter?.name || '').toLowerCase();      // ชื่อผู้แจ้ง
+        const agentName = (r.reportedAgent?.name || '').toLowerCase();    // ชื่อผู้ถูกร้องเรียน
+        const propTitle = (r.property?.title || '').toLowerCase();        // ชื่อประกาศที่เกี่ยวข้อง
+        const resText = (r.resolution?.summary || '').toLowerCase();      // บันทึกผลการยุติเรื่อง
 
         return (
           ticketId.includes(q) ||
@@ -242,19 +282,24 @@ export default function AdminReportsPage() {
     });
   }, [reports, searchQuery, severityFilter]);
 
-  // Export CSV
+  // ----------------------------------------------------------------------------
+  // 5. CSV EXPORT (ฟังก์ชันส่งออกรายงานข้อร้องเรียนเป็นไฟล์ CSV)
+  // ----------------------------------------------------------------------------
   const handleExportCSV = () => {
     if (filteredReports.length === 0) {
       toast.error('ไม่มีข้อมูลสำหรับส่งออก');
       return;
     }
 
+    // กำหนดหัวตารางของไฟล์ CSV
     const headers = ['Ticket ID', 'ความรุนแรง', 'เหตุผล', 'รายละเอียด', 'สถานะ', 'ผู้แจ้ง', 'ผู้ถูกรายงาน', 'ประกาศที่เกี่ยวข้อง', 'ผลการยุติเรื่อง', 'วันที่แจ้ง'];
+
+    // แปลงข้อมูลแต่ละแถวเป็น CSV Format
     const rows = filteredReports.map(r => [
       `"TK-${r.id.slice(0, 8).toUpperCase()}"`,
       `"${getReportSeverity(r.reason, r.details).toUpperCase()}"`,
       `"${r.reason || ''}"`,
-      `"${(r.details || '').replace(/"/g, '""')}"`,
+      `"${(r.details || '').replace(/"/g, '""')}"`, // escape double quotes
       `"${r.status}"`,
       `"${r.reporter?.name || '-'}"`,
       `"${r.reportedAgent?.name || '-'}"`,
@@ -263,6 +308,7 @@ export default function AdminReportsPage() {
       `"${new Date(r.createdAt).toLocaleString('th-TH')}"`
     ]);
 
+    // เติม Byte Order Mark (\uFEFF) นำหน้า เพื่อให้ Microsoft Excel รองรับภาษาไทยได้สมบูรณ์
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -272,7 +318,7 @@ export default function AdminReportsPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('ดาวน์โหลดไฟล์ CSV รายงานปัญหาเรียบร้อยแล้ว');
+    toast.success('ดาวน์โหลดไฟล์ CSV รายงานข้อร้องเรียนเรียบร้อยแล้ว');
   };
 
   return (

@@ -1,7 +1,18 @@
-// ประกาศ type เพิ่มเติมให้ next-auth รู้จักฟิลด์ที่โปรเจกต์นี้ใส่เข้าไปเอง
-// (role, phone, status, id) — ของเดิม next-auth ไม่มีฟิลด์พวกนี้ ทำให้ทุกจุดที่เคยอ่าน
-// session.user ต้อง `as {...}` เอาเอง กระจายอยู่หลายไฟล์ ไฟล์นี้รวมไว้ที่เดียว
-// ดู lib/authOptions.ts ว่าฟิลด์พวกนี้ถูกใส่เข้า token/session ตอนไหนบ้าง
+/**
+ * ==============================================================================
+ * การขยายประเภทข้อมูลระบบยืนยันตัวตน NextAuth (NextAuth Type Augmentation)
+ * /types/next-auth.d.ts
+ * ==============================================================================
+ * หน้าที่หลัก:
+ * - ประกาศ Type เพิ่มเติมให้ NextAuth รู้จักฟิลด์เฉพาะของโปรเจกต์ Srichai Property
+ *   (role, phone, status, id)
+ * - ป้องกันไม่ให้โค้ดส่วนอื่นต้องพิมพ์ type assertion `as {...}` เองซ้ำๆ
+ * - เชื่อมโยงกับการสร้าง Token ใน lib/authOptions.ts และการดักสิทธิ์ใน proxy.ts
+ *
+ * [SEARCH: NEXTAUTH_TYPE_AUGMENTATION]
+ * [AUTH: นิยามประเภทข้อมูลความปลอดภัย]
+ * ==============================================================================
+ */
 
 import { DefaultSession, DefaultUser } from "next-auth";
 import { DefaultJWT } from "next-auth/jwt";

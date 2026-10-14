@@ -3,9 +3,12 @@ import { cn } from '@/lib/utils';
 
 /**
  * ==============================================================================
+ * [SEARCH: UI_CHAT_BUBBLE] [STYLE: CHAT_BUBBLE_VARIANTS]
  * SHADCN UI CHAT BUBBLE PRIMITIVES (กล่องบอลลูนคำพูดข้อความ)
  * ==============================================================================
  * ทำหน้าที่แสดงผลกรอบกรอกข้อความในดีไซน์มินิมอล มีมิติ สไตล์ shadcn
+ * รองรับ primary (ข้อความเราเอง), secondary (ข้อความคู่สนทนา), outline, ghost
+ * ==============================================================================
  */
 
 interface BubbleProps extends React.HTMLAttributes<HTMLDivElement> {

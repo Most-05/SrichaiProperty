@@ -16,38 +16,62 @@ import {
 } from 'lucide-react';
 
 export default function AdminKycPage() {
+  // ----------------------------------------------------------------------------
+  // 1. STATE MANAGEMENT (การจัดการสถานะภายในหน้าตรวจสอบ KYC)
+  // ----------------------------------------------------------------------------
+  // รายชื่อนายหน้าที่ดึงมาจาก API (อิงตามแท็บสถานะที่เลือก เช่น pending, approved, rejected)
   const [agents, setAgents] = useState<AgentData[]>([]);
+
+  // สถานะการโหลดข้อมูลครั้งแรก (แสดง Loading Spinner เต็มหน้าจอขณะเริ่มดึงข้อมูล)
   const [loading, setLoading] = useState(true);
+
+  // สถานะการกดปุ่มรีเฟรชข้อมูลด้วยตนเอง (หมุนไอคอน RefreshCw ขณะกำลังโหลด)
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // สถานะแท็บปัจจุบัน: 'pending' (รอตรวจสอบ), 'approved' (อนุมัติแล้ว), 'rejected' (ปฏิเสธ/ส่งกลับ)
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+
+  // ข้อความค้นหาด่วน (Search Query) รองรับการค้นชื่อ, อีเมล, เบอร์โทร, LINE ID หรือ User ID
   const [searchQuery, setSearchQuery] = useState('');
+
+  // ตัวกรองประเภทไฟล์เอกสาร: 'all' (ทั้งหมด), 'image' (เฉพาะรูปถ่ายบัตร), 'pdf' (เฉพาะเอกสาร PDF)
   const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'image' | 'pdf'>('all');
+
+  // ข้อมูลเอกสารที่แอดมินกำลังคลิกเปิดดูใน Modal ขยายใหญ่ (Inspect Modal)
   const [inspectingDoc, setInspectingDoc] = useState<{ url: string; title: string } | null>(null);
 
+  // ----------------------------------------------------------------------------
+  // 2. DATA FETCHING (ฟังก์ชันดึงข้อมูลรายการ KYC จาก API)
+  // ----------------------------------------------------------------------------
+  // ดึงข้อมูลนายหน้าตามสถานะที่ระบุ พร้อมป้องกันปัญหาแคชด้วย Timestamp
   const fetchAgents = async (status: string) => {
     try {
+      // ส่งคำขอแบบ GET ไปยัง /api/admin/kyc พร้อมปิดการแคชระดับเบราว์เซอร์
       const res = await fetch(`/api/admin/kyc?status=${status}&t=${Date.now()}`, {
         cache: 'no-store',
         headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
       });
       const data = await res.json();
+      // ตรวจสอบว่า API ส่งผลลัพธ์สำเร็จและมี Array รายชื่อนายหน้า
       if (data.success && Array.isArray(data.users)) {
-        setAgents(data.users);
+        setAgents(data.users); // บันทึกรายชื่อนายหน้าลง State
       } else {
-        setAgents([]);
+        setAgents([]);        // หากไม่มีข้อมูล ให้กำหนดเป็น Array ว่าง
       }
     } catch (err) {
       console.error(err);
       setAgents([]);
       toast.error('ไม่สามารถโหลดข้อมูล KYC ได้');
     } finally {
+      // ปิดสถานะการโหลดข้อมูลทั้งแบบปกติและแบบรีเฟรช
       setLoading(false);
       setIsRefreshing(false);
     }
   };
 
+  // ดักจับการสลับแท็บสถานะ (activeTab) เพื่อดึงข้อมูลใหม่ทันที
   useEffect(() => {
-    let ignore = false;
+    let ignore = false; // Flag ป้องกัน Race Condition เมื่อสลับแท็บเร็วกว่าที่ Request จะตอบกลับ
     const loadData = async () => {
       try {
         const res = await fetch(`/api/admin/kyc?status=${activeTab}&t=${Date.now()}`, {
@@ -55,6 +79,7 @@ export default function AdminKycPage() {
           headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
         });
         const data = await res.json();
+        // อัปเดต State เฉพาะเมื่อ Effect นี้ยังคงมีผลอยู่ (ยังไม่ถูก Clean up)
         if (!ignore) {
           if (data.success && Array.isArray(data.users)) {
             setAgents(data.users);
@@ -73,20 +98,28 @@ export default function AdminKycPage() {
       }
     };
     loadData();
+    // Cleanup Function ยกเลิกผลการตอบกลับหากมีการเปลี่ยนแท็บก่อนโหลดเสร็จ
     return () => {
       ignore = true;
     };
   }, [activeTab]);
 
+  // ฟังก์ชันรองรับการคลิกปุ่มรีเฟรชข้อมูลด้วยตนเอง
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchAgents(activeTab);
+    setIsRefreshing(true);  // หมุนไอคอนรีเฟรช
+    fetchAgents(activeTab); // ดึงข้อมูลล่าสุด
   };
 
+  // ----------------------------------------------------------------------------
+  // 3. ACTION HANDLERS (ฟังก์ชันอนุมัติ ปฏิเสธ และลบบัญชี)
+  // ----------------------------------------------------------------------------
+  // ฟังก์ชันอัปเดตสถานะ KYC (อนุมัติ หรือ ปฏิเสธพร้อมระบุเหตุผล)
   const handleUpdateStatus = async (userId: string, newStatus: string, reason?: string, note?: string) => {
+    // ใช้ Optimistic UI: นำรายการออกจากหน้าจอทันทีเพื่อความรู้สึกลื่นไหล
     setAgents(prev => prev.filter(a => a.id !== userId));
 
     try {
+      // ส่งคำขอแบบ PATCH เพื่อบันทึกสถานะลงฐานข้อมูล
       const res = await fetch('/api/admin/kyc', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -94,11 +127,12 @@ export default function AdminKycPage() {
       });
       const data = await res.json();
       if (data.success) {
+        // แสดงข้อความแจ้งเตือนความสำเร็จตามสถานะที่เลือก
         toast.success(newStatus === 'approved' ? 'อนุมัติสิทธิ์นายหน้าเรียบร้อยแล้ว' : 'ส่งบันทึกการปฏิเสธเอกสารเรียบร้อยแล้ว');
-        fetchAgents(activeTab);
+        fetchAgents(activeTab); // ซิงก์ข้อมูลจริงจากฐานข้อมูลใหม่อีกครั้ง
       } else {
         toast.error('เกิดข้อผิดพลาด: ' + (data.error || ''));
-        fetchAgents(activeTab);
+        fetchAgents(activeTab); // กรณีล้มเหลว โหลดข้อมูลเดิมกลับคืนมา
       }
     } catch (err) {
       console.error(err);
@@ -107,12 +141,16 @@ export default function AdminKycPage() {
     }
   };
 
+  // ฟังก์ชันลบบัญชีนายหน้าออกจากระบบอย่างถาวร
   const handleDeleteAgent = async (userId: string) => {
+    // แสดงกล่องถามยืนยันก่อนลบเพื่อความปลอดภัยสูงสุด
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบบัญชีนี้ออกจากระบบอย่างถาวร?')) return;
 
+    // Optimistic UI ลบออกจากหน้าจอก่อน
     setAgents(prev => prev.filter(a => a.id !== userId));
 
     try {
+      // ส่งคำขอแบบ DELETE ไปยัง API
       const res = await fetch(`/api/admin/kyc?userId=${userId}`, {
         method: 'DELETE'
       });
@@ -131,56 +169,65 @@ export default function AdminKycPage() {
     }
   };
 
-  // Document Counts
+  // ----------------------------------------------------------------------------
+  // 4. COMPUTATIONS & FILTER PIPELINE (การนับจำนวนเอกสารและกระบวนการกรอง)
+  // ----------------------------------------------------------------------------
+  // คำนวณสรุปจำนวนเอกสารแยกตามประเภท (PDF vs รูปภาพ)
   const docCounts = useMemo(() => {
-    let images = 0;
-    let pdfs = 0;
+    let images = 0; // ตัวนับไฟล์รูปภาพ (.jpg, .png ฯลฯ)
+    let pdfs = 0;   // ตัวนับไฟล์เอกสาร PDF
     agents.forEach(a => {
       if (a.kyc_doc) {
         if (a.kyc_doc.toLowerCase().endsWith('.pdf')) {
-          pdfs++;
+          pdfs++;   // ถ้าลงท้ายด้วย .pdf ให้นับเป็นเอกสาร PDF
         } else {
-          images++;
+          images++; // มิฉะนั้นนับเป็นไฟล์รูปภาพ
         }
       }
     });
     return { all: agents.length, image: images, pdf: pdfs };
   }, [agents]);
 
-  // Search & Type filter
+  // กรองรายชื่อนายหน้าตามคำค้นหา (Multi-field Search) และประเภทไฟล์เอกสาร
   const filteredAgents = useMemo(() => {
     return agents.filter(a => {
-      // Search match
+      // ขั้นที่ 1: ตรวจสอบคำค้นหา
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const name = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
-        const email = (a.email || '').toLowerCase();
-        const phone = (a.phone || '').toLowerCase();
-        const id = (a.id || '').toLowerCase();
-        const line = (a.line_id || '').toLowerCase();
+        const name = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase(); // ชื่อ-นามสกุล
+        const email = (a.email || '').toLowerCase();                             // อีเมล
+        const phone = (a.phone || '').toLowerCase();                             // เบอร์โทรศัพท์
+        const id = (a.id || '').toLowerCase();                                   // รหัสประจำตัว
+        const line = (a.line_id || '').toLowerCase();                             // ไอดี LINE
+        // ตรวจว่ามีฟิลด์ใดฟิลด์หนึ่งตรงกับคำค้นหาหรือไม่
         const match = name.includes(q) || email.includes(q) || phone.includes(q) || id.includes(q) || line.includes(q);
         if (!match) return false;
       }
 
-      // Doc type filter
+      // ขั้นที่ 2: กรองตามประเภทของไฟล์เอกสารที่แนบมา
       if (docTypeFilter === 'pdf') {
-        return a.kyc_doc && a.kyc_doc.toLowerCase().endsWith('.pdf');
+        return a.kyc_doc && a.kyc_doc.toLowerCase().endsWith('.pdf');     // เฉพาะไฟล์ PDF
       } else if (docTypeFilter === 'image') {
-        return a.kyc_doc && !a.kyc_doc.toLowerCase().endsWith('.pdf');
+        return a.kyc_doc && !a.kyc_doc.toLowerCase().endsWith('.pdf');    // เฉพาะไฟล์รูปถ่าย
       }
 
-      return true;
+      return true; // หากเลือก 'all' ให้ผ่านการกรองทั้งหมด
     });
   }, [agents, searchQuery, docTypeFilter]);
 
-  // Export CSV
+  // ----------------------------------------------------------------------------
+  // 5. CSV EXPORT (ส่งออกรายงาน KYC เป็นไฟล์ CSV)
+  // ----------------------------------------------------------------------------
   const handleExportCSV = () => {
     if (filteredAgents.length === 0) {
       toast.error('ไม่มีข้อมูลสำหรับส่งออก');
       return;
     }
 
+    // กำหนดหัวตารางของไฟล์ CSV
     const headers = ['User ID', 'ชื่อ-นามสกุล', 'อีเมล', 'เบอร์โทรศัพท์', 'LINE ID', 'สถานะ KYC', 'มีเอกสารแนบ', 'รูปแบบไฟล์', 'วันที่ส่งเอกสาร'];
+
+    // แปลงข้อมูลแต่ละแถวเป็น CSV Format
     const rows = filteredAgents.map(a => [
       `"${a.id}"`,
       `"${a.first_name || ''} ${a.last_name || ''}"`,
@@ -193,15 +240,16 @@ export default function AdminKycPage() {
       `"${new Date(a.created_at).toLocaleString('th-TH')}"`
     ]);
 
+    // เติม Byte Order Mark (\uFEFF) นำหน้า เพื่อให้ Microsoft Excel รองรับภาษาไทยได้ถูกต้อง
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); // สร้าง Blob Object
+    const url = URL.createObjectURL(blob);                                     // สร้าง URL สำหรับดาวน์โหลด
+    const link = document.createElement('a');                                 // สร้างแท็ก <a> เสมือน
     link.setAttribute('href', url);
     link.setAttribute('download', `srichai_kyc_${activeTab}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    link.click();                    // กระตุ้นการดาวน์โหลด
+    document.body.removeChild(link); // ล้างหน่วยความจำ
     toast.success('ดาวน์โหลดไฟล์ CSV เรียบร้อยแล้ว');
   };
 

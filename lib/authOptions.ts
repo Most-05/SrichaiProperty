@@ -1,3 +1,20 @@
+/**
+ * ==============================================================================
+ * [SEARCH: NEXTAUTH_OPTIONS_CONFIG] [AUTH: NEXTAUTH_SESSION_JWT_CONFIGURATION] [LOGIC: การยืนยันตัวตน GOOGLE_FACEBOOK_CREDENTIALS]
+ * การตั้งค่า NextAuth สำหรับระบบยืนยันตัวตนและจัดการ Session (NextAuth Options Configuration)
+ * /lib/authOptions.ts
+ * ==============================================================================
+ * วัตถุประสงค์หลัก:
+ * 1. กำหนด Authentication Providers:
+ *    - Google OAuth: ล็อกอินผ่านบัญชี Google
+ *    - Facebook OAuth: ล็อกอินผ่านบัญชี Facebook
+ *    - Credentials Provider: ล็อกอินด้วยอีเมลและรหัสผ่าน (ตรวจเช็คแฮชด้วย bcrypt)
+ * 2. บันทึกสิทธิ์และสถานะลงใน JWT Token และ Session (id, role, status, plan)
+ * 3. มีระบบดักจับการระงับบัญชี (banned/suspended) ให้บล็อกการเข้าสู่ระบบ
+ * 4. บันทึกประวัติการเข้าสู่ระบบ (Audit Login History)
+ * ==============================================================================
+ */
+
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";

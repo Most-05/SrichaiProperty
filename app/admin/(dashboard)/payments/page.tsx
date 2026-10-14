@@ -78,43 +78,68 @@ function getBillingBadge(amount: number): { label: string; className: string } {
 }
 
 export default function AdminPaymentsPage() {
+  // ----------------------------------------------------------------------------
+  // 1. STATE MANAGEMENT (การจัดการสถานะภายในหน้าจัดการการชำระเงิน)
+  // ----------------------------------------------------------------------------
+  // รายการประวัติธุรกรรมและการแนบสลิปที่ดึงมาจาก API
   const [payments, setPayments] = useState<Payment[]>([]);
+
+  // แท็บตัวกรองสถานะ: 'pending' (รอตรวจสลิป), 'approved' (อนุมัติแล้ว), 'rejected' (ปฏิเสธ), 'all' (ทั้งหมด)
   const [filter, setFilter] = useState<Filter>('pending');
+
+  // สถานะการโหลดข้อมูลครั้งแรก (แสดง Loading Spinner เต็มหน้าจอ)
   const [loading, setLoading] = useState(true);
+
+  // สถานะการกดปุ่มรีเฟรชข้อมูลด้วยตนเอง (หมุนไอคอน RefreshCw)
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // ตรวจสอบว่าผู้ใช้มีสิทธิ์เข้าถึงหน้านี้หรือไม่ (หากเป็น 401 จะแสดงหน้าจอเตือนต้องใช้สิทธิ์ Admin)
   const [unauthorized, setUnauthorized] = useState(false);
+
+  // รหัส ID ของรายการธุรกรรมที่กำลังถูกประมวลผล (ป้องกันการกดปุ่มอนุมัติซ้ำ)
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  // เก็บ URL รูปภาพสลิปที่แอดมินคลิกเปิดดูแบบขยายใหญ่ (Full-screen Modal)
   const [slipUrl, setSlipUrl] = useState<string | null>(null);
+
+  // ข้อความค้นหาด่วน (Search Query) รองรับการค้นชื่อนายหน้า, อีเมล, รหัสออเดอร์ หรือข้อความในโน้ต
   const [searchQuery, setSearchQuery] = useState('');
+
+  // ตัวนับรอบสำหรับกระตุ้นการโหลดข้อมูลใหม่ (Trigger re-fetch)
   const [tick, setTick] = useState(0);
 
-  // Rejection Modal State
-  const [rejectingPayment, setRejectingPayment] = useState<Payment | null>(null);
-  const [selectedRejectReason, setSelectedRejectReason] = useState(PAYMENT_REJECT_PRESETS[0]);
-  const [customRejectNote, setCustomRejectNote] = useState('');
-  const [submittingReject, setSubmittingReject] = useState(false);
+  // Rejection Modal State (สถานะหน้าต่างระบุเหตุผลในการปฏิเสธสลิป)
+  const [rejectingPayment, setRejectingPayment] = useState<Payment | null>(null);      // รายการธุรกรรมที่จะปฏิเสธ
+  const [selectedRejectReason, setSelectedRejectReason] = useState(PAYMENT_REJECT_PRESETS[0]); // เหตุผลเริ่มต้นจากเทมเพลต
+  const [customRejectNote, setCustomRejectNote] = useState('');                       // ข้อความคำแนะนำเพิ่มเติมที่พิมพ์เอง
+  const [submittingReject, setSubmittingReject] = useState(false);                     // สถานะกำลังส่งข้อมูลปฏิเสธ
 
-  // Internal Note Modal State
-  const [noteModalPayment, setNoteModalPayment] = useState<Payment | null>(null);
-  const [noteText, setNoteText] = useState('');
-  const [savingNote, setSavingNote] = useState(false);
+  // Internal Note Modal State (สถานะหน้าต่างบันทึกโน้ตภายในเฉพาะทีมแอดมิน)
+  const [noteModalPayment, setNoteModalPayment] = useState<Payment | null>(null);      // รายการธุรกรรมที่จะบันทึกโน้ต
+  const [noteText, setNoteText] = useState('');                                         // ข้อความในโน้ต
+  const [savingNote, setSavingNote] = useState(false);                                 // สถานะกำลังบันทึกโน้ต
 
+  // ----------------------------------------------------------------------------
+  // 2. DATA FETCHING (ฟังก์ชันดึงข้อมูลรายการธุรกรรมการชำระเงิน)
+  // ----------------------------------------------------------------------------
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false; // ตัวแปรป้องกัน Race Condition เมื่อผู้ใช้สลับแท็บเร็ว
+    // ส่งคำขอแบบ GET ไปยัง API ตรวจสอบสลิป พร้อมแนบ Timestamp ป้องกันเบราว์เซอร์แคช
     fetch(`/api/admin/payments?status=${filter}&t=${Date.now()}`)
       .then(async (r) => {
+        // ตรวจสอบกรณีไม่มีสิทธิ์เข้าถึง (401 Unauthorized)
         if (r.status === 401) {
           if (!cancelled) {
-            setUnauthorized(true);
+            setUnauthorized(true); // แสดงหน้ากากล็อกสิทธิ์แอดมิน
             setLoading(false);
           }
           return null;
         }
-        return r.json();
+        return r.json(); // ถอดรหัส JSON จากการตอบกลับ
       })
       .then(data => {
         if (data && !cancelled) {
-          setPayments(data.transactions ?? []);
+          setPayments(data.transactions ?? []); // บันทึกรายการสลิปลงใน State
           setUnauthorized(false);
           setLoading(false);
           setIsRefreshing(false);
@@ -126,23 +151,30 @@ export default function AdminPaymentsPage() {
           setIsRefreshing(false);
         }
       });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; }; // ล้างสถานะเมื่อ Component ถูก Unmount
   }, [filter, tick]);
 
+  // ฟังก์ชันสลับแท็บสถานะตัวกรอง (เปลี่ยนสถานะและสั่งแสดง Spinner ทันที)
   const changeFilter = (f: Filter) => { 
     setLoading(true); 
     setFilter(f); 
   };
 
+  // ฟังก์ชันกดรีเฟรชข้อมูลด้วยตนเองจาก Header
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setTick(t => t + 1);
+    setTick(t => t + 1); // เพิ่มค่า tick เพื่อกระตุ้นให้ useEffect ทำงานใหม่
   };
 
+  // ----------------------------------------------------------------------------
+  // 3. ACTION HANDLERS (ฟังก์ชันอนุมัติ ปฏิเสธ และบันทึกโน้ตภายใน)
+  // ----------------------------------------------------------------------------
+  // ฟังก์ชันอนุมัติการชำระเงินและปรับระดับสมาชิกเป็น Verified PRO ทันที
   const handleApprove = async (p: Payment) => {
     if (!confirm(`ยืนยันการอนุมัติสิทธิ์ Verified PRO ให้แก่ "${p.agentName}" ใช่หรือไม่?`)) return;
-    setProcessingId(p.id);
+    setProcessingId(p.id); // บันทึก ID กำลังประมวลผลเพื่อปิดการกดปุ่มซ้ำ
     try {
+      // ส่งคำขอแบบ PATCH ไปยัง API /api/admin/payments พร้อมคำสั่ง 'approve'
       const res = await fetch('/api/admin/payments', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -151,26 +183,28 @@ export default function AdminPaymentsPage() {
       const data = await res.json();
       if (data.success) {
         toast.success(`อนุมัติสลิปและปรับสิทธิ์เป็น Verified PRO เรียบร้อยแล้ว`);
-        setTick(t => t + 1);
+        setTick(t => t + 1); // รีเฟรชรายการล่าสุด
       } else {
         toast.error(data.error ?? 'เกิดข้อผิดพลาด');
       }
     } catch {
       toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
-      setProcessingId(null);
+      setProcessingId(null); // คืนสถานะปุ่ม
     }
   };
 
+  // เปิด Modal ระบุเหตุผลการปฏิเสธสลิป
   const handleOpenRejectModal = (p: Payment) => {
-    setRejectingPayment(p);
-    setSelectedRejectReason(PAYMENT_REJECT_PRESETS[0]);
-    setCustomRejectNote('');
+    setRejectingPayment(p);                            // กำหนดธุรกรรมเป้าหมาย
+    setSelectedRejectReason(PAYMENT_REJECT_PRESETS[0]); // ตั้งค่าเหตุผลเริ่มต้น
+    setCustomRejectNote('');                            // ล้างข้อความพิมพ์เอง
   };
 
+  // ยืนยันการปฏิเสธสลิปและส่งคำแนะนำกลับไปยังนายหน้า
   const handleConfirmReject = async () => {
     if (!rejectingPayment) return;
-    setSubmittingReject(true);
+    setSubmittingReject(true); // เปิดสถานะกำลังบันทึก
     try {
       const res = await fetch('/api/admin/payments', {
         method: 'PATCH',
@@ -180,14 +214,14 @@ export default function AdminPaymentsPage() {
           action: 'reject',
           agentId: rejectingPayment.agentId,
           reason: selectedRejectReason,
-          note: customRejectNote.trim()
+          note: customRejectNote.trim() // ตัดช่องว่างส่วนเกิน
         }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success('ปฏิเสธสลิปและส่งการแจ้งเตือนไปยังนายหน้าเรียบร้อยแล้ว');
-        setRejectingPayment(null);
-        setTick(t => t + 1);
+        setRejectingPayment(null); // ปิด Modal
+        setTick(t => t + 1);       // ดึงข้อมูลใหม่
       } else {
         toast.error(data.error ?? 'เกิดข้อผิดพลาด');
       }
@@ -198,11 +232,13 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  // เปิด Modal แก้ไขโน้ตบันทึกภายในสำหรับทีมงาน
   const handleOpenNoteModal = (p: Payment) => {
     setNoteModalPayment(p);
     setNoteText(p.internalNote?.text || '');
   };
 
+  // บันทึกโน้ตภายในลงฐานข้อมูล (ไม่แสดงให้นายหน้าเห็น)
   const handleSaveNote = async () => {
     if (!noteModalPayment) return;
     setSavingNote(true);
@@ -219,14 +255,14 @@ export default function AdminPaymentsPage() {
       const data = await res.json();
       if (data.success) {
         toast.success('บันทึกโน้ตภายในเรียบร้อยแล้ว');
-        // Update locally
+        // อัปเดตข้อมูลโน้ตใน State ทันทีโดยไม่ต้องโหลดใหม่ทั้งตาราง
         setPayments(prev => prev.map(item => {
           if (item.id === noteModalPayment.id) {
             return { ...item, internalNote: data.note };
           }
           return item;
         }));
-        setNoteModalPayment(null);
+        setNoteModalPayment(null); // ปิด Modal
       } else {
         toast.error(data.error ?? 'ไม่สามารถบันทึกโน้ตได้');
       }
@@ -237,10 +273,13 @@ export default function AdminPaymentsPage() {
     }
   };
 
-  // Search filter
+  // ----------------------------------------------------------------------------
+  // 4. SEARCH PIPELINE (ระบบค้นหาข้อมูลธุรกรรมแบบเรียลไทม์)
+  // ----------------------------------------------------------------------------
   const filteredPayments = useMemo(() => {
     if (!searchQuery.trim()) return payments;
     const q = searchQuery.toLowerCase().trim();
+    // ค้นหาครอบคลุมชื่อนายหน้า, อีเมล, รหัสธุรกรรม, รหัสออเดอร์ และข้อความในโน้ต
     return payments.filter(p => {
       const name = (p.agentName || '').toLowerCase();
       const email = (p.agentEmail || '').toLowerCase();
@@ -251,24 +290,30 @@ export default function AdminPaymentsPage() {
     });
   }, [payments, searchQuery]);
 
-  // Export CSV
+  // ----------------------------------------------------------------------------
+  // 5. CSV EXPORT (ฟังก์ชันส่งออกรายงานรายการชำระเงิน)
+  // ----------------------------------------------------------------------------
   const handleExportCSV = () => {
     if (filteredPayments.length === 0) {
       toast.error('ไม่มีข้อมูลสำหรับส่งออก');
       return;
     }
 
+    // กำหนดหัวตารางของไฟล์ CSV
     const headers = ['รหัสธุรกรรม', 'นายหน้าผู้ชำระ', 'อีเมล', 'ยอดเงิน (บาท)', 'สถานะ', 'โน้ตภายใน', 'วันที่ทำรายการ'];
+
+    // แปลงข้อมูลแต่ละแถวเป็น CSV Format
     const rows = filteredPayments.map(p => [
       `"${p.id}"`,
       `"${p.agentName}"`,
       `"${p.agentEmail}"`,
       `"${p.amount}"`,
       `"${STATUS_LABEL[p.status] || p.status}"`,
-      `"${(p.internalNote?.text || '').replace(/"/g, '""')}"`,
+      `"${(p.internalNote?.text || '').replace(/"/g, '""')}"`, // escape double quotes
       `"${new Date(p.createdAt).toLocaleString('th-TH')}"`
     ]);
 
+    // เติม Byte Order Mark (\uFEFF) นำหน้า เพื่อให้ Microsoft Excel รองรับฟอนต์ภาษาไทยได้สมบูรณ์
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

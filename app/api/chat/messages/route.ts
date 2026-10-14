@@ -9,6 +9,7 @@ import { notifyUser } from '@/lib/notify'; // สร้างการแจ้�
 
 /**
  * ==============================================================================
+ * [SEARCH: API_CHAT_MESSAGES_ROUTE] [DATA: ข้อความแชทรายรายการ] [LOGIC: CURSOR_PAGINATION_PUSHER_REALTIME]
  * API ROUTE: /api/chat/messages
  * ==============================================================================
  * วัตถุประสงค์หลัก:

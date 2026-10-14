@@ -1,3 +1,16 @@
+/**
+ * ==============================================================================
+ * [SEARCH: API_ADMIN_KYC_ROUTE] [AUTH: ADMIN_RBAC_CHECK] [LOGIC: ตรวจสอบและอนุมัติเอกสาร KYC นายหน้า]
+ * API จัดการและตรวจสอบเอกสารยืนยันตัวตน KYC นายหน้า (Admin KYC API Route)
+ * /app/api/admin/kyc/route.ts
+ * ==============================================================================
+ * ฟังก์ชันหลัก:
+ * - GET: ดึงรายชื่อนายหน้าที่ยื่นเอกสาร KYC แบ่งตามสถานะ (pending, approved, rejected)
+ * - PATCH: อนุมัติ (approved) หรือปฏิเสธ (rejected) พร้อมระบุเหตุผล และส่ง In-app notification แจ้งนายหน้า
+ * - DELETE: ลบบัญชีนายหน้าออกจากระบบ
+ * ==============================================================================
+ */
+
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // ไคลเอนต์ Prisma สำหรับดึงข้อมูลผู้ใช้ที่ยื่น KYC เป็นตัวแทน
 import { getServerSession } from 'next-auth/next'; // ดึงเซสชันเพื่อยืนยันสิทธิ์ admin

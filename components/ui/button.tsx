@@ -1,8 +1,27 @@
+/**
+ * ==============================================================================
+ * [SEARCH: UI_BUTTON_COMPONENT] [STYLE: BUTTON_VARIANTS]
+ * คอมโพเนนต์ปุ่มกดมาตรฐานระดับระบบ (Core UI Button Component)
+ * ==============================================================================
+ * พัฒนาต่อยอดจาก @base-ui/react/button และ Tailwind CSS + CVA (Class Variance Authority)
+ * 
+ * จุดเด่น & ฟังก์ชันหลัก:
+ * 1. Variant Palette: รองรับสไตล์ปุ่มหลากหลาย (default, outline, secondary, ghost, destructive, link)
+ * 2. Size Scaling: ปรับขนาดความสูงและการเว้นระยะไอคอนอัตโนมัติ (default, xs, sm, lg, icon, icon-xs, icon-sm, icon-lg)
+ * 3. Accessibility & Focus: มีวงแหวนโฟกัส (focus-visible ring) ที่เป็นไปตามมาตรฐานการเข้าถึง WCAG
+ * 4. Micro-interactions: เอฟเฟกต์ยุบตัวเมื่อคลิก (active:translate-y-px)
+ * ==============================================================================
+ */
+
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * [STYLE: คลาสกำหนดลักษณะปุ่มด้วย CVA]
+ * นิยามคลาสพื้นฐานและตัวแปรสไตล์ (Variants & Sizes) ทั้งหมดของปุ่ม
+ */
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
