@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   ShieldCheck, 
   Clock, 
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 import { PRO_MONTHLY, PRO_YEARLY } from '@/lib/pro';
 import { compressImage } from '@/lib/utils/compressImage';
+import { getPromptPayQrUrl } from '@/lib/promptpay';
 
 type Step = 'details' | 'payment' | 'success';
 type BillingCycle = 'monthly' | 'yearly';
@@ -269,43 +271,15 @@ export default function UpgradePage() {
           {/* QR Code Section */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm text-center space-y-4">
             <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-4 inline-block">
-              <div className="bg-white rounded-xl p-2 w-40 h-40 flex items-center justify-center">
-                {/* QR Code Placeholder - ใน production ใช้ QR จริง */}
-                <div className="text-center">
-                  <svg className="w-32 h-32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    {/* QR Pattern Simulation */}
-                    <rect width="100" height="100" fill="white"/>
-                    {/* Corner squares */}
-                    <rect x="5" y="5" width="25" height="25" rx="3" fill="#1e293b"/>
-                    <rect x="8" y="8" width="19" height="19" rx="2" fill="white"/>
-                    <rect x="11" y="11" width="13" height="13" rx="1" fill="#1e293b"/>
-                    <rect x="70" y="5" width="25" height="25" rx="3" fill="#1e293b"/>
-                    <rect x="73" y="8" width="19" height="19" rx="2" fill="white"/>
-                    <rect x="76" y="11" width="13" height="13" rx="1" fill="#1e293b"/>
-                    <rect x="5" y="70" width="25" height="25" rx="3" fill="#1e293b"/>
-                    <rect x="8" y="73" width="19" height="19" rx="2" fill="white"/>
-                    <rect x="11" y="76" width="13" height="13" rx="1" fill="#1e293b"/>
-                    {/* Data modules */}
-                    {[35,40,45,50,55,60].map((x, i) =>
-                      [5,10,15,20,25].filter((_, j) => (i + j) % 2 === 0).map(y => (
-                        <rect key={`${x}-${y}`} x={x} y={y} width="4" height="4" fill="#1e293b"/>
-                      ))
-                    )}
-                    {[5,10,15,20,25,30].map((y, i) =>
-                      [35,40,45,50,55,60].filter((_, j) => (i + j) % 3 !== 0).map(x => (
-                        <rect key={`m-${x}-${y}`} x={x} y={y} width="4" height="4" fill="#1e293b"/>
-                      ))
-                    )}
-                    {[35,38,41,44,47,50,53,56,59,62,65,68].map((x, i) =>
-                      [35,40,45,50,55,60,65].filter((_, j) => (i * 3 + j * 7) % 5 !== 0).map(y => (
-                        <rect key={`d-${x}-${y}`} x={x} y={y} width="3" height="3" fill="#1e293b"/>
-                      ))
-                    )}
-                    {/* Center logo hint */}
-                    <rect x="43" y="43" width="14" height="14" rx="2" fill="white"/>
-                    <text x="50" y="53" textAnchor="middle" fontSize="8" fill="#f59e0b" fontWeight="bold">฿</text>
-                  </svg>
-                </div>
+              <div className="bg-white rounded-xl p-2 w-44 h-44 flex items-center justify-center shadow-inner mx-auto">
+                <Image
+                  src={getPromptPayQrUrl('0812345678', plan.amount)}
+                  alt={`PromptPay QR ฿${plan.amount}`}
+                  width={160}
+                  height={160}
+                  className="w-full h-full object-contain"
+                  unoptimized
+                />
               </div>
             </div>
             <div>

@@ -14,7 +14,13 @@ import { useRouter, useParams } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
 import { toast } from '@/components/ui/toast';
 import { timeSlotRange } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
-import { MapPin } from 'lucide-react';
+import { 
+  MapPin, 
+  AlertTriangle, 
+  Calendar, 
+  Lock, 
+  Check 
+} from 'lucide-react';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
@@ -365,9 +371,7 @@ export default function AgentEditPropertyPage() {
         {propertyStatus === 'rejected' && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-1.5">
             <p className="text-xs font-black text-red-700 flex items-center gap-1.5">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
               เหตุผลที่ผู้ดูแลระบบส่งกลับมาแก้ไข
             </p>
             <p className="text-xs text-red-600 font-medium">{rejectReason || 'ไม่ได้ระบุเหตุผลเพิ่มเติม'}</p>
@@ -541,9 +545,7 @@ export default function AgentEditPropertyPage() {
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">5</span>
               <h2 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                 จัดการวันเวลาที่เปิดให้เข้าชมบ้านหลังนี้
               </h2>
             </div>
@@ -659,14 +661,10 @@ export default function AgentEditPropertyPage() {
                           ) : (
                             <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${booked ? 'text-amber-600' : active ? 'text-emerald-600' : 'text-slate-400'}`}>
                               {booked && (
-                                <svg className="w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
+                                <Lock className="w-3 h-3 text-amber-600 shrink-0" />
                               )}
                               {active && !booked && (
-                                <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                </svg>
+                                <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                               )}
                               <span>{booked ? 'มีลูกค้าจองแล้ว' : active ? 'เปิดรับจองอยู่' : 'ยังไม่ได้เปิด'}</span>
                             </p>
@@ -716,9 +714,7 @@ export default function AgentEditPropertyPage() {
               {saving ? 'กำลังบันทึก...' : (
                 <>
                   <span>บันทึกการแก้ไข</span>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Check className="w-4 h-4 shrink-0" />
                 </>
               )}
             </button>

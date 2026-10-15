@@ -7,15 +7,18 @@
  * /components/agent/UpgradeProModal.tsx
  * ==============================================================================
  * วัตถุประสงค์:
- * 1. แสดง Pop-up ยืนยันข้อมูลสิทธิประโยชน์แพ็กเกจ PRO Agent (599 บาท/เดือน)
+ * 1. แสดง Pop-up ยืนยันข้อมูลสิทธิประโยชน์แพ็กเกจ PRO Agent (299 บาท/เดือน)
  * 2. ช่องทางแนบสลิปการโอนเงิน (FormData) ส่งไปยัง API `/api/packages/checkout`
- * 3. แจ้งเตือนสถานะเมื่อยื่นสลิปสำเร็จเพื่อรอแอนมินตรวจสอบ
+ * 3. แจ้งเตือนสถานะเมื่อยื่นสลิปสำเร็จเพื่อรอแอดมินตรวจสอบ
  * ==============================================================================
  */
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { toast } from '@/components/ui/toast';
 import { compressImage } from '@/lib/utils/compressImage';
+import { getPromptPayQrUrl } from '@/lib/promptpay';
+import { ShieldCheck, X, Check, Paperclip, ArrowRight } from 'lucide-react';
 
 /** Props สำหรับ UpgradeProModal Component */
 interface UpgradeProModalProps {
@@ -70,15 +73,11 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
       <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left">
         <div className="flex justify-between items-center border-b pb-3">
           <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-            <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
+            <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0" />
             <span>สมัครสมาชิก Verified PRO</span>
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1 cursor-pointer" aria-label="ปิด">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-4 h-4 shrink-0" />
           </button>
         </div>
 
@@ -93,8 +92,14 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
           <div className="bg-slate-900 text-white rounded-2xl p-4 text-center space-y-2">
             <p className="text-xs font-bold text-amber-400">สแกน QR Code ชำระเงิน</p>
             <div className="w-40 h-40 bg-white mx-auto rounded-xl flex items-center justify-center p-2 shadow-inner">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PROMPTPAY_299_SRICHAI" alt="PromptPay QR" className="w-full h-full object-contain" />
+              <Image
+                src={getPromptPayQrUrl('0812345678', 299)}
+                alt="PromptPay QR"
+                width={150}
+                height={150}
+                className="w-full h-full object-contain"
+                unoptimized
+              />
             </div>
             <p className="text-[10px] text-slate-300 font-medium">บจก. ศรีชัย พร็อพเพอร์ตี้ (ธ.กสิกรไทย 012-3-45678-9)</p>
           </div>
@@ -116,16 +121,12 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
           >
             {slipFile ? (
               <>
-                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                </svg>
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="truncate">{slipFile.name}</span>
               </>
             ) : (
               <>
-                <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
+                <Paperclip className="w-4 h-4 text-slate-400 shrink-0" />
                 <span>คลิกเพื่อเลือกไฟล์รูปภาพสลิป</span>
               </>
             )}
@@ -143,10 +144,8 @@ export default function UpgradeProModal({ isOpen, onClose, onSuccess }: UpgradeP
               <span>กำลังส่งข้อมูล...</span>
             ) : (
               <>
-                <span>ส่งสลิปชำระเงิน</span>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+                <span>ยืนยันการชำระเงิน</span>
+                <ArrowRight className="w-3.5 h-3.5 shrink-0" />
               </>
             )}
           </button>
