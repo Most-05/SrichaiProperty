@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
 import { toast } from '@/components/ui/toast';
 import { timeSlotRange } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
+import { MapPin } from 'lucide-react';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 // ถ้าโดน server-render (ซึ่ง Next.js ทำแม้ในหน้า 'use client' รอบแรกด้วย) จะพังทันที
@@ -410,23 +411,21 @@ export default function AgentAddPropertyPage() {
               <input type="text" value={f.address} onChange={e => setF({ ...f, address: e.target.value })} placeholder="เช่น 123/45 ซ.ปุณณกัณฑ์ 10 ถ.ปุณณกัณฑ์" className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium text-xs" required />
             </div>
 
-                        {/* เดิมเป็น <iframe pointer-events-none> พิกัดตายตัวทุกบ้าน กดปักหมุดไม่ได้จริงเลย */}
-            <div className="rounded-2xl border overflow-hidden">
+            {/* แผนที่ปักหมุดตำแหน่งจริง พร้อมช่องค้นหา */}
+            <div>
+              <label className="block font-bold mb-1 text-slate-700">ตำแหน่งบนแผนที่</label>
               <PropertyLocationMap
                 latitude={latitude}
                 longitude={longitude}
-                height={176}
+                height={240}
                 editable
                 onChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
               />
+              <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-2">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>พิมพ์ค้นหาสถานที่ด้านบน หรือคลิก/ลากหมุดบนแผนที่เพื่อระบุตำแหน่งจริง</span>
+              </p>
             </div>
-            <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>คลิกหรือลากหมุดบนแผนที่เพื่อระบุตำแหน่งบ้านจริง (ถ้าไม่เลือก ระบบจะใช้พิกัดกลางหาดใหญ่แทน)</span>
-            </p>
           </div>
 
           {/* Card 4: สื่อประกอบ & เอกสารสิทธิ์ */}

@@ -14,6 +14,7 @@ import { useRouter, useParams } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
 import { toast } from '@/components/ui/toast';
 import { timeSlotRange } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
+import { MapPin } from 'lucide-react';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 const PropertyLocationMap = dynamic(() => import('@/components/property/PropertyLocationMap'), {
@@ -506,16 +507,17 @@ export default function AgentEditPropertyPage() {
             {/* แผนที่ปักหมุดจริงตอนแก้ไขประกาศ */}
             <div>
               <label className="block font-bold mb-1 text-slate-700">ตำแหน่งบนแผนที่</label>
-              <div className="rounded-2xl border overflow-hidden">
-                <PropertyLocationMap
-                  latitude={latitude}
-                  longitude={longitude}
-                  height={176}
-                  editable
-                  onChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
-                />
-              </div>
-              <p className="text-[9px] text-slate-400 mt-1">คลิกหรือลากหมุดเพื่อแก้ตำแหน่งบ้านให้ตรงจริง</p>
+              <PropertyLocationMap
+                latitude={latitude}
+                longitude={longitude}
+                height={240}
+                editable
+                onChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
+              />
+              <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-2">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>พิมพ์ค้นหาสถานที่ด้านบน หรือคลิก/ลากหมุดบนแผนที่เพื่อระบุตำแหน่งจริง</span>
+              </p>
             </div>
           </div>
 
