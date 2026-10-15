@@ -20,7 +20,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation"; // ใช้เช็คหน้าปัจจุบันเพื่อไฮไลต์เมนูที่กำลังเปิดอยู่
 import { useSession, signOut } from "next-auth/react"; // ใช้ดึงข้อมูลผู้ใช้ที่ล็อกอินและออกจากระบบ
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Zap, Menu, X, LogOut } from "lucide-react";
 import NotificationBell from "@/components/common/NotificationBell"; // ใช้แสดงกระดิ่งแจ้งเตือนบนแถบเมนู
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 
@@ -193,21 +193,13 @@ export default function Navbar() {
 
             {session && isUserAdmin && (
               <Link href="/admin/dashboard" className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-2.5 py-1.5 rounded-lg text-[10px] shadow-sm flex items-center gap-1 cursor-pointer whitespace-nowrap">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <Zap className="w-3 h-3 fill-current" />
                 <span>แอดมิน</span>
               </Link>
             )}
             
             <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-xl focus:outline-none transition cursor-pointer" aria-label="เมนูหลัก">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {isOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
 
@@ -235,9 +227,7 @@ export default function Navbar() {
 
             {isUserAdmin && (
               <Link href="/admin/dashboard" onClick={() => setIsOpen(false)} className="px-4 py-3 text-amber-950 bg-amber-400 font-black rounded-xl text-xs shadow-sm flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <Zap className="w-4 h-4 fill-current shrink-0" />
                 <span>หน้าควบคุมแอดมิน (Admin Dashboard)</span>
               </Link>
             )}
@@ -287,9 +277,7 @@ export default function Navbar() {
                 }}
                 className="flex items-center gap-2 w-full text-left px-4 py-3 text-red-600 bg-red-50/50 hover:bg-red-50 font-extrabold text-xs rounded-xl transition cursor-pointer"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+                <LogOut className="w-4 h-4 shrink-0" />
                 <span>ออกจากระบบ</span>
               </button>
             ) : (

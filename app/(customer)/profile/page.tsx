@@ -20,13 +20,7 @@ import { useSession } from 'next-auth/react';
 import { useApp } from '@/context/AppContext';
 import ProfileSidebar from '@/components/customer/ProfileSidebar';
 import ProfileForm from '@/components/customer/ProfileForm';
-
-// ฟังก์ชันสร้างรูปโปรไฟล์ตัวอักษรย่อ (fallback avatar) กรณีผู้ใช้ไม่มีรูปถ่ายในระบบ
-const getInitialsAvatar = (name: string) => {
-  const initials = name.trim().split(/\s+/).map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#1e293b"/><text x="50" y="55" font-family="sans-serif" font-weight="bold" font-size="35" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-};
+import { fallbackAvatarUrl } from '@/lib/utils/avatar';
 
 export default function ProfilePage() {
   const { data: session, update: updateSession } = useSession();
@@ -285,7 +279,9 @@ export default function ProfilePage() {
   // คำนวณชื่อผู้ใช้ที่จะนำไปแสดงผล และดึง URL รูปโปรไฟล์
   const userDisplayName = `${firstName} ${lastName}`.trim() || session?.user?.name || profile.fullName || 'ผู้ใช้งาน';
   const rawImage = profileImage || session?.user?.image;
-  const avatarUrl = (rawImage && (rawImage.startsWith('http') || rawImage.startsWith('/'))) ? rawImage : getInitialsAvatar(userDisplayName);
+  const avatarUrl = (rawImage && (rawImage.startsWith('http') || rawImage.startsWith('/'))) 
+    ? rawImage 
+    : fallbackAvatarUrl(userDisplayName, '1e293b');
 
   return (
     <div className="font-sans bg-slate-900 min-h-screen text-slate-800 antialiased text-xs">

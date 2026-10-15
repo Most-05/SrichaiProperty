@@ -20,6 +20,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { toast } from '@/components/ui/toast';
+import { Check, AlertCircle, User, Lock, ShieldCheck, Shield, CheckSquare, FileText, ExternalLink, Trash2 } from 'lucide-react';
 
 /** Props สำหรับ ProfileForm Component */
 interface ProfileFormProps {
@@ -100,13 +101,9 @@ export default function ProfileForm({
           }`}
         >
           {statusMsg.type === 'success' ? (
-            <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
           ) : (
-            <svg className="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
           )}
           <span>{statusMsg.text}</span>
         </div>
@@ -120,9 +117,7 @@ export default function ProfileForm({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+              <User className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-sm font-extrabold text-slate-900">ข้อมูลส่วนบุคคล</h3>
@@ -215,9 +210,7 @@ export default function ProfileForm({
               className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed text-xs font-mono"
             />
             <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+              <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span>ไม่อนุญาตให้แก้ไขอีเมลด้วยตนเองเพื่อความปลอดภัย หากต้องการเปลี่ยนกรุณาติดต่อผู้ดูแลระบบ</span>
             </p>
           </div>
@@ -248,9 +241,7 @@ export default function ProfileForm({
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-100 space-y-6">
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
           <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+            <Lock className="w-4 h-4" />
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-slate-900">ความปลอดภัยและรหัสผ่าน</h3>
@@ -318,9 +309,7 @@ export default function ProfileForm({
         {/* ประวัติการเข้าสู่ระบบล่าสุด (Audit Log) */}
         <div className="space-y-3 pt-5 border-t border-slate-100">
           <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
+            <ShieldCheck className="w-4 h-4 text-slate-500" />
             <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
               ประวัติการเข้าสู่ระบบล่าสุด (Security Audit Log)
             </h4>
@@ -355,9 +344,7 @@ export default function ProfileForm({
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-100 space-y-6">
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
           <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <Shield className="w-4 h-4" />
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-slate-900">ศูนย์ความเป็นส่วนตัวและสิทธิ PDPA</h3>
@@ -370,9 +357,7 @@ export default function ProfileForm({
         {/* 3.1 การจัดการความยินยอม (Consent Management) */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
+            <CheckSquare className="w-4 h-4 text-slate-500" />
             <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
               การจัดการความยินยอม (Consent Management)
             </h4>
@@ -423,9 +408,7 @@ export default function ProfileForm({
         {/* 3.2 การจัดการข้อมูลส่วนบุคคลและนโยบายความเป็นส่วนตัว (Data Subject Rights & Policy) */}
         <div className="space-y-3 pt-5 border-t border-slate-100">
           <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
+            <FileText className="w-4 h-4 text-slate-500" />
             <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
               นโยบายความเป็นส่วนตัว (Privacy Policy)
             </h4>
@@ -445,9 +428,7 @@ export default function ProfileForm({
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-blue-600 font-bold text-xs rounded-xl transition shadow-xs flex-shrink-0"
               >
                 <span>อ่านนโยบายฉบับเต็ม</span>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
+                <ExternalLink className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
@@ -458,9 +439,7 @@ export default function ProfileForm({
           <div className="bg-rose-50/70 border border-rose-200/80 rounded-2xl p-5 space-y-3">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-rose-700">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                <Trash2 className="w-4 h-4 flex-shrink-0" />
                 <h4 className="font-extrabold text-xs">
                   พื้นที่อันตราย: ขอลบบัญชีผู้ใช้ถาวร (Delete Account)
                 </h4>

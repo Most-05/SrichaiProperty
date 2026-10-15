@@ -216,12 +216,13 @@ export default function AppointmentsPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        toast.success('ยืนยันวันนัดหมายใหม่เรียบร้อยแล้ว');
         await loadAppointments();
       } else {
-        alert(data.error || 'ยืนยันวันใหม่ไม่สำเร็จ');
+        toast.error(data.error || 'ยืนยันวันใหม่ไม่สำเร็จ');
       }
     } catch {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
     } finally {
       setAcceptingId(null);
     }

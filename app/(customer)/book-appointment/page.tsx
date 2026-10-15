@@ -21,7 +21,7 @@ import BookingSidebar from '@/components/customer/BookingSidebar';
 import BookingCalendar from '@/components/customer/BookingCalendar';
 import { NO_SHOW_LIMIT, timeSlotRange } from '@/lib/constants';
 import { toast } from '@/components/ui/toast';
-import { Bell, Check, Loader2, LogIn, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Bell, Check, Loader2, LogIn, AlertCircle, ArrowLeft, Search } from 'lucide-react';
 
 // รายชื่อเดือนภาษาไทยสำหรับแสดงผลวันที่แบบข้อความอ่านง่าย
 const MONTH_NAMES_TH = [
@@ -253,9 +253,7 @@ function BookAppointmentForm() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500 font-bold gap-4 px-4 text-center">
         <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm text-slate-400">
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Search className="w-8 h-8" />
         </div>
         <p>ไม่พบอสังหาริมทรัพย์ที่ต้องการจองนัดหมาย</p>
         <button onClick={() => router.push('/search')} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs transition">
