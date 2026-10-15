@@ -422,11 +422,9 @@ function AdminModerationContent() {
     toast.success('ดาวน์โหลดไฟล์ CSV เรียบร้อยแล้ว');
   };
 
-  // ฟังก์ชันคำนวณคลาสสีของป้ายกำกับ SLA ตามระดับความเร่งด่วน (Urgent / Warning / On Track)
-  const slaBadgeClass = (level: PropertyData['slaLevel']) => {
-    if (level === 'urgent' || level === 'overdue') return 'bg-red-50 text-red-600 border-red-100'; // สีแดง: เกินกำหนดหรือวิกฤต
-    if (level === 'warning') return 'bg-amber-50 text-amber-600 border-amber-100';                  // สีส้ม: ใกล้หมดเวลา
-    return 'bg-emerald-50 text-emerald-600 border-emerald-100';                                     // สีเขียว: ปกติ ทันกำหนด
+  // ฟังก์ชันคำนวณคลาสสีของป้ายกำกับ SLA (ใช้โทนสีเทาสุภาพเดียวกันทั้งหมดเพื่อความเรียบง่าย ไม่ซับซ้อน)
+  const slaBadgeClass = (_level?: PropertyData['slaLevel']) => {
+    return 'bg-slate-100 text-slate-700 border-slate-200';
   };
 
   // ------------------------------------------------------------------------------
@@ -608,8 +606,8 @@ function AdminModerationContent() {
               onClick={() => setSortBySla((prev) => !prev)}
               className={`border font-bold py-2 px-3 sm:px-4 rounded-lg text-xs transition shadow-xs cursor-pointer flex items-center gap-1.5 ${
                 sortBySla
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-slate-900 border-slate-900 text-white'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
               <Clock className="w-3.5 h-3.5" />
@@ -784,12 +782,10 @@ function AdminModerationContent() {
                     <div
                       className={`w-1.5 shrink-0 ${
                         activeTab === 'pending'
-                          ? property.slaUrgent
-                            ? 'bg-red-500'
-                            : 'bg-amber-500'
+                          ? 'bg-slate-400'
                           : activeTab === 'approved'
                           ? 'bg-emerald-500'
-                          : 'bg-slate-400'
+                          : 'bg-slate-300'
                       }`}
                     />
 

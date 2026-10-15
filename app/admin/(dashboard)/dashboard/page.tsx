@@ -9,7 +9,6 @@ import {
   Loader2,
   RefreshCw,
   ExternalLink,
-  AlertCircle,
   Clock,
   ArrowRight,
   Eye,
@@ -418,10 +417,10 @@ export default function AdminDashboardPage() {
               {moderationItems.filter(i => i.slaUrgent).length > 0 && (
                 <Link
                   href="/admin/moderation?tab=pending"
-                  className="inline-flex items-center gap-1.5 bg-red-600 text-white px-2.5 py-1 rounded-lg font-extrabold text-xs shadow-xs hover:bg-red-700 transition-colors animate-pulse"
+                  className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-800 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-slate-50 transition-colors shadow-2xs"
                   title="ไปหน้าตรวจสอบประกาศที่ค้างตรวจนาน"
                 >
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <span>ค้างตรวจนาน ({moderationItems.filter(i => i.slaUrgent).length})</span>
                 </Link>
               )}
@@ -513,8 +512,8 @@ export default function AdminDashboardPage() {
                     onClick={() => setModerationFilter('urgent')}
                     className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
                       moderationFilter === 'urgent'
-                        ? 'bg-red-600 text-white shadow-xs'
-                        : 'bg-white border border-red-200 text-red-700 hover:bg-red-50'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     <Clock className="w-3.5 h-3.5" />

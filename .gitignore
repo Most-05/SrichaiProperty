@@ -51,4 +51,5 @@ docs/email_setup_guide.md
 
 # database dumps
 *.sql
+!prisma/migrations/**/*.sql
 *.dump

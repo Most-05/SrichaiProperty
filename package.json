@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "prisma db seed",
+    "db:fix": "tsx scripts/fix-db-constraints.ts",
     "postinstall": "prisma generate",
     "lint": "eslint"
   },
