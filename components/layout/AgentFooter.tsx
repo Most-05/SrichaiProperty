@@ -14,6 +14,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 
 export default function AgentFooter() {
   return (
@@ -30,9 +31,7 @@ export default function AgentFooter() {
           <Link href="/agent/privacy" className="hover:text-amber-400 transition text-amber-400/90">PDPA นายหน้า</Link>
           <Link href="/agent/terms" className="hover:text-amber-400 transition text-amber-400/90">ข้อกำหนดนายหน้า</Link>
           <Link href="/home" className="hover:text-amber-400 transition flex items-center gap-1">
-            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
+            <ExternalLink className="w-3 h-3 text-slate-400 shrink-0" />
             หน้าเว็บไซต์หลัก
           </Link>
         </div>

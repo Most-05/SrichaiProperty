@@ -1,6 +1,7 @@
 'use client';
 
 import { SUPPORT_CONTACT } from '@/lib/constants'; // ช่องทางติดต่อทีมงาน
+import { X } from 'lucide-react';
 
 /**
  * ==============================================================================
@@ -29,7 +30,7 @@ export default function ForgotPasswordModal({ open, onClose }: ForgotPasswordMod
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <h3 className="text-lg font-extrabold text-slate-900">ลืมรหัสผ่าน?</h3>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition text-slate-400 cursor-pointer" aria-label="ปิด">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-6 space-y-4 text-sm text-slate-600 leading-relaxed">

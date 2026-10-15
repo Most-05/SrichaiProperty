@@ -19,6 +19,23 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link'; // ใช้ลิงก์ไปหน้าประกาศสาธารณะและหน้าแก้ไขทรัพย์ในส่วนปุ่มด้านล่าง
 import Image from 'next/image'; // ใช้แสดงรูปหน้าปกทรัพย์ในหัวข้อของโมดัล
+import { 
+  MapPin, 
+  AlertCircle, 
+  X, 
+  Bed, 
+  Bath, 
+  Maximize2, 
+  Eye, 
+  Calendar, 
+  MessageSquare, 
+  Star, 
+  Users, 
+  Clock, 
+  Phone, 
+  ExternalLink, 
+  Pencil 
+} from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'; // ใช้สร้างกราฟแท่งเปรียบเทียบสถิติหลายชุด
 import {
   ChartConfig,
@@ -218,10 +235,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
                 <span className="text-blue-600 font-black text-sm">{property.price}</span>
                 {property.location && (
                   <span className="flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s7-6.5 7-11.5a7 7 0 1 0-14 0C5 14.5 12 21 12 21Z" />
-                      <circle cx="12" cy="9.5" r="2.5" />
-                    </svg>
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span>{property.location}</span>
                   </span>
                 )}
@@ -229,9 +243,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
               {/* แสดงเหตุผลหากประกาศโดน Admin ตีกลับ */}
               {property.status === 'rejected' && property.rejectReason && (
                 <p className="text-xs text-red-600 font-bold mt-1.5 bg-red-50 border border-red-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                   <span>เหตุผลที่ถูกตีกลับ: {property.rejectReason}</span>
                 </p>
               )}
@@ -243,9 +255,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
             onClick={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition shrink-0 cursor-pointer self-end sm:self-center"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-4 h-4 shrink-0" />
           </button>
         </div>
 
@@ -259,27 +269,21 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-normal">ห้องนอน:</span>
                 <span className="flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v11m0-4h18m0-7v11M3 11h18M7 7h4v4H7z" />
-                  </svg>
+                  <Bed className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <span>{property.bedrooms || 0} ห้อง</span>
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-normal">ห้องน้ำ:</span>
                 <span className="flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16a1 1 0 011 1v3a4 4 0 01-4 4H7a4 4 0 01-4-4v-3a1 1 0 011-1zM6 12V5a2 2 0 012-2h1a2 2 0 012 2v1" />
-                  </svg>
+                  <Bath className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <span>{property.bathrooms || 0} ห้อง</span>
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-normal">พื้นที่ใช้สอย:</span>
                 <span className="flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-                  </svg>
+                  <Maximize2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <span>{property.area_sqm || 0} ตร.ม.</span>
                 </span>
               </div>
@@ -292,10 +296,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
             <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">เข้าชมรวม</span>
               <strong className="text-xl font-black text-slate-900 block flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
+                <Eye className="w-4 h-4 text-slate-500 shrink-0" />
                 <span>{property.views.toLocaleString()}</span>
               </strong>
               <span className="text-[9px] text-slate-400 font-semibold block">เปิดดูประกาศ</span>
@@ -305,12 +306,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
             <div className="p-3.5 bg-emerald-50/80 border border-emerald-100 rounded-2xl space-y-1">
               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">นัดชมสถานที่</span>
               <strong className="text-xl font-black text-emerald-950 block flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
+                <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{property.appointments}</span>
               </strong>
               <span className="text-[9px] text-emerald-600 font-semibold block">จองเข้าชมจริง</span>
@@ -320,9 +316,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
             <div className="p-3.5 bg-blue-50/80 border border-blue-100 rounded-2xl space-y-1">
               <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">ทักแชทสอบถาม</span>
               <strong className="text-xl font-black text-blue-950 block flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+                <MessageSquare className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>{property.chatsCount || 0}</span>
               </strong>
               <span className="text-[9px] text-blue-600 font-semibold block">แชทสอบถาม</span>
@@ -332,9 +326,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
             <div className="p-3.5 bg-amber-50/80 border border-amber-100 rounded-2xl space-y-1">
               <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">เซฟเป็นโปรด</span>
               <strong className="text-xl font-black text-amber-950 block flex items-center gap-1.5">
-                <svg className="w-4 h-4 fill-amber-400 text-amber-400" viewBox="0 0 24 24">
-                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                </svg>
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
                 <span>{property.savesCount || 0}</span>
               </strong>
               <span className="text-[9px] text-amber-600 font-semibold block">กดเซฟไว้</span>
@@ -395,9 +387,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
           <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
             <h4 className="font-extrabold text-emerald-950 text-xs md:text-sm flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <svg className="w-4 h-4 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+              <Users className="w-4 h-4 text-emerald-700 shrink-0" />
               <span>รายชื่อลูกค้านัดหมายชมบ้านหลังนี้</span>
             </h4>
             <span className="text-[11px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-extrabold">
@@ -412,9 +402,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
                   <div>
                     <strong className="text-xs font-extrabold text-slate-900 block">{apt.customerName}</strong>
                     <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
-                      <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <Clock className="w-3 h-3 text-slate-400 shrink-0" />
                       วันที่ {apt.date} ({apt.timeSlot})
                     </span>
                   </div>
@@ -423,9 +411,7 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
                     href={toTelHref(apt.customerPhone)}
                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-[10px] transition shrink-0 shadow-xs flex items-center gap-1"
                   >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
+                    <Phone className="w-3 h-3 shrink-0" />
                     <span>โทรหา</span>
                   </a>
                 </div>
@@ -443,18 +429,14 @@ export default function PropertyStatsModal({ property, onClose }: PropertyStatsM
             target="_blank"
             className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-2xl text-xs sm:text-sm text-center transition shadow-md flex items-center justify-center gap-2"
           >
-            <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
+            <ExternalLink className="w-4 h-4 text-slate-300 shrink-0" />
             <span>เปิดดูหน้าประกาศจริงหน้าร้าน</span>
           </Link>
           <Link
             href={`/agent/edit-property/${property.id}`}
             className="py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-xs sm:text-sm text-center transition shadow-md flex items-center justify-center gap-2"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
+            <Pencil className="w-4 h-4 shrink-0" />
             <span>แก้ไขประกาศนี้</span>
           </Link>
         </div>
