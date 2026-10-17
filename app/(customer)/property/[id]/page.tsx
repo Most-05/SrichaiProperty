@@ -224,6 +224,8 @@ export default function PropertyDetailPage() {
 
   // 1.1 ค้นหาข้อมูลอสังหาริมทรัพย์จาก ID ที่ตรงกันในฐานข้อมูล
   const property = properties.find((p) => String(p.id) === String(id));
+  // ประกาศให้เช่า: ราคาเป็นค่าเช่าต่อเดือน → ไม่แสดงเครื่องคำนวณสินเชื่อ (BUG-49)
+  const isRent = property?.listingType === 'rent';
 
   // 1.2 จัดการสถานที่สำคัญหลัก 5 แท็บแบบ Real-time Dynamic จาก OpenStreetMap (ปลอดข้อมูลฮาร์ดโค้ด 100%)
   const [activeNearbyTab, setActiveNearbyTab] = useState<'all' | 'shopping' | 'education' | 'hospital' | 'transport'>('all'); // แท็บหมวดหมู่สถานที่ใกล้เคียงที่เลือกดู
@@ -557,7 +559,7 @@ export default function PropertyDetailPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-3 gap-2">
                   <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">{property.title}</h1>
                   <div className="text-right">
-                    <div className="text-2xl font-black text-blue-700">{property.price}</div>
+                    <div className="text-2xl font-black text-blue-700">{property.price}{isRent && <span className="text-sm font-bold text-slate-400"> / เดือน</span>}</div>
                     <div className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">รหัสทรัพย์: #{String(property.id).slice(-6).toUpperCase()}</div>
                   </div>
                 </div>
@@ -837,7 +839,8 @@ export default function PropertyDetailPage() {
                 )}
               </div>
 
-              {/* กล่องเครื่องคำนวณสินเชื่อ (Mortgage Loan Calculator) */}
+              {/* กล่องเครื่องคำนวณสินเชื่อ (Mortgage Loan Calculator) — แสดงเฉพาะประกาศขาย */}
+              {!isRent && (
               <div className="pt-6 border-t border-slate-100">
                 <div className="bg-slate-950 text-white p-6 sm:p-8 rounded-3xl space-y-6 shadow-xl relative overflow-hidden">
                   <div>
@@ -946,6 +949,7 @@ export default function PropertyDetailPage() {
                   </p>
                 </div>
               </div>
+              )}
 
               {/* ====================================================================
                   ส่วนที่ 3.5: คะแนนและรีวิวจากผู้ใช้บริการ (CUSTOMER REVIEWS & RATINGS)
@@ -1219,7 +1223,7 @@ export default function PropertyDetailPage() {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] text-slate-400 font-bold uppercase">ราคา</p>
-          <p className="text-base font-black text-blue-700 truncate">{property.price}</p>
+          <p className="text-base font-black text-blue-700 truncate">{property.price}{isRent && <span className="text-[10px] font-bold text-slate-400"> / เดือน</span>}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <a
