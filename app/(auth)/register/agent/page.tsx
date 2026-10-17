@@ -7,6 +7,7 @@ import AgentRegisterBanner from '@/components/auth/AgentRegisterBanner';
 import OtpVerificationModal from '@/components/auth/OtpVerificationModal';
 import { toast } from '@/components/ui/toast';
 import { compressImage } from '@/lib/utils/compressImage';
+import { ArrowLeft, Check, Image as ImageIcon, FileText, ArrowRight } from 'lucide-react';
 
 export default function AgentRegisterPage() {
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -180,9 +181,7 @@ export default function AgentRegisterPage() {
             href="/login/agent" 
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 transition text-slate-600 font-medium text-xs shadow-sm"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+            <ArrowLeft className="w-3.5 h-3.5" />
             กลับไปหน้าเข้าสู่ระบบ
           </Link>
         </div>
@@ -385,15 +384,13 @@ export default function AgentRegisterPage() {
                       <div className="flex flex-col items-center gap-1.5">
                         <Image src={profileImage} alt="Profile Preview" width={48} height={48} className="w-12 h-12 rounded-full object-cover border border-slate-200" unoptimized />
                         <span className="text-[9px] font-semibold text-emerald-600 flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                          <Check className="w-3 h-3" />
                           อัปโหลดสำเร็จ
                         </span>
                       </div>
                     ) : (
                       <>
-                        <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+                        <ImageIcon className="w-7 h-7 text-slate-400" />
                         <span className="text-[10px] font-bold text-slate-500">คลิกเพื่ออัปโหลดรูปภาพ</span>
                       </>
                     )}
@@ -416,19 +413,15 @@ export default function AgentRegisterPage() {
                       <div className="text-xs text-slate-500 animate-pulse">กำลังอัปโหลด...</div>
                     ) : kycDoc ? (
                       <div className="flex flex-col items-center gap-1.5">
-                        <svg className="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                        <FileText className="w-7 h-7 text-emerald-600" />
                         <span className="text-[9px] font-semibold text-emerald-600 truncate max-w-[150px] flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                          <Check className="w-3 h-3" />
                           อัปโหลดไฟล์เรียบร้อย
                         </span>
                       </div>
                     ) : (
                       <>
-                        <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                        <FileText className="w-7 h-7 text-slate-400" />
                         <span className="text-[10px] font-bold text-slate-500">คลิกเพื่ออัปโหลดไฟล์ KYC</span>
                       </>
                     )}
@@ -458,9 +451,7 @@ export default function AgentRegisterPage() {
               className="w-full bg-[#0d1527] hover:bg-[#16223d] text-white font-extrabold py-3.5 rounded-xl transition-all shadow-lg shadow-slate-900/10 active:scale-[0.98] text-xs flex items-center justify-center gap-2 cursor-pointer"
             >
               ส่งคำขอสมัครตัวแทน
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         </div>

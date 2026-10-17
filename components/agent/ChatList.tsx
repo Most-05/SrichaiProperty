@@ -1,4 +1,5 @@
 import React from 'react';
+import { Home } from 'lucide-react';
 import { AgentContact } from '@/types'; // กำหนดโครงสร้างข้อมูลผู้ติดต่อที่แสดงในรายการ (ชื่อ, รูป, ข้อความล่าสุด, รหัสบ้าน)
 
 interface Props {
@@ -82,9 +83,7 @@ export default function ChatList({
                   
                   {c.propertyCode && (
                     <span className="bg-slate-100 text-slate-600 text-[9px] font-bold px-1.5 py-0.5 rounded mt-1 inline-flex items-center gap-1 truncate max-w-full">
-                      <svg className="w-2.5 h-2.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                      </svg>
+                      <Home className="w-2.5 h-2.5 text-slate-400 shrink-0" />
                       {c.propertyCode}
                     </span>
                   )}

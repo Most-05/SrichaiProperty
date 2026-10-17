@@ -40,9 +40,9 @@ export default async function AgentLayout({
     redirect('/login/agent');
   }
 
-  // เช็คสถานะของ agent ว่ายัง 'pending' (รออนุมัติ) อยู่หรือไม่
-  // ถ้าไม่มีค่า status มาเลย ให้ถือว่าเป็น 'pending' ไว้ก่อน (ปลอดภัยไว้ก่อน)
-  const isPending = (session.user?.status || 'pending') === 'pending';
+  // เช็คสถานะของ agent ว่ายัง 'pending' (รออนุมัติ) หรือ 'rejected' (เอกสารไม่ผ่าน) หรือไม่
+  // หากยังไม่ได้รับอนุมัติ ให้แสดงหน้าจอ PendingAgentGate เพื่อดูสถานะ/เหตุผลและอัปโหลดเอกสารใหม่
+  const isPending = ['pending', 'rejected'].includes(session.user?.status || 'pending');
 
   return (
     // โครงหน้าหลัก: สูงอย่างน้อยเต็มจอ, จัดเรียงแนวตั้ง (navbar บน, เนื้อหากลาง, footer ล่างสุดของหน้า)

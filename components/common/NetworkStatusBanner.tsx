@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 /**
  * ==============================================================================
@@ -63,9 +64,7 @@ export default function NetworkStatusBanner() {
           role="status"
           className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 border border-amber-400 animate-bounce"
         >
-          <svg className="w-4 h-4 shrink-0 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
+          <AlertTriangle className="w-4 h-4 shrink-0 text-slate-950" />
           <span>ขาดการเชื่อมต่ออินเทอร์เน็ต ระบบจะซิงค์ใหม่อัตโนมัติเมื่อสัญญาณกลับมา</span>
         </div>
       ) : (
@@ -73,9 +72,7 @@ export default function NetworkStatusBanner() {
           role="status"
           className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-600 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 border border-emerald-500 transition-all"
         >
-          <svg className="w-4 h-4 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-          </svg>
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-white" />
           <span>เชื่อมต่ออินเทอร์เน็ตเรียบร้อยแล้ว</span>
         </div>
       )}

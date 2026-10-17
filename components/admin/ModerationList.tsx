@@ -101,13 +101,7 @@ export default function ModerationList({ items, onApprove, onReject }: Props) {
                     - SLA ปกติ: text-slate-600 bg-slate-100 border-slate-200 (โทนสีเทาสุภาพ)
                     - ทรงป้าย: rounded-full text-xs font-bold / font-medium px-2.5 py-0.5 border
                   */}
-                  <span
-                    className={`inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                      item.slaUrgent
-                        ? 'text-rose-700 bg-rose-50 border border-rose-200 animate-pulse'
-                        : 'text-slate-700 bg-slate-100 border border-slate-200'
-                    }`}
-                  >
+                  <span className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold text-slate-700 bg-slate-100 border border-slate-200">
                     <Clock className="w-3 h-3 shrink-0" />
                     <span>{item.sla}</span>
                   </span>

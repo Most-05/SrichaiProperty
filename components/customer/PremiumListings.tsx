@@ -12,6 +12,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Property } from '@/types'; // กำหนดโครงสร้างข้อมูลอสังหาริมทรัพย์ที่รับมาแสดงในรายการพรีเมียม
+import { Crown } from 'lucide-react';
 
 interface PremiumListingsProps {
   properties: Property[];
@@ -25,9 +26,7 @@ export default function PremiumListings({ properties }: PremiumListingsProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <h2 className="text-lg sm:text-2xl font-extrabold text-slate-900 mb-1 flex items-center gap-2">
-            <svg className="w-5 h-5 text-amber-500 fill-amber-500" viewBox="0 0 24 24">
-              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-            </svg>
+            <Crown className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" />
             <span>อสังหาริมทรัพย์พรีเมียม</span>
           </h2>
           <p className="text-slate-500 text-xs font-medium">คัดสรรเฉพาะโครงการคุณภาพ บ้านเดี่ยวและคอนโดมิเนียมทำเลศักยภาพสูง</p>

@@ -26,7 +26,8 @@ import {
   Clock,
   CalendarClock,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { NO_SHOW_LIMIT, timeSlotRange, timeSlotStart } from '@/lib/constants';
@@ -151,11 +152,22 @@ export default function AgentAppointmentsPage() {
       };
 
       fetchAppointments();
-      const interval = setInterval(fetchAppointments, 3000); // ดึงข้อมูลคิวนัดหมายใหม่เบื้องหลังทุก 3 วินาที
+
+      // ดึงข้อมูลใหม่เมื่อผู้ใช้กลับมาโฟกัสที่หน้าจอ หรือทุก 30 วินาทีเมื่อแท็บเปิดอยู่ (ป้องกันภาระเซิร์ฟเวอร์จาก 3 วินาทีเดิม)
+      const onFocus = () => {
+        if (document.visibilityState === 'visible') fetchAppointments();
+      };
+      window.addEventListener('focus', onFocus);
+      document.addEventListener('visibilitychange', onFocus);
+      const interval = setInterval(() => {
+        if (document.visibilityState === 'visible') fetchAppointments();
+      }, 30000);
 
       return () => {
         isSubscribed = false;
         clearInterval(interval);
+        window.removeEventListener('focus', onFocus);
+        document.removeEventListener('visibilitychange', onFocus);
       };
     }
   }, [sessionStatus]);
@@ -1102,9 +1114,12 @@ export default function AgentAppointmentsPage() {
           <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-extrabold text-amber-600 text-base flex items-center gap-1.5">
-                <span>📅</span> ขอเลื่อนวันนัดหมาย
+                <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>ขอเลื่อนวันนัดหมาย</span>
               </h3>
-              <button onClick={closeRescheduleModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+              <button onClick={closeRescheduleModal} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition cursor-pointer" aria-label="ปิด">
+                <X className="w-4 h-4 shrink-0" />
+              </button>
             </div>
 
             <div>
@@ -1261,17 +1276,21 @@ export default function AgentAppointmentsPage() {
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-extrabold text-red-600 text-base flex items-center gap-1.5">
-                <span>⚠️</span> ยกเลิกนัดหมายที่ยืนยันแล้ว
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>ยกเลิกนัดหมายที่ยืนยันแล้ว</span>
               </h3>
-              <button onClick={closeCancelModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+              <button onClick={closeCancelModal} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition cursor-pointer" aria-label="ปิด">
+                <X className="w-4 h-4 shrink-0" />
+              </button>
             </div>
 
             <div>
               <p className="text-xs font-bold text-slate-500">นัดหมายของ:</p>
               <p className="text-sm font-extrabold text-slate-900">{cancelingApt.customerName}</p>
               <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{cancelingApt.propertyTitle}</p>
-              <p className="text-[11px] font-bold text-slate-600 mt-1">
-                📅 {formatDateTH(cancelingApt.date)}, {timeSlotLabel(cancelingApt.timeSlot)}
+              <p className="text-[11px] font-bold text-slate-600 mt-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>{formatDateTH(cancelingApt.date)}, {timeSlotLabel(cancelingApt.timeSlot)}</span>
               </p>
             </div>
 
@@ -1334,15 +1353,11 @@ export default function AgentAppointmentsPage() {
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-extrabold text-red-600 text-base flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
+                <Ban className="w-4 h-4 text-red-500 shrink-0" />
                 <span>ยืนยันว่าลูกค้าไม่มาตามนัด</span>
               </h3>
               <button onClick={closeNoShowModal} className="text-slate-400 hover:text-slate-600 transition cursor-pointer p-1" aria-label="ปิด">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-4 h-4 shrink-0" />
               </button>
             </div>
 
@@ -1350,10 +1365,8 @@ export default function AgentAppointmentsPage() {
               <p className="text-xs font-bold text-slate-500">นัดหมายของ:</p>
               <p className="text-sm font-extrabold text-slate-900">{noShowApt.customerName}</p>
               <p className="text-xs font-medium text-slate-500 mt-0.5 line-clamp-1">{noShowApt.propertyTitle}</p>
-              <p className="text-[11px] font-bold text-slate-600 mt-1 flex items-center gap-1">
-                <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+              <p className="text-[11px] font-bold text-slate-600 mt-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span>{formatDateTH(noShowApt.date)}, {timeSlotLabel(noShowApt.timeSlot)}</span>
               </p>
             </div>
@@ -1386,10 +1399,13 @@ export default function AgentAppointmentsPage() {
               )}
             </div>
 
-            <p className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 leading-relaxed">
-              ℹ️ ลูกค้าจะเห็นบันทึกนี้ และไม่สามารถรีวิวนัดหมายนี้ได้ — ถ้าลูกค้าเบี้ยวนัดสะสมครบ
-              จำนวนที่กำหนด ระบบจะจำกัดการจองนัดใหม่ชั่วคราว
-            </p>
+            <div className="flex items-start gap-2 text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 leading-relaxed">
+              <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+              <span>
+                ลูกค้าจะเห็นบันทึกนี้ และไม่สามารถรีวิวนัดหมายนี้ได้ — ถ้าลูกค้าเบี้ยวนัดสะสมครบ
+                จำนวนที่กำหนด ระบบจะจำกัดการจองนัดใหม่ชั่วคราว
+              </span>
+            </div>
 
             <div className="flex items-center justify-end gap-2 border-t pt-3">
               <button

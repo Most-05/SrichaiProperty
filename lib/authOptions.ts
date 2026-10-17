@@ -84,12 +84,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("รหัสผ่านไม่ถูกต้อง");
         }
 
-        // 4. กันไม่ให้นายหน้า (agent) ที่แอดมินยังไม่อนุมัติ (status = pending) เข้าระบบได้
-        if (user.role_id === 'agent' && user.status === 'pending') {
-          throw new Error("บัญชีนายหน้าของคุณอยู่ระหว่างรอแอดมินตรวจสอบและอนุมัติ");
-        }
-
-        // 5. กันบัญชีที่ถูกแบน
+        // 4. กันบัญชีที่ถูกแบนหรือระงับการใช้งาน (สถานะ pending/rejected ของนายหน้าจะถูกควบคุมผ่าน PendingAgentGate ใน app/agent/layout.tsx)
         if (user.status === 'banned') {
           throw new Error("บัญชีของคุณถูกระงับการใช้งาน");
         }

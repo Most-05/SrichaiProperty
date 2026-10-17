@@ -12,6 +12,8 @@
  * ==============================================================================
  */
 
+import { X } from 'lucide-react';
+
 /** Props สำหรับ PolicyModal Component */
 interface PolicyModalProps {
   policyType: 'privacy' | 'terms' | null; // ประเภทนโยบายที่เปิดดูอยู่ ('privacy' = นโยบายส่วนบุคคล, 'terms' = ข้อตกลง)
@@ -20,11 +22,11 @@ interface PolicyModalProps {
 
 const policies = {
   privacy: {
-    title: " นโยบายความเป็นส่วนตัว",
+    title: "นโยบายความเป็นส่วนตัว",
     content: "การจัดเก็บข้อมูล: เราจะจัดเก็บข้อมูลส่วนบุคคลของคุณ เช่น ชื่อ, อีเมล และเบอร์โทรศัพท์ เพื่อวัตถุประสงค์ในการให้บริการ และการทำนัดหมายชมบ้าน ข้อมูลทั้งหมดจะได้รับการเข้ารหัสและไม่ถูกส่งต่อให้บุคคลภายนอกที่ไม่เกี่ยวข้อง"
   },
   terms: {
-    title: " เงื่อนไขการใช้งาน",
+    title: "เงื่อนไขการใช้งาน",
     content: "ข้อตกลงและเงื่อนไข:\n1. ผู้ใช้ต้องใช้ข้อมูลที่เป็นจริงในการทำธุรกรรม\n2. การลงประกาศขาย/เช่า ต้องเป็นทรัพย์ที่ได้รับอนุญาตอย่างถูกต้อง\n3. ทางบริษัทขอสงวนสิทธิ์ในการระงับบัญชีที่ละเมิดกฎความเป็นส่วนตัว"
   }
 };
@@ -40,8 +42,8 @@ export default function PolicyModal({ policyType, onClose }: PolicyModalProps) {
           <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
             {policies[policyType].title}
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition text-slate-400 cursor-pointer">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition text-slate-400 cursor-pointer" aria-label="ปิด">
+            <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-8 overflow-y-auto text-slate-600 space-y-6 leading-relaxed text-sm whitespace-pre-line">

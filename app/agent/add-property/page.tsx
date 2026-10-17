@@ -25,6 +25,16 @@ import { useRouter } from 'next/navigation';
 import ImageUploader from '@/components/property/ImageUploader';
 import { toast } from '@/components/ui/toast';
 import { timeSlotRange } from '@/lib/constants'; // เวลารอบเช้า/บ่าย (ค่ากลางที่เดียว)
+import { 
+  MapPin, 
+  AlertTriangle, 
+  FileText, 
+  X, 
+  Calendar, 
+  Check, 
+  AlertCircle, 
+  ArrowRight 
+} from 'lucide-react';
 
 // ปิด SSR สำหรับแผนที่เสมอ — Leaflet เข้าถึง window/document ตอนโหลดโมดูล
 // ถ้าโดน server-render (ซึ่ง Next.js ทำแม้ในหน้า 'use client' รอบแรกด้วย) จะพังทันที
@@ -410,23 +420,21 @@ export default function AgentAddPropertyPage() {
               <input type="text" value={f.address} onChange={e => setF({ ...f, address: e.target.value })} placeholder="เช่น 123/45 ซ.ปุณณกัณฑ์ 10 ถ.ปุณณกัณฑ์" className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium text-xs" required />
             </div>
 
-                        {/* เดิมเป็น <iframe pointer-events-none> พิกัดตายตัวทุกบ้าน กดปักหมุดไม่ได้จริงเลย */}
-            <div className="rounded-2xl border overflow-hidden">
+            {/* แผนที่ปักหมุดตำแหน่งจริง พร้อมช่องค้นหา */}
+            <div>
+              <label className="block font-bold mb-1 text-slate-700">ตำแหน่งบนแผนที่</label>
               <PropertyLocationMap
                 latitude={latitude}
                 longitude={longitude}
-                height={176}
+                height={240}
                 editable
                 onChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
               />
+              <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-2">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>พิมพ์ค้นหาสถานที่ด้านบน หรือคลิก/ลากหมุดบนแผนที่เพื่อระบุตำแหน่งจริง</span>
+              </p>
             </div>
-            <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>คลิกหรือลากหมุดบนแผนที่เพื่อระบุตำแหน่งบ้านจริง (ถ้าไม่เลือก ระบบจะใช้พิกัดกลางหาดใหญ่แทน)</span>
-            </p>
           </div>
 
           {/* Card 4: สื่อประกอบ & เอกสารสิทธิ์ */}
@@ -444,9 +452,7 @@ export default function AgentAddPropertyPage() {
             {/* PDPA Warning Alert */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[10px] text-amber-900 space-y-2">
               <div className="font-bold flex items-center gap-1.5 text-amber-800">
-                <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>คำเตือนข้อมูลส่วนบุคคล (PDPA)</span>
               </div>
               <p className="leading-relaxed">เอกสารนี้ใช้สำหรับให้ทีมงานตรวจสอบความถูกต้องเท่านั้น <span className="font-bold underline">จะไม่ถูกแสดงสู่สาธารณะ</span> กรุณาปิดซ่อนเลขบัตรประชาชนในเอกสารก่อนอัปโหลด</p>
@@ -484,9 +490,7 @@ export default function AgentAddPropertyPage() {
               {f.doc ? (
                 <div className="flex items-center gap-2 bg-white border rounded-lg p-2">
                   {f.doc.toLowerCase().endsWith('.pdf') ? (
-                    <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                    <FileText className="w-5 h-5 text-red-500 shrink-0" />
                   ) : (
                     <Image src={f.doc} alt="เอกสารสิทธิ์" width={32} height={32} className="w-8 h-8 rounded object-cover border shrink-0" unoptimized />
                   )}
@@ -497,9 +501,7 @@ export default function AgentAddPropertyPage() {
                     onClick={() => { setF(prev => ({ ...prev, doc: '' })); setDocFileName(''); }}
                     className="text-red-500 font-bold hover:text-red-700 shrink-0 cursor-pointer flex items-center gap-1"
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <X className="w-3.5 h-3.5 shrink-0" />
                     <span>ลบ</span>
                   </button>
                 </div>
@@ -524,9 +526,7 @@ export default function AgentAddPropertyPage() {
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-[11px]">5</span>
               <h2 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>วันเวลาที่เปิดให้เข้าชมบ้านหลังนี้</span>
               </h2>
             </div>
@@ -628,25 +628,19 @@ export default function AgentAddPropertyPage() {
                               (ของเดิมโชว์ได้อย่างเดียว พอชนแล้วเลือกไว้ก็ไม่รู้ว่าเลือกติดหรือยัง) */}
                           <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
                             {active && (
-                              <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                              </svg>
+                              <Check className="w-2.5 h-2.5 shrink-0" />
                             )}
                             <span>{active ? 'เลือกไว้แล้ว' : 'ยังไม่ได้เลือก'}</span>
                           </p>
                           {busy && (
                             <p className="text-[9px] font-black mt-1 text-amber-600 leading-tight flex items-center gap-1">
-                              <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
+                              <AlertCircle className="w-3 h-3 shrink-0" />
                               <span>ติดนัดที่ &quot;{busy.propertyTitle}&quot; แล้ว</span>
                             </p>
                           )}
                           {otherOpen && (
                             <p className="text-[9px] font-bold mt-1 text-slate-400 leading-tight flex items-center gap-1">
-                              <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
+                              <AlertCircle className="w-3 h-3 shrink-0" />
                               <span>เปิดวันว่างให้ &quot;{otherOpen.propertyTitle}&quot; ไว้ด้วย</span>
                             </p>
                           )}
@@ -668,18 +662,14 @@ export default function AgentAddPropertyPage() {
 
             {viewingSlots.length > 0 && (
               <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                </svg>
+                <Check className="w-3.5 h-3.5" />
                 <span>เลือกไว้แล้วทั้งหมด {viewingSlots.length} ช่วงเวลา</span>
               </p>
             )}
 
             {agentBusySlots.length > 0 && (
               <div className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 leading-relaxed flex items-start gap-1.5">
-                <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>
                   วันที่เป็นเส้นประ คือวันที่ไปทับกับ<strong>บ้านหลังอื่นของคุณ</strong> ซึ่งมีได้ 2 แบบ:
                   <strong className="text-amber-700">ติดนัดแล้ว</strong> (มีลูกค้าจองไว้จริง ไปนำชมที่นี่ไม่ได้)
@@ -706,9 +696,7 @@ export default function AgentAddPropertyPage() {
               <button type="submit" disabled={loading} className="px-6 py-2.5 bg-blue-600 text-white font-extrabold rounded-xl hover:bg-blue-700 transition shadow-md flex items-center gap-1.5 cursor-pointer">
                 <span>{loading ? 'กำลังบันทึก...' : 'ส่งคำขอลงประกาศ'}</span>
                 {!loading && (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 )}
               </button>
             </div>

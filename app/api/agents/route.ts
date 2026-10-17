@@ -8,51 +8,64 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
 
-    const agents = await db.users.findMany({
-      where: {
-        role_id: 'agent',
-        status: 'approved',
-        ...(search ? {
-          OR: [
-            { first_name: { contains: search, mode: 'insensitive' } },
-            { last_name: { contains: search, mode: 'insensitive' } },
-            { specialty_zone: { contains: search, mode: 'insensitive' } },
-          ]
-        } : {})
-      },
-      select: {
-        id: true,
-        email: true,
-        first_name: true,
-        last_name: true,
-        phone: true,
-        line_id: true,
-        profile_image: true,
-        experience: true,
-        specialty_zone: true,
-        specialty_type: true,
-        is_verified: true,
-        plan_type: true,
-        plan_expired_at: true,
-        created_at: true,
-        properties: {
-          select: { id: true }
+    const [agents, allAmphures, allProvinces] = await Promise.all([
+      db.users.findMany({
+        where: {
+          role_id: 'agent',
+          status: 'approved',
+          ...(search ? {
+            OR: [
+              { first_name: { contains: search, mode: 'insensitive' } },
+              { last_name: { contains: search, mode: 'insensitive' } },
+              { specialty_zone: { contains: search, mode: 'insensitive' } },
+            ]
+          } : {})
         },
-        appointments_appointments_agent_idTousers: {
-          where: {
-            reviews: { isNot: null }
+        select: {
+          id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+          phone: true,
+          line_id: true,
+          profile_image: true,
+          experience: true,
+          specialty_zone: true,
+          specialty_type: true,
+          is_verified: true,
+          plan_type: true,
+          plan_expired_at: true,
+          created_at: true,
+          properties: {
+            select: { id: true }
           },
-          select: {
-            reviews: {
-              select: { rating: true }
+          appointments_appointments_agent_idTousers: {
+            where: {
+              reviews: { isNot: null }
+            },
+            select: {
+              reviews: {
+                select: { rating: true }
+              }
             }
           }
+        },
+        orderBy: {
+          created_at: 'desc'
         }
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
+      }),
+      db.amphures.findMany({
+        select: {
+          id: true,
+          name_th: true,
+          province_id: true,
+          provinces: { select: { id: true, name_th: true } }
+        }
+      }),
+      db.provinces.findMany({
+        select: { id: true, name_th: true }
+      })
+    ]);
 
     const formattedAgents = agents.map(agent => {
       const validReviews = (agent.appointments_appointments_agent_idTousers || [])
@@ -64,6 +77,16 @@ export async function GET(req: Request) {
       const averageRating = reviewCount > 0 ? parseFloat((totalRating / reviewCount).toFixed(1)) : 0;
       const ratingText = reviewCount > 0 ? `${averageRating.toFixed(1)} (${reviewCount} รีวิว)` : "ยังไม่มีรีวิว";
 
+      // วิเคราะห์หาจังหวัดและอำเภอจากข้อความ specialty_zone โดยเทียบกับฐานข้อมูลจริง
+      const zoneText = (agent.specialty_zone || "สงขลา / หาดใหญ่").trim();
+      const matchedAmphure = allAmphures.find(a => zoneText.includes(a.name_th));
+      const matchedProvince = allProvinces.find(p => zoneText.includes(p.name_th)) || (matchedAmphure ? matchedAmphure.provinces : null);
+
+      const resolvedProvince = matchedProvince ? matchedProvince.name_th : "สงขลา";
+      const resolvedAmphure = matchedAmphure 
+        ? matchedAmphure.name_th 
+        : (zoneText.split(/[/,]/)[0]?.trim() || "หาดใหญ่");
+
       return {
         id: agent.id,
         name: `${agent.first_name} ${agent.last_name}`,
@@ -74,6 +97,9 @@ export async function GET(req: Request) {
         averageRating,
         reviewCount,
         location: agent.specialty_zone || "สงขลา / หาดใหญ่",
+        province: resolvedProvince,
+        amphure: resolvedAmphure,
+        specialtyType: agent.specialty_type || null,
         phone: agent.phone || "08X-XXX-XXXX",
         lineId: agent.line_id || null,
         email: agent.email,

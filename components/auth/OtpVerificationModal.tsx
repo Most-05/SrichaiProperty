@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import { X, Briefcase } from 'lucide-react';
 
 /** Props สำหรับ OtpVerificationModal Component */
 interface Props {
@@ -28,14 +29,12 @@ export default function OtpVerificationModal({ show, onClose, otpValues, onOtpCh
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}></div>
       <div className="bg-white rounded-3xl p-6 max-w-sm w-full relative z-10 shadow-2xl">
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer" aria-label="ปิด">
+          <X className="w-5 h-5" />
         </button>
         <div className="text-center mb-5">
           <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-amber-200">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+            <Briefcase className="w-7 h-7" />
           </div>
           <h3 className="text-xl font-extrabold text-slate-900 mb-1.5">ยืนยันตัวตนตัวแทน</h3>
           <p className="text-slate-500 text-xs">เราได้ส่งรหัส OTP 6 หลักไปยังเบอร์มือถือของท่าน</p>

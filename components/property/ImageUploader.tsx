@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { compressImage, formatBytes } from '@/lib/utils/compressImage';
+import { Loader2, Upload, Check, X } from 'lucide-react';
 
 /**
  * ==============================================================================
@@ -101,14 +102,9 @@ export default function ImageUploader({ uploadedImages, setUploadedImages }: Pro
           isProcessing ? 'bg-blue-200 text-blue-700' : 'bg-blue-100 text-blue-600'
         }`}>
           {isProcessing ? (
-            <svg className="w-5 h-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-            </svg>
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
           ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
+            <Upload className="w-5 h-5 text-blue-600" />
           )}
         </div>
         <p className="font-extrabold text-blue-700 text-xs">
@@ -129,9 +125,7 @@ export default function ImageUploader({ uploadedImages, setUploadedImages }: Pro
             : 'bg-blue-50 text-blue-700 border-blue-200 animate-pulse'
         }`}>
           {statusMessage.startsWith('สำเร็จ') && (
-            <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-            </svg>
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
           )}
           <span>{statusMessage}</span>
         </div>
@@ -149,9 +143,7 @@ export default function ImageUploader({ uploadedImages, setUploadedImages }: Pro
                 className="absolute top-1 right-1 bg-slate-900/80 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer"
                 title="ลบรูปภาพ"
               >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-3 h-3 text-white" />
               </button>
             </div>
           ))}

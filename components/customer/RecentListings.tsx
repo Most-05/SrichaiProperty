@@ -16,6 +16,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Property } from '@/types'; // กำหนดโครงสร้างข้อมูลอสังหาริมทรัพย์ที่รับมาแสดงในรายการล่าสุด
+import { Heart, Bed, Bath, Maximize2, ArrowRight } from 'lucide-react';
 
 interface RecentListingsProps {
   properties: Property[];
@@ -36,7 +37,7 @@ export default function RecentListings({ properties, favorites, toggleFavorite }
             href="/search" 
             className="inline-flex items-center text-slate-700 font-bold hover:text-blue-700 transition bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200 text-xs group"
           >
-            ดูทั้งหมด <span className="ml-1 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+            ดูทั้งหมด <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
 
@@ -57,19 +58,9 @@ export default function RecentListings({ properties, favorites, toggleFavorite }
                   }} 
                   className="absolute top-3 right-3 z-10 w-8 h-8 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center hover:scale-110 transition shadow-sm"
                 >
-                  <svg 
-                    className={`w-4 h-4 transition-colors ${isFav ? "text-red-500" : "text-slate-400"}`} 
-                    fill={isFav ? "currentColor" : "none"} 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth="2" 
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
-                    />
-                  </svg>
+                  <Heart 
+                    className={`w-4 h-4 transition-colors ${isFav ? "text-rose-500 fill-rose-500" : "text-slate-400"}`} 
+                  />
                 </button>
                 
                 <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
@@ -98,23 +89,17 @@ export default function RecentListings({ properties, favorites, toggleFavorite }
                   
                   <div className="flex items-center justify-between text-slate-600 border-t border-b border-slate-100 py-2.5 mb-3 bg-slate-50 px-3 rounded-lg text-xs font-semibold">
                     <span className="flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v11m0-4h18m0-7v11M3 11h18M7 7h4v4H7z" />
-                      </svg>
+                      <Bed className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       {prop.bedrooms} นอน
                     </span>
                     <div className="w-px h-5 bg-slate-200" />
                     <span className="flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16a1 1 0 011 1v3a4 4 0 01-4 4H7a4 4 0 01-4-4v-3a1 1 0 011-1zM6 12V5a2 2 0 012-2h1a2 2 0 012 2v1" />
-                      </svg>
+                      <Bath className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       {prop.bathrooms} น้ำ
                     </span>
                     <div className="w-px h-5 bg-slate-200" />
                     <span className="flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-                      </svg>
+                      <Maximize2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       {prop.area} ตร.ม.
                     </span>
                   </div>

@@ -26,6 +26,9 @@ export interface Agent {
   averageRating?: number;
   reviewCount?: number;
   location: string;
+  province?: string;
+  amphure?: string;
+  specialtyType?: string | null;
   phone: string;
   email: string;
   isVerified: boolean;

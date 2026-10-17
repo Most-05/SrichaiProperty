@@ -146,7 +146,8 @@ export default function AgentDashboardPage() {
       sale: propertiesList.filter(p => p.listingType === 'sale').length,
       rent: propertiesList.filter(p => p.listingType === 'rent').length,
       pending: propertiesList.filter(p => p.status === 'pending').length,
-      approved: propertiesList.filter(p => p.status === 'approved').length
+      approved: propertiesList.filter(p => p.status === 'approved').length,
+      rejected: propertiesList.filter(p => p.status === 'rejected').length
     };
   }, [propertiesList]);
 
@@ -456,6 +457,23 @@ export default function AgentDashboardPage() {
                   {counts.pending}
                 </span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterType('rejected')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                  filterType === 'rejected'
+                    ? 'bg-rose-600 text-white shadow-2xs'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                }`}
+              >
+                <span>ถูกปฏิเสธ</span>
+                <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                  filterType === 'rejected' ? 'bg-rose-800 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {counts.rejected}
+                </span>
+              </button>
             </div>
 
             {/* ตารางแสดงข้อมูลอสังหาริมทรัพย์ */}
@@ -541,12 +559,22 @@ export default function AgentDashboardPage() {
                               ตรวจเมื่อ {new Date(p.reviewedAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                             </p>
                           )}
-                          <span className="hidden">
-                          </span>
-                          {p.status === 'rejected' && p.rejectReason && (
-                            <p className="text-[9px] text-red-500 font-bold mt-1 line-clamp-2 max-w-[140px] mx-auto" title={p.rejectReason}>
-                              {p.rejectReason}
-                            </p>
+                          {p.status === 'rejected' && (
+                            <div className="mt-1.5 p-1.5 bg-rose-50 border border-rose-200 rounded-lg text-left max-w-[160px] mx-auto shadow-2xs">
+                              <div className="flex items-center gap-1 text-[9px] font-extrabold text-rose-700">
+                                <AlertTriangle className="w-3 h-3 shrink-0 text-rose-500" />
+                                <span>เหตุผลที่ตีกลับ:</span>
+                              </div>
+                              <p className="text-[9px] text-rose-600 font-medium mt-0.5 break-words line-clamp-2" title={p.rejectReason || 'กรุณาแก้ไขข้อมูลตามคำแนะนำ'}>
+                                {p.rejectReason || 'เอกสารหรือข้อมูลไม่ผ่านเกณฑ์'}
+                              </p>
+                              <Link
+                                href={`/agent/edit-property/${p.id}`}
+                                className="inline-block mt-1 text-[9px] font-black text-rose-700 hover:text-rose-900 underline"
+                              >
+                                คลิกเพื่อแก้ไขและส่งตรวจใหม่ →
+                              </Link>
+                            </div>
                           )}
                         </td>
 

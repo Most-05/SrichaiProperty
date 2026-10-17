@@ -954,9 +954,7 @@ export default function PropertyDetailPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-                      <svg className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" viewBox="0 0 24 24">
-                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                      </svg>
+                      <Star className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" />
                       <span>คะแนนและความคิดเห็นจากผู้เข้าชมจริง</span>
                     </h3>
                     <p className="text-xs text-slate-500 font-medium mt-1">
@@ -968,13 +966,10 @@ export default function PropertyDetailPage() {
                       <span className="text-lg font-black text-amber-600">{agentRealRating.toFixed(1)}</span>
                       <div className="flex items-center gap-0.5 text-amber-400">
                         {Array.from({ length: 5 }, (_, i) => (
-                          <svg 
+                          <Star 
                             key={i} 
                             className={`w-3.5 h-3.5 ${i < Math.round(agentRealRating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`} 
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                          </svg>
+                          />
                         ))}
                       </div>
                       <span className="text-[11px] text-amber-800 font-bold">({agentRealReviewCount} รีวิว)</span>
@@ -990,9 +985,7 @@ export default function PropertyDetailPage() {
                 ) : reviews.length === 0 ? (
                   <div className="py-10 px-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center space-y-2">
                     <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 border border-amber-200/60 flex items-center justify-center mx-auto">
-                      <svg className="w-5 h-5 fill-amber-400" viewBox="0 0 24 24">
-                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                      </svg>
+                      <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
                     </div>
                     <p className="text-sm font-bold text-slate-700">ยังไม่มีรีวิวสำหรับนายหน้าท่านนี้</p>
                     <p className="text-xs text-slate-400 max-w-md mx-auto">
@@ -1022,13 +1015,10 @@ export default function PropertyDetailPage() {
                           <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl border border-slate-200/80 shadow-xs">
                             <div className="flex items-center gap-0.5 text-amber-400">
                               {Array.from({ length: 5 }, (_, i) => (
-                                <svg 
+                                <Star 
                                   key={i} 
                                   className={`w-3 h-3 ${i < rev.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`} 
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                                </svg>
+                                />
                               ))}
                             </div>
                             <span className="text-[10px] font-extrabold text-slate-700 ml-1">{rev.rating}.0</span>
