@@ -559,7 +559,7 @@ export default function AppointmentsPage() {
                     {/* ปุ่มการทำงาน */}
                     <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 border-t lg:border-t-0 pt-3 lg:pt-0">
                       <Link
-                        href={`/properties/${item.propertyId}`}
+                        href={`/property/${item.propertyId}`}
                         className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition cursor-pointer"
                       >
                         ดูประกาศ
@@ -615,7 +615,7 @@ export default function AppointmentsPage() {
                         <span className="text-2xl font-extrabold text-slate-900 leading-none my-0.5">{dayStr}</span>
                         <span className="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded shadow-sm mt-1">{apt.timeSlotText || apt.timeSlot}</span>
                       </div>
-                      <Link href={`/properties/${apt.propertyId}`} className="w-full h-20 rounded-lg overflow-hidden relative border border-slate-100 block group">
+                      <Link href={`/property/${apt.propertyId}`} className="w-full h-20 rounded-lg overflow-hidden relative border border-slate-100 block group">
                         <Image 
                           src={apt.propertyImage || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600"} 
                           width={140} 
@@ -649,7 +649,7 @@ export default function AppointmentsPage() {
                       </div>
 
                       <div>
-                        <Link href={`/properties/${apt.propertyId}`} className="font-extrabold text-slate-900 text-sm hover:text-blue-600 transition line-clamp-1">
+                        <Link href={`/property/${apt.propertyId}`} className="font-extrabold text-slate-900 text-sm hover:text-blue-600 transition line-clamp-1">
                           {apt.propertyName}
                         </Link>
                         <div className="text-blue-700 font-extrabold text-xs mt-0.5">{apt.propertyPrice}</div>
@@ -825,7 +825,7 @@ export default function AppointmentsPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
-                        href={`/properties/${apt.propertyId}`}
+                        href={`/property/${apt.propertyId}`}
                         className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
                       >
                         <ExternalLink className="w-3.5 h-3.5 shrink-0" /> ดูประกาศ
