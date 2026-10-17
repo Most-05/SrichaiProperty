@@ -13,6 +13,9 @@ import { getToken } from 'next-auth/jwt';
 // — พอสำหรับหน้า PendingAgentGate ที่ใช้ดูสถานะ/ส่งเอกสารใหม่
 // (login/logout, ดู/แก้โปรไฟล์, อัปโหลดไฟล์, กระดิ่งแจ้งเตือน + realtime) API อื่นของนายหน้าถูกกันทั้งหมด (BUG-29)
 const UNVERIFIED_AGENT_ALLOWED_APIS = ['/api/auth', '/api/user/profile', '/api/upload', '/api/notifications', '/api/pusher/auth'];
+// หน้าอ่านอย่างเดียวที่นายหน้ายังไม่ผ่าน KYC เปิดได้ นอกจาก /agent/profile (อ่าน PDPA / ข้อกำหนดระหว่างรออนุมัติ)
+// ⚠ ต้องตรงกับรายการใน components/agent/PendingGateSwitch.tsx (ตัวนั้นเลือกว่าจะโชว์เนื้อหาจริงหรือหน้า Gate)
+const UNVERIFIED_AGENT_READABLE_PAGES = ['/agent/privacy', '/agent/terms'];
 
 // หน้าฝั่งลูกค้าที่ต้อง login ก่อน (ต้องตรงกับ matcher ด้านล่าง)
 // '/notifications' = ศูนย์แจ้งเตือนของลูกค้า (หน้าใหม่ 3 ต.ค.) — เดิมไม่อยู่ในรายการ เปิดได้ตอนไม่ล็อกอิน (BUG-40)
@@ -83,9 +86,9 @@ export default async function proxy(request: NextRequest) {
     // (ถ้าเป็น admin จะข้ามการเช็ค status นี้ไปเลย เพราะ admin เข้าได้เสมอ)
     const userStatus = (token?.status as string) || 'pending';
     // ยังไม่ผ่าน KYC (รอตรวจ หรือเอกสารไม่ผ่าน) → เข้าได้แค่หน้าโปรไฟล์ ซึ่ง layout จะแสดง PendingAgentGate
-    // (ดูสถานะ / เหตุผล / อัปโหลดเอกสารใหม่) หน้าอื่นพากลับมาที่โปรไฟล์ (BUG-29)
+    // (ดูสถานะ / เหตุผล / อัปโหลดเอกสารใหม่) + หน้าอ่านอย่างเดียว PDPA/ข้อกำหนด · หน้าอื่นพากลับมาที่โปรไฟล์ (BUG-29)
     if (userRole === 'agent' && (userStatus === 'pending' || userStatus === 'rejected')) {
-      if (url.pathname === '/agent/profile') return NextResponse.next();
+      if (url.pathname === '/agent/profile' || UNVERIFIED_AGENT_READABLE_PAGES.includes(url.pathname)) return NextResponse.next();
       url.pathname = '/agent/profile';
       return NextResponse.redirect(url);
     }
