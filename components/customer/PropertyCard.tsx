@@ -66,7 +66,8 @@ export default function PropertyCard({
     : null;
 
   // ตรวจสอบว่าประกาศนี้เป็นประเภทขายหรือไม่ (ดูจาก listingType หรือข้อความราคาที่ไม่มีคำว่า '/ เดือน')
-  const isSale = prop.listingType === 'sale' || !rawPriceStr.includes('/ เดือน');
+  // ใช้ listingType เป็นหลัก — API ส่งราคาเป็น "฿x" เสมอ (ไม่มี "/ เดือน") ถ้าใช้ || แบบเดิม ประกาศเช่าจะถูกนับเป็นขายทุกตัว (BUG-49)
+  const isSale = prop.listingType ? prop.listingType === 'sale' : !rawPriceStr.includes('/ เดือน');
 
   // คำนวณยอดผ่อนประเมินเบื้องต้น (สำหรับทรัพย์ขาย ประเมินยอดผ่อนดอกเบี้ยมาตรฐาน 30 ปี ~฿5,500 ต่อ 1 ล้านบาท)
   const estimatedMonthly = (isSale && numPrice > 0)
@@ -169,6 +170,7 @@ export default function PropertyCard({
               <div className="sm:text-right shrink-0">
                 <div className="text-xl font-black text-blue-700 tracking-tight leading-none">
                   {prop.price}
+                  {!isSale && <span className="text-xs font-bold text-slate-400"> / เดือน</span>}
                 </div>
                 {pricePerSqm && (
                   <div className="text-[11px] text-slate-400 font-semibold mt-1">
@@ -361,6 +363,7 @@ export default function PropertyCard({
           <div className="flex items-baseline justify-between gap-2">
             <div className="text-xl font-black text-blue-700 leading-none tracking-tight">
               {prop.price}
+              {!isSale && <span className="text-xs font-bold text-slate-400"> / เดือน</span>}
             </div>
             {estimatedMonthly && (
               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md truncate">
