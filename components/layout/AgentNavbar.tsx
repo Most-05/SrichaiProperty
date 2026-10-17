@@ -51,9 +51,14 @@ export default function AgentNavbar() {
   const userFullName = session?.user?.name || "สมชาย นายหน้าดี";
   const userImage = session?.user?.image || fallbackAvatarUrl(userFullName);
 
-  // ดึงจำนวนแชทรอตอบ / แชทยังไม่ได้อ่าน
+  // นายหน้าที่ยังไม่ผ่าน KYC (รอตรวจ / เอกสารไม่ผ่าน) ใช้ได้แค่หน้า PendingAgentGate
+  // → ซ่อนเมนูหน้าอื่น + ปุ่มลงประกาศ (กดไปก็ถูก proxy พากลับหน้าโปรไฟล์อยู่ดี)
+  const isUnverifiedAgent = session?.user?.role === 'agent'
+    && ['pending', 'rejected'].includes(session?.user?.status || '');
+
+  // ดึงจำนวนแชทรอตอบ / แชทยังไม่ได้อ่าน (ข้ามถ้ายังไม่ผ่าน KYC เพราะ API แชทถูกกันไว้)
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user && !isUnverifiedAgent) {
       fetch('/api/chat/sessions')
         .then(r => r.json())
         .then(data => {
@@ -67,7 +72,7 @@ export default function AgentNavbar() {
         })
         .catch(() => {});
     }
-  }, [session?.user, pathname]);
+  }, [session?.user, pathname, isUnverifiedAgent]);
 
   const navLinkClass = (href: string) => {
     const isActive = pathname === href || pathname.startsWith(href + '/');
@@ -126,6 +131,7 @@ export default function AgentNavbar() {
 
         {/* Desktop Links (>= lg) */}
         <div className="hidden lg:flex items-center gap-1.5 sm:gap-2">
+          {!isUnverifiedAgent && (<>
           {navLinks.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
             return (
@@ -158,6 +164,7 @@ export default function AgentNavbar() {
           </Link>
 
           <div className="h-6 w-px bg-slate-800 mx-1" />
+          </>)}
 
           {/* Notifications, Profile & Logout */}
           <div className="flex items-center gap-3">
@@ -245,7 +252,8 @@ export default function AgentNavbar() {
             </Link>
           </div>
 
-          {/* Quick CTA */}
+          {/* Quick CTA + เมนูหน้าต่างๆ (ซ่อนถ้ายังไม่ผ่าน KYC) */}
+          {!isUnverifiedAgent && (<>
           <Link
             href="/agent/add-property"
             onClick={() => setIsMobileOpen(false)}
@@ -283,6 +291,7 @@ export default function AgentNavbar() {
               );
             })}
           </div>
+          </>)}
 
           <div className="border-t border-slate-800 pt-2">
             <button

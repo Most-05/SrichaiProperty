@@ -9,9 +9,13 @@ import { getToken } from 'next-auth/jwt';
 // เพื่อตรวจสอบว่า "ใครเป็นคนเรียก" (login หรือยัง) และ "มีสิทธิ์" เข้าหน้านั้นหรือไม่
 // ถ้าไม่มีสิทธิ์ก็จะ redirect ไปหน้าอื่น หรือตอบ error กลับไปแทน
 // ============================================================================
-// API ที่นายหน้า "เอกสาร KYC ไม่ผ่าน" (status = rejected) ยังเรียกได้ — พอสำหรับหน้าโปรไฟล์ที่ใช้ส่งเอกสารใหม่
+// API ที่นายหน้า "ยังไม่ผ่าน KYC" (status = pending รอตรวจ หรือ rejected เอกสารไม่ผ่าน) ยังเรียกได้
+// — พอสำหรับหน้า PendingAgentGate ที่ใช้ดูสถานะ/ส่งเอกสารใหม่
 // (login/logout, ดู/แก้โปรไฟล์, อัปโหลดไฟล์, กระดิ่งแจ้งเตือน + realtime) API อื่นของนายหน้าถูกกันทั้งหมด (BUG-29)
-const REJECTED_AGENT_ALLOWED_APIS = ['/api/auth', '/api/user/profile', '/api/upload', '/api/notifications', '/api/pusher/auth'];
+const UNVERIFIED_AGENT_ALLOWED_APIS = ['/api/auth', '/api/user/profile', '/api/upload', '/api/notifications', '/api/pusher/auth'];
+// หน้าอ่านอย่างเดียวที่นายหน้ายังไม่ผ่าน KYC เปิดได้ นอกจาก /agent/profile (อ่าน PDPA / ข้อกำหนดระหว่างรออนุมัติ)
+// ⚠ ต้องตรงกับรายการใน components/agent/PendingGateSwitch.tsx (ตัวนั้นเลือกว่าจะโชว์เนื้อหาจริงหรือหน้า Gate)
+const UNVERIFIED_AGENT_READABLE_PAGES = ['/agent/privacy', '/agent/terms'];
 
 // หน้าฝั่งลูกค้าที่ต้อง login ก่อน (ต้องตรงกับ matcher ด้านล่าง)
 // '/notifications' = ศูนย์แจ้งเตือนของลูกค้า (หน้าใหม่ 3 ต.ค.) — เดิมไม่อยู่ในรายการ เปิดได้ตอนไม่ล็อกอิน (BUG-40)
@@ -45,13 +49,17 @@ export default async function proxy(request: NextRequest) {
   }
 
   // ---------------------------------------------------------------------
-  // 0.5 นายหน้าที่เอกสาร KYC ไม่ผ่าน (rejected) — ล็อกอินได้เพื่อส่งเอกสารใหม่เท่านั้น
+  // 0.5 นายหน้าที่ยังไม่ผ่าน KYC — รอแอดมินตรวจ (pending) หรือเอกสารไม่ผ่าน (rejected)
+  // ล็อกอินได้เพื่อดูสถานะ/ส่งเอกสารใหม่ที่หน้า PendingAgentGate เท่านั้น
   // ไม่กันตรงนี้ = เรียก API ลงประกาศ/รับนัดได้ เพราะ API ฝั่งนายหน้าเช็คแค่ role ไม่ได้เช็ค status
   // ---------------------------------------------------------------------
-  const isRejectedAgent = userRole === 'agent' && token?.status === 'rejected';
-  if (isRejectedAgent && url.pathname.startsWith('/api/')
-      && !REJECTED_AGENT_ALLOWED_APIS.some((p) => url.pathname === p || url.pathname.startsWith(p + '/'))) {
-    return NextResponse.json({ error: "เอกสารยืนยันตัวตน (KYC) ไม่ผ่าน กรุณาส่งเอกสารใหม่ที่หน้าโปรไฟล์" }, { status: 403 });
+  const isUnverifiedAgent = userRole === 'agent' && (token?.status === 'pending' || token?.status === 'rejected');
+  if (isUnverifiedAgent && url.pathname.startsWith('/api/')
+      && !UNVERIFIED_AGENT_ALLOWED_APIS.some((p) => url.pathname === p || url.pathname.startsWith(p + '/'))) {
+    const message = token?.status === 'pending'
+      ? "บัญชีนายหน้าของคุณอยู่ระหว่างรอแอดมินตรวจสอบและอนุมัติ"
+      : "เอกสารยืนยันตัวตน (KYC) ไม่ผ่าน กรุณาส่งเอกสารใหม่ที่หน้าโปรไฟล์";
+    return NextResponse.json({ error: message }, { status: 403 });
   }
 
   // ---------------------------------------------------------------------
@@ -72,14 +80,15 @@ export default async function proxy(request: NextRequest) {
     }
 
     // 1.3 กรณีเป็น agent แต่บัญชียังไม่ได้รับอนุมัติจากแอดมิน
-    // (status เริ่มต้นคือ 'pending' รอตรวจสอบ, หรืออาจถูกระงับ/แบน)
-    // -> ห้ามเข้าแผงควบคุมนายหน้า ให้เด้งกลับไปหน้า login
+    // - pending (รอตรวจ) / rejected (เอกสารไม่ผ่าน) -> เข้าได้แค่หน้าโปรไฟล์ที่แสดง PendingAgentGate
+    // - สถานะอื่นที่ไม่ใช่ approved (เช่น ถูกระงับ/แบน) -> ห้ามเข้าแผงควบคุมนายหน้า ให้เด้งกลับไปหน้า login
     // หมายเหตุ: เงื่อนไขนี้เช็คเฉพาะกรณี role === 'agent' เท่านั้น
     // (ถ้าเป็น admin จะข้ามการเช็ค status นี้ไปเลย เพราะ admin เข้าได้เสมอ)
     const userStatus = (token?.status as string) || 'pending';
-    // เอกสาร KYC ไม่ผ่าน → เข้าได้แค่หน้าโปรไฟล์ (มีกล่องอัปโหลดเอกสารใหม่) หน้าอื่นพากลับมาที่โปรไฟล์ (BUG-29)
-    if (userRole === 'agent' && userStatus === 'rejected') {
-      if (url.pathname === '/agent/profile') return NextResponse.next();
+    // ยังไม่ผ่าน KYC (รอตรวจ หรือเอกสารไม่ผ่าน) → เข้าได้แค่หน้าโปรไฟล์ ซึ่ง layout จะแสดง PendingAgentGate
+    // (ดูสถานะ / เหตุผล / อัปโหลดเอกสารใหม่) + หน้าอ่านอย่างเดียว PDPA/ข้อกำหนด · หน้าอื่นพากลับมาที่โปรไฟล์ (BUG-29)
+    if (userRole === 'agent' && (userStatus === 'pending' || userStatus === 'rejected')) {
+      if (url.pathname === '/agent/profile' || UNVERIFIED_AGENT_READABLE_PAGES.includes(url.pathname)) return NextResponse.next();
       url.pathname = '/agent/profile';
       return NextResponse.redirect(url);
     }

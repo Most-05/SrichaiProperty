@@ -21,8 +21,8 @@ import { authOptions } from '@/lib/authOptions';
 import AgentNavbar from '@/components/layout/AgentNavbar';
 // ส่วนท้ายหน้า (footer) ของหน้า agent
 import AgentFooter from '@/components/layout/AgentFooter';
-// หน้าจอที่แสดงเมื่อ agent ยังไม่ได้รับการอนุมัติ (สถานะ pending)
-import PendingAgentGate from '@/components/agent/PendingAgentGate';
+// เลือกว่า agent ที่ยังไม่ได้รับการอนุมัติจะเห็นอะไร (PendingAgentGate หรือหน้า PDPA/ข้อกำหนด)
+import PendingGateSwitch from '@/components/agent/PendingGateSwitch';
 
 // Layout นี้จะครอบทุกหน้าที่อยู่ใน route group /agent
 // เป็น Server Component (async function) เพราะต้องเช็ค session ก่อน render
@@ -53,13 +53,13 @@ export default async function AgentLayout({
 
       {/* ส่วนเนื้อหาหลัก ยืดเต็มพื้นที่ที่เหลือ */}
       <main className="flex-1">
-        {/* ถ้า agent ยังรออนุมัติ -> โชว์หน้า PendingAgentGate แทนเนื้อหาจริง
+        {/* ถ้า agent ยังรออนุมัติ -> โชว์หน้า PendingAgentGate แทนเนื้อหาจริง (ยกเว้นหน้า PDPA/ข้อกำหนด อ่านได้)
             ถ้าอนุมัติแล้ว -> โชว์เนื้อหาของหน้านั้นๆ ตามปกติ (children) */}
-        {isPending ? <PendingAgentGate /> : children}
+        {isPending ? <PendingGateSwitch>{children}</PendingGateSwitch> : children}
       </main>
 
-      {/* ส่วนท้ายหน้า อยู่ท้ายสุดของเนื้อหาเสมอ */}
-      <AgentFooter />
+      {/* ส่วนท้ายหน้า อยู่ท้ายสุดของเนื้อหาเสมอ (ยังไม่ผ่าน KYC → ซ่อนลิงก์หน้าที่ยังเข้าไม่ได้) */}
+      <AgentFooter isUnverifiedAgent={isPending} />
 
     </div>
   );
