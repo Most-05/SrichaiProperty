@@ -293,10 +293,11 @@ export default function AdminSidebar() {
               </Link>
             </div>
 
+            {/* ซ่อนเมนูตั้งค่าระบบกลางชั่วคราว เพราะระบบตั้งค่ายังทำงานไม่ถูกต้อง — แก้เสร็จแล้วลบคอมเมนต์ออกเพื่อเปิดกลับมา
             <div className="space-y-1">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-2.5">ระบบและการตั้งค่า</span>
-              <Link 
-                href="/admin/settings" 
+              <Link
+                href="/admin/settings"
                 onClick={() => setIsMobileOpen(false)}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left font-semibold ${
                   isActive('/admin/settings') ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30' : 'hover:bg-slate-800/70 text-slate-300'
@@ -306,6 +307,7 @@ export default function AdminSidebar() {
                 <span>ตั้งค่าระบบกลาง</span>
               </Link>
             </div>
+            */}
           </nav>
         </div>
 
