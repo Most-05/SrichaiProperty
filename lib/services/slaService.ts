@@ -33,34 +33,34 @@ export function calculateModerationSla(
   createdAt: Date | string,
   now: number = Date.now()
 ): SlaInfo {
-  const createdMs = new Date(createdAt).getTime();
-  const diffMs = Math.max(0, now - createdMs);
+  const createdMs = new Date(createdAt).getTime(); // เวลาที่นายหน้าส่งประกาศ (แปลงเป็นตัวเลข)
+  const diffMs = Math.max(0, now - createdMs); // คำนวณเวลาที่รอ = ตอนนี้ − เวลาส่ง (กันค่าติดลบ)
 
-  const totalMinutes = Math.floor(diffMs / (60 * 1000));
-  const hoursPassed = Math.floor(totalMinutes / 60);
-  const minutesPassed = totalMinutes % 60;
+  const totalMinutes = Math.floor(diffMs / (60 * 1000)); // รอมาทั้งหมดกี่นาที
+  const hoursPassed = Math.floor(totalMinutes / 60); // รอมากี่ชั่วโมงเต็ม
+  const minutesPassed = totalMinutes % 60; // เศษนาทีที่เหลือ (0–59)
 
   // 1. ระดับความเร่งด่วน: เกิน 24 ชม. = ด่วนมาก (urgent), เกิน 12 ชม. = เริ่มนาน (warning)
-  let level: SlaLevel = 'normal';
-  if (hoursPassed >= MODERATION_SLA_HOURS) {
-    level = 'urgent';
-  } else if (hoursPassed >= 12) {
-    level = 'warning';
+  let level: SlaLevel = 'normal'; // เริ่มต้น = ปกติ (สีเขียว)
+  if (hoursPassed >= MODERATION_SLA_HOURS) { // รอครบ 24 ชม. ขึ้นไป
+    level = 'urgent'; // = ด่วน (สีแดง)
+  } else if (hoursPassed >= 12) { // รอครบ 12 ชม. ขึ้นไป
+    level = 'warning'; // = เตือน (สีเหลือง)
   }
 
   // 2. ข้อความภาษาไทยเข้าใจง่าย ตรงไปตรงมา
-  let label = '';
-  if (hoursPassed === 0 && minutesPassed === 0) {
+  let label = ''; // ข้อความที่จะไปโชว์บนป้าย
+  if (hoursPassed === 0 && minutesPassed === 0) { // ยังไม่ถึง 1 นาที
     label = 'เพิ่งลงเมื่อสักครู่';
-  } else if (hoursPassed === 0) {
+  } else if (hoursPassed === 0) { // ยังไม่ถึง 1 ชม. → บอกเป็นนาที
     label = `รอตรวจ ${minutesPassed} นาที`;
-  } else if (hoursPassed < 24) {
+  } else if (hoursPassed < 24) { // 1–23 ชม. → บอกชั่วโมง (+ นาทีถ้ามี)
     label = minutesPassed > 0 
       ? `รอตรวจ ${hoursPassed} ชม. ${minutesPassed} นาที` 
       : `รอตรวจ ${hoursPassed} ชม.`;
-  } else {
-    const days = Math.floor(hoursPassed / 24);
-    const remHours = hoursPassed % 24;
+  } else { // ตั้งแต่ 24 ชม. → บอกเป็นวัน + ชั่วโมง
+    const days = Math.floor(hoursPassed / 24); // กี่วันเต็ม
+    const remHours = hoursPassed % 24; // เศษชั่วโมงที่เหลือ
     label = remHours > 0 
       ? `ค้างตรวจนาน ${days} วัน ${remHours} ชม.` 
       : `ค้างตรวจนาน ${days} วัน`;
