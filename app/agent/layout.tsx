@@ -58,8 +58,8 @@ export default async function AgentLayout({
         {isPending ? <PendingAgentGate /> : children}
       </main>
 
-      {/* ส่วนท้ายหน้า อยู่ท้ายสุดของเนื้อหาเสมอ */}
-      <AgentFooter />
+      {/* ส่วนท้ายหน้า อยู่ท้ายสุดของเนื้อหาเสมอ (ยังไม่ผ่าน KYC → ซ่อนลิงก์หน้าที่ยังเข้าไม่ได้) */}
+      <AgentFooter isUnverifiedAgent={isPending} />
 
     </div>
   );
